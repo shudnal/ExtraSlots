@@ -100,8 +100,32 @@ namespace ExtraSlots
                 for (int index = 0; index < PlayerInventory.m_inventory.Count; index++)
                 {
                     ItemDrop.ItemData item = PlayerInventory.m_inventory[index];
-                    if (item == null)
-                        continue;
+
+                    if (Player.m_localPlayer.IsItemEquiped(item) && GetItemSlot(item) == null)
+                    {
+                        // Try putting equipped item in slot
+                        if (TryFindFreeSlotForItem(item, out Slot slot))
+                        {
+                            LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into free slot {slot}");
+                            item.m_gridPos = slot.GridPosition;
+                            PlayerInventory.Changed();
+                        }
+                        else if (TryFindFirstUnequippedSlotForItem(item, out Slot slotToSwap))
+                        {
+                            if (slotToSwap.IsFree)
+                            {
+                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into unequipped slot {slot}");
+                                item.m_gridPos = slotToSwap.GridPosition;
+                            }
+                            else
+                            {
+                                ItemDrop.ItemData itemToSwap = slotToSwap.Item;
+                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was swapped with unequipped {itemToSwap.m_shared.m_name} into slot {slot}");
+                                (item.m_gridPos, itemToSwap.m_gridPos) = (itemToSwap.m_gridPos, item.m_gridPos);
+                            }
+                            PlayerInventory.Changed();
+                        }
+                    }
 
                     if (ItemIsOverlapping(item))
                     {
@@ -113,6 +137,8 @@ namespace ExtraSlots
                         LogWarning($"Item {item.m_shared.m_name} {item.m_gridPos} is out of inventory grid");
                         tempItems.Add(item);
                     }
+
+                    PruneLastEquippedSlotFromItem(item);
 
                     occupiedPositions.Add(item.m_gridPos);
                 }

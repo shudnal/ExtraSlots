@@ -70,7 +70,7 @@ namespace ExtraSlots
                 if (!IsValidPlayer(__instance))
                     return;
 
-                SaveCurrentEquippedSlotsToItems();
+                SaveLastEquippedSlotsToItems();
             }
         }
     }

@@ -1,5 +1,7 @@
 ﻿using HarmonyLib;
 using static ExtraSlots.Slots;
+using static ExtraSlots.ExtraSlots;
+using System.Linq;
 
 namespace ExtraSlots
 {
@@ -16,12 +18,54 @@ namespace ExtraSlots
 
             ItemsSlotsValidation.ValidateItems();
         }
+        
+        [HarmonyPatch(typeof(Player), nameof(Player.OnSpawned))]
+        private static class Player_OnSpawned_ExcludeRedundantSlots
+        {
+            private static void Postfix(Player __instance)
+            {
+                if (__instance != Player.m_localPlayer)
+                    return;
+
+                UpdatePlayerInventorySize();
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.Update))]
+        private static class Player_Update_UpdateInventoryHeight
+        {
+            private static Container tombstoneContainer = null!;
+
+            private static void Postfix(Player __instance)
+            {
+                __instance.m_inventory.m_height = InventoryHeightFull;
+
+                tombstoneContainer ??= __instance.m_tombstone.GetComponent<Container>();
+                if (tombstoneContainer != null)
+                    tombstoneContainer.m_height = __instance.m_inventory.m_height;
+            }
+        }
+
+        [HarmonyPatch(typeof(Inventory), nameof(Inventory.Save))]
+        private static class Inventory_Save_SaveLastEquippedSlots
+        {
+            private static void Prefix(Inventory __instance)
+            {
+                if (__instance != PlayerInventory)
+                    return;
+
+                SaveLastEquippedSlotsToItems();
+            }
+        }
 
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.SlotsUsedPercentage))]
         private static class Inventory_SlotsUsedPercentage_ExcludeRedundantSlots
         {
             private static void Postfix(Inventory __instance, ref float __result)
             {
+                if (__instance != PlayerInventory)
+                    return;
+
                 __result = (float)__instance.m_inventory.Count / InventorySizeActive * 100f;
             }
         }
@@ -82,6 +126,9 @@ namespace ExtraSlots
 
                 if (__result == new Vector2i(-1, -1))
                     __result = FindEmptyQuickSlot();
+
+                if (__result == new Vector2i(-1, -1) && TryFindFreeSlotForItem(Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot, out Slot slot1))
+                    __result = slot1.GridPosition;
             }
         }
 
@@ -109,23 +156,83 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(ItemDrop.ItemData), typeof(int), typeof(int), typeof(int))]
-        private static class Inventory_AddItem_ItemData_amount_x_y_AutoFixInventorySize
+        [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.DropItem))]
+        private static class InventoryGrid_DropItem_DropPrevention
         {
-            private static void Prefix(Inventory __instance, int y)
+            public static bool Prefix(InventoryGrid __instance, Inventory fromInventory, ItemDrop.ItemData item, Vector2i pos)
+            {
+                if (item == null)
+                    return true;
+
+                ItemDrop.ItemData itemAt = __instance.m_inventory.GetItemAt(pos.x, pos.y);
+                if (itemAt == item)
+                    return true;
+
+                // If the dropped item is unfit for target slot
+                if (__instance.m_inventory == PlayerInventory && GetSlotInGrid(pos) is Slot slot && !slot.ItemFit(item))
+                {
+                    LogInfo($"DropItem Prevented dropping {item.m_shared.m_name} {item.m_gridPos} into unfit slot {slot}");
+                    return false;
+                }
+
+                // If dropped item is in slot and interchanged item is unfit for dragged item slot
+                if (itemAt != null && fromInventory == PlayerInventory && GetSlotInGrid(item.m_gridPos) is Slot slot1 && !slot1.ItemFit(itemAt))
+                {
+                    LogInfo($"DropItem Prevented swapping {item.m_shared.m_name} {slot1} with unfit item {itemAt.m_shared.m_name} {pos}");
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(ItemDrop.ItemData), typeof(int), typeof(int), typeof(int))]
+        private static class Inventory_AddItem_ItemData_amount_x_y_TargetPositionRerouting
+        {
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(Inventory __instance, ItemDrop.ItemData item, ref int x, ref int y)
             {
                 if (__instance != PlayerInventory)
                     return;
 
-                if (y < __instance.m_height)
+                if (item == null)
                     return;
 
-                __instance.m_height = InventoryHeightFull;
+                // If another item is at grind - let stack logic go
+                if (__instance.GetItemAt(x, y) != null)
+                    return;
+
+                // If the dropped item fits for target slot
+                if (GetSlotInGrid(new Vector2i(x, y)) is not Slot slot || slot.ItemFit(item))
+                    return;
+
+                if (!TryFindFreeSlotForItem(item, out Slot freeSlot))
+                    return;
+
+                LogInfo($"AddItem X Y Rerouted {item.m_shared.m_name} from {x},{y} to slot {freeSlot} {freeSlot.GridPosition}");
+                x = freeSlot.GridPosition.x;
+                y = freeSlot.GridPosition.y;
+            }
+        }
+
+        [HarmonyPatch(typeof(Inventory), nameof(Inventory.CanAddItem), typeof(ItemDrop.ItemData), typeof(int))]
+        private static class Inventory_CanAddItem_ItemData_TryFindAppropriateExtraSlot
+        {
+            [HarmonyPriority(Priority.First)]
+            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, ref bool __result)
+            {
+                if (__instance != PlayerInventory)
+                    return;
+
+                if (__result)
+                    return;
+
+                __result = TryFindFreeSlotForItem(item, out _);
             }
         }
 
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(ItemDrop.ItemData))]
-        private static class Inventory_AddItem_ItemData_
+        private static class Inventory_AddItem_ItemData_TryFindAppropriateExtraSlot
         {
             [HarmonyPriority(Priority.First)]
             private static void Postfix(Inventory __instance, ItemDrop.ItemData item, ref bool __result)
@@ -147,121 +254,64 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.DropItem))]
-        public static class InventoryGrid_DropItem_DropPrevention
+        [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(ItemDrop.ItemData), typeof(Vector2i))]
+        private static class Inventory_AddItem_ItemData_pos_TargetPositionRerouting
         {
-            public static bool Prefix(InventoryGrid __instance, Inventory fromInventory, ItemDrop.ItemData item, Vector2i pos)
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(Inventory __instance, ItemDrop.ItemData item, ref Vector2i pos)
             {
-                ItemDrop.ItemData itemAt = __instance.m_inventory.GetItemAt(pos.x, pos.y);
-                if (itemAt == item)
-                    return true;
+                if (__instance != PlayerInventory)
+                    return;
 
-                if (__instance.m_inventory != PlayerInventory && __instance != InventoryGui.instance.m_playerGrid)
-                    return true;
+                if (item == null)
+                    return;
 
-                /*bool targetEquipment = EquipmentSlots.TryGetSlotIndex(pos, out int targetSlot) && __instance.m_inventory == PlayerInventory;
+                // If already overlapping or not slot or slot fit - let logic go
+                if (__instance.GetItemAt(pos.x, pos.y) != null || GetSlotInGrid(pos) is not Slot slot || slot.ItemFit(item))
+                    return;
 
-                // If the dropped item is unfit for target slot
-                if (item != null && targetEquipment && !EquipmentSlots.IsValidItemForSlot(item, targetSlot))
+                // If inventory has available free stack items with the same quality - let stack logic go
+                if (item.m_shared.m_maxStackSize > 1)
                 {
-                    LogInfo($"DropItem Prevented dropping {item.m_shared.m_name} {item.m_gridPos} into unfit slot {slots[targetSlot]}");
-                    return false;
+                    int freeStacks = __instance.GetAllItems()
+                        .Where(itemInv => item.m_shared.m_name == itemInv.m_shared.m_name && item.m_quality == itemInv.m_quality && item.m_worldLevel == itemInv.m_worldLevel)
+                        .Sum(itemInv => itemInv.m_shared.m_maxStackSize - itemInv.m_stack);
+
+                    if (freeStacks > item.m_stack)
+                        return;
                 }
 
-                // If dropped item is in slot and interchanged item is unfit for dragged item slot
-                if (item != null && itemAt != null && fromInventory == PlayerInventory && EquipmentSlots.TryGetItemSlot(item, out int currentSlot) && !EquipmentSlots.IsValidItemForSlot(itemAt, currentSlot))
-                {
-                    LogInfo($"DropItem Prevented swapping {item.m_shared.m_name} {slots[currentSlot]} with unfit item {itemAt.m_shared.m_name} {pos}");
-                    return false;
-                }
+                if (!TryFindFreeSlotForItem(item, out Slot freeSlot))
+                    return;
 
-                // If item is unequipped and will not be automatically equipped after drop
-                if (itemAt == null && item != null && AutoEquip.Value.IsOff() && KeepUnequippedInSlot.Value.IsOff() && targetEquipment)
-                {
-                    LogInfo($"DropItem Prevented dropping {item.m_shared.m_name} {item.m_gridPos} into slot {slots[targetSlot]} with both autoequip and keep unequipped disabled");
-                    return false;
-                }*/
-
-                return true;
+                LogInfo($"AddItem Pos Rerouted {item.m_shared.m_name} from {pos} to slot {freeSlot} {freeSlot.GridPosition}");
+                pos = freeSlot.GridPosition;
             }
         }
 
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnSelectedItem))]
-        public static class InventoryGui_OnSelectedItem_DragValidation_AutoEquip
+        [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(string), typeof(int), typeof(int), typeof(int), typeof(long), typeof(string), typeof(Vector2i), typeof(bool))]
+        public static class Inventory_AddItem_ByName_FindAppropriateSlot
         {
-            /*public static bool Prefix(InventoryGui __instance, InventoryGrid grid, ref ItemDrop.ItemData item, ref Vector2i pos, ref Vector2i __state)
+            public static ItemDrop.ItemData itemToFindSlot = null;
+
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(Inventory __instance, string name)
             {
-                __state = new Vector2i(-1, -1);
-
-                Player localPlayer = Player.m_localPlayer;
-                if (localPlayer.IsTeleporting())
-                    return true;
-
-                if (!__instance.m_dragGo)
-                    return true;
-
-                if (grid == __instance.m_playerGrid && EquipmentSlots.TryGetSlotIndex(pos, out int slotIndex))
-                {
-                    // If the dragged item is unfit for target slot
-                    if (__instance.m_dragItem != null && !EquipmentSlots.IsValidItemForSlot(__instance.m_dragItem, slotIndex))
-                    {
-                        LogInfo($"OnSelectedItem Prevented dragging {__instance.m_dragItem.m_shared.m_name} {__instance.m_dragItem.m_gridPos} into unfit slot {slots[slotIndex]}");
-                        return false;
-                    }
-
-                    // If item is unequipped and will not be automatically equipped
-                    if (__instance.m_dragItem != null && AutoEquip.Value.IsOff() && KeepUnequippedInSlot.Value.IsOff() && !Player.m_localPlayer.IsItemEquiped(__instance.m_dragItem))
-                    {
-                        LogInfo($"OnSelectedItem Dragging converted into Queued equip action on {__instance.m_dragItem.m_shared.m_name} {__instance.m_dragItem.m_gridPos}");
-
-                        Player.m_localPlayer.QueueEquipAction(__instance.m_dragItem);
-
-                        // Clear item and position to prevent autoequip and unequip
-                        item = null!;
-                        pos = __state;
-                        __instance.SetupDragItem(null, null, 1);
-                        return false;
-                    }
-                }
-
-                // If drag item is in slot and interchanged item is unfit for dragged item slot
-                if (__instance.m_dragItem != null && item != null && EquipmentSlots.TryGetItemSlot(__instance.m_dragItem, out int slotIndex1) && !EquipmentSlots.IsValidItemForSlot(item, slotIndex1))
-                {
-                    LogInfo($"OnSelectedItem Prevented swapping {__instance.m_dragItem.m_shared.m_name} {slots[slotIndex1]} with unfit item {item.m_shared.m_name}");
-                    return false;
-                }
-
-                // Save position dragged from to check on postfix
-                if (__instance.m_dragInventory == PlayerInventory && __instance.m_dragItem != null)
-                    __state = __instance.m_dragItem.m_gridPos;
-
-                return true;
-            }
-
-            public static void Postfix(InventoryGui __instance, InventoryGrid grid, Vector2i pos, ref Vector2i __state)
-            {
-                // If dragging is in progress
-                if (__instance.m_dragGo)
+                if (__instance != PlayerInventory)
                     return;
 
-                if (pos == __state)
+                ItemDrop component = ObjectDB.instance?.GetItemPrefab(name)?.GetComponent<ItemDrop>();
+                if (component == null)
                     return;
 
-                if (grid == __instance.m_playerGrid)
-                    CheckAutoEquip(pos);
+                if (component.m_itemData.m_shared.m_maxStackSize > 1)
+                    return;
 
-                if (__state != new Vector2i(-1, -1))
-                    CheckAutoEquip(__state);
+                itemToFindSlot = component.m_itemData;
             }
 
-            private static void CheckAutoEquip(Vector2i pos)
-            {
-                ItemDrop.ItemData item = PlayerInventory.GetItemAt(pos.x, pos.y);
-                if (EquipmentSlots.IsItemAtSlot(item) && AutoEquip.Value.IsOn())
-                    Player.m_localPlayer.EquipItem(item);
-                else
-                    Player.m_localPlayer.UnequipItem(item);
-            }*/
+            [HarmonyPriority(Priority.First)]
+            private static void Postfix() => itemToFindSlot = null;
         }
     }
 }

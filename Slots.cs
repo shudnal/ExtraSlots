@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using static ExtraSlots.ExtraSlots;
+using static ExtraSlots.Slots;
 
 namespace ExtraSlots
 {
@@ -83,7 +84,7 @@ namespace ExtraSlots
             public ItemDrop.ItemData Item => PlayerInventory == null || _gridPos == emptyPosition ? null : PlayerInventory.GetItemAt(_gridPos.x, _gridPos.y);
             public bool IsFree => Item != null;
 
-            public bool ItemFit(ItemDrop.ItemData item) => IsActive && (_itemIsValid == null || _itemIsValid(item));
+            public bool ItemFit(ItemDrop.ItemData item) => item != null && IsActive && (_itemIsValid == null || _itemIsValid(item));
 
             public bool IsFreeQuickSlot() => IsQuickSlot && IsActive && IsFree;
 
@@ -122,7 +123,9 @@ namespace ExtraSlots
         
         public const int vanillaInventoryHeight = 4;
 
-        public static Inventory PlayerInventory => Player.m_localPlayer?.GetInventory();
+        public static PlayerProfile PlayerProfile => Game.instance?.GetPlayerProfile() ?? FejdStartup.instance?.m_profiles[FejdStartup.instance.m_profileIndex];
+        public static Player CurrentPlayer => Player.m_localPlayer ?? EquipmentAndQuickSlotsCompat.playerToLoad;
+        public static Inventory PlayerInventory => CurrentPlayer?.GetInventory();
         public static int InventoryWidth => PlayerInventory != null ? PlayerInventory.GetWidth() : 8;
         public static int InventoryHeightPlayer => vanillaInventoryHeight + extraRows.Value;
         public static int InventoryHeightFull => InventoryHeightPlayer + GetTargetInventoryHeight(slots.Length, InventoryWidth);
@@ -158,21 +161,50 @@ namespace ExtraSlots
             if (item == null)
                 return false;
 
-            if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && playerID == Game.instance.GetPlayerProfile().GetPlayerID().ToString() && item.m_customData.TryGetValue(customKeySlotID, out string slotID))
+            if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == PlayerProfile?.GetPlayerID().ToString())
             {
-                int oldSlotIndex = Array.FindIndex(slots, slot => slot.ID == slotID);
-                if (oldSlotIndex > -1)
+                int prevSlotIndex = Array.FindIndex(slots, slot => slot.ID == slotID);
+                if (prevSlotIndex > -1)
                 {
-                    Slot oldSlot = slots[oldSlotIndex];
-                    if (oldSlot.IsActive && oldSlot.ItemFit(item) && oldSlot.IsFree)
+                    Slot prevSlot = slots[prevSlotIndex];
+                    if (prevSlot.IsActive && prevSlot.ItemFit(item) && prevSlot.IsFree)
                     {
-                        slot = oldSlot;
+                        slot = prevSlot;
                         return true;
                     }
                 }
             }
 
             int index = Array.FindIndex(slots, slot => slot.IsActive && slot.IsFree && slot.ItemFit(item));
+            if (index == -1)
+                return false;
+
+            slot = slots[index];
+            return true;
+        }
+
+        public static bool TryFindFirstUnequippedSlotForItem(ItemDrop.ItemData item, out Slot slot)
+        {
+            slot = null;
+
+            if (item == null)
+                return false;
+
+            if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == PlayerProfile?.GetPlayerID().ToString())
+            {
+                int prevSlotIndex = Array.FindIndex(slots, slot => slot.ID == slotID);
+                if (prevSlotIndex > -1)
+                {
+                    Slot prevSlot = slots[prevSlotIndex];
+                    if (prevSlot.IsActive && prevSlot.ItemFit(item) && !CurrentPlayer.IsItemEquiped(prevSlot.Item))
+                    {
+                        slot = prevSlot;
+                        return true;
+                    }
+                }
+            }
+
+            int index = Array.FindIndex(slots, slot => slot.IsActive && slot.ItemFit(item) && !CurrentPlayer.IsItemEquiped(slot.Item));
             if (index == -1)
                 return false;
 
@@ -192,7 +224,7 @@ namespace ExtraSlots
             return slot != null;
         }
 
-        internal static void SaveCurrentEquippedSlotsToItems()
+        internal static void SaveLastEquippedSlotsToItems()
         {
             long playerID = Game.instance.GetPlayerProfile().GetPlayerID();
 
@@ -205,6 +237,15 @@ namespace ExtraSlots
                     item.m_customData[customKeySlotID] = slot.ID;
                 }
             }
+        }
+
+        internal static void PruneLastEquippedSlotFromItem(ItemDrop.ItemData item)
+        {
+            if (item == null)
+                return;
+
+            item.m_customData.Remove(customKeyPlayerID);
+            item.m_customData.Remove(customKeySlotID);
         }
 
         public static void InitializeSlots()
@@ -297,10 +338,22 @@ namespace ExtraSlots
                    (item.m_shared.m_food > 0 || item.m_shared.m_foodStamina > 0 || item.m_shared.m_foodEitr > 0);
         }
 
-        public static void DeinitializeSlots()
+        public static Slot GetSlotInGrid(Vector2i pos)
         {
-            for (int i = 0; i < slots.Length; i++)
-                slots[i] = null;
+            foreach (Slot slot in slots)
+                if (slot.GridPosition == pos)
+                    return slot;
+
+            return null;
+        }
+
+        public static Slot GetItemSlot(ItemDrop.ItemData item)
+        {
+            foreach (Slot slot in slots)
+                if (slot.Item == item)
+                    return slot;
+
+            return null;
         }
     }
 }

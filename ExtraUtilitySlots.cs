@@ -247,7 +247,7 @@ namespace ExtraSlots
             }
 
             [HarmonyPatch(typeof(Player), nameof(Player.OnInventoryChanged))]
-            private static class Player_OnInventoryChanged_ValidateInventory
+            private static class Player_OnInventoryChanged_ValidateExtraUtilitySlots
             {
                 private static void Postfix(Player __instance)
                 {

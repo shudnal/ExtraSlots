@@ -12,7 +12,7 @@
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
-    <LangVersion>8.0</LangVersion>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -33,6 +33,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="EquipmentAndQuickSlotsCompat.cs" />
     <Compile Include="EquipmentPanel.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="InventoryInteraction.cs" />
@@ -91,6 +92,7 @@
     <Content Include="Libs\ServerSync.dll" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".editorconfig" />
     <None Include="ILRepack.targets" />
   </ItemGroup>
   <ItemGroup>
