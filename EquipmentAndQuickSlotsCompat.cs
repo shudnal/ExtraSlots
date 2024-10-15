@@ -108,7 +108,6 @@ namespace ExtraSlots
                     {
                         playerToLoad = __instance;
                         Load();
-                        playerToLoad.EquipInventoryItems();
                         playerToLoad = null;
                     }
                 }

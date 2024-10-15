@@ -15,15 +15,15 @@ namespace ExtraSlots
 
         private const float tileSpace = 6f;
         private const float tileSize = 64f + tileSpace;
-        private const float interslotSpaceInTiles = 0.5f;
+        private const float interslotSpaceInTiles = 0.25f;
         private static int equipmentSlotsCount = 0;
         private static int quickSlotsCount = 0;
 
-        private static float InventoryWidth => InventoryGui.instance ? InventoryGui.instance.m_player.rect.width : 0;
-        private static float PanelWidth => (Math.Max(quickSlotsCount, SlotPositions.LastEquipmentColumn() + 1) + FoodAmmoSlotsWidthInTiles) * tileSize ;
-        private static float PanelHeight => (quickSlotsCount > 0 || foodSlotsEnabled.Value || ammoSlotsEnabled.Value ? 4f + interslotSpaceInTiles : 3) * tileSize;
+        private static float InventoryPanelWidth => InventoryGui.instance ? InventoryGui.instance.m_player.rect.width : 0;
+        private static float PanelWidth => (Math.Max(quickSlotsCount, SlotPositions.LastEquipmentColumn() + 1) + FoodAmmoSlotsWidthInTiles) * tileSize + tileSpace / 2;
+        private static float PanelHeight => (quickSlotsCount > 0 || miscSlotsEnabled.Value && (foodSlotsEnabled.Value || ammoSlotsEnabled.Value) ? 4f + interslotSpaceInTiles : 3f) * tileSize + tileSpace / 2;
         private static Vector2 PanelOffset => new Vector2(equipmentPanelOffset.Value.x, -equipmentPanelOffset.Value.y);
-        private static Vector2 PanelPosition => new Vector2(InventoryWidth, 0f) + PanelOffset;
+        private static Vector2 PanelPosition => new Vector2(InventoryPanelWidth + 100f, 0f) + PanelOffset;
         private static float FoodAmmoSlotsWidthInTiles => (foodSlotsEnabled.Value || ammoSlotsEnabled.Value ? interslotSpaceInTiles : 0) + (foodSlotsEnabled.Value ? 1f : 0) + (ammoSlotsEnabled.Value ? 1f : 0);
 
         public static RectTransform inventoryDarken = null;
@@ -68,6 +68,7 @@ namespace ExtraSlots
             UpdateSlotsCount();
             UpdateBackground();
             SetSlotsPositions();
+            MarkDirty();
         }
 
         // Runs every frame InventoryGui.UpdateInventory if visible
@@ -170,44 +171,44 @@ namespace ExtraSlots
             // Result in grid size of half tiles
             internal static Vector2 GetEquipmentTileOffset(int i)
             {
-                int x = Column(i) * 2
+                int x = Column(i) * 4
                     // Horizontal offset for rows with insuccifient columns
-                    + (equipmentSlotsAlignment.Value == SlotsAlignment.VerticalTopHorizontalMiddle && Row(i) > LastEquipmentRow() ? 1 : 0)
+                    + (equipmentSlotsAlignment.Value == SlotsAlignment.VerticalTopHorizontalMiddle && Row(i) > LastEquipmentRow() ? 1 : 0) * 2
                     // Offset for equipment positioning in the middle if quickslots amount is more than equipment columns
-                    + Math.Max(quickSlotsCount - 1 - LastEquipmentColumn(), 0);
+                    + Math.Max(quickSlotsCount - 1 - LastEquipmentColumn(), 0) * 2;
 
-                int y = Row(i) * 2
+                int y = Row(i) * 4
                     // Offset for last column and vertical alignment in the middle
-                    + Math.Max(equipmentSlotsAlignment.Value == SlotsAlignment.VerticalMiddleHorizontalLeft && Column(i) == LastEquipmentColumn() ? 2 - LastEquipmentRow() : 0, 0);
+                    + Math.Max(equipmentSlotsAlignment.Value == SlotsAlignment.VerticalMiddleHorizontalLeft && Column(i) == LastEquipmentColumn() ? 2 - LastEquipmentRow() : 0, 0) * 2;
                 return GetSlotPosition(x, y);
             }
             internal static Vector2 GetQuickSlotTileOffset(int i)
             {
-                int x = (i - equipmentSlotsCount) * 2
+                int x = i * 4
                     // Offset for quickslots positioning in the middle if equipment columns is more than quickslots
                     + Math.Max(quickSlotsAlignmentCenter.Value ? LastEquipmentColumn() + 1 - quickSlotsCount : 0, 0);
-                int y = 3 * 2 + 1;
+                int y = 3 * 4 + 1;
                 return GetSlotPosition(x, y);
             }
             internal static Vector2 GetFoodSlotTileOffset(int i)
             {
-                int x = Math.Max(LastEquipmentColumn() + 1, quickSlotsCount) * 2 + 1;
-                int y = i * 2;
+                int x = Math.Max(LastEquipmentColumn() + 1, quickSlotsCount) * 4 + 1;
+                int y = i * 4;
                 return GetSlotPosition(x, y);
             }
             internal static Vector2 GetAmmoSlotTileOffset(int i)
             {
-                int x = Math.Max(LastEquipmentColumn() + 1, quickSlotsCount) * 2 + 1 + (foodSlotsEnabled.Value ? 2 : 0);
-                int y = i * 2;
+                int x = Math.Max(LastEquipmentColumn() + 1, quickSlotsCount) * 4 + 1 + (foodSlotsEnabled.Value ? 4 : 0);
+                int y = i * 4;
                 return GetSlotPosition(x, y);
             }
             internal static Vector2 GetMiscSlotTileOffset(int i)
             {
-                int x = Math.Max(LastEquipmentColumn() + 1, quickSlotsCount) * 2 + i * 2 + 1;
-                int y = 3 * 2 + 1;
+                int x = Math.Max(LastEquipmentColumn() + 1, quickSlotsCount) * 4 + i * 4 + 1;
+                int y = 3 * 4 + 1;
                 return GetSlotPosition(x, y);
             }
-            private static Vector2 GetSlotPosition(int x, int y) => PanelPosition + new Vector2(x * tileSize / 2, -y * tileSize / 2);
+            private static Vector2 GetSlotPosition(int x, int y) => PanelPosition + new Vector2(x * tileSize / 4, -y * tileSize / 4);
         }
         
         // Runs every frame InventoryGui.Update if visible

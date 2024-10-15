@@ -98,7 +98,7 @@ namespace ExtraSlots
             if (!hotBar)
                 return;
 
-            hotBarRect.anchoredPosition = quickSlotsOffset.Value;
+            hotBarRect.anchoredPosition = new Vector2(quickSlotsOffset.Value.x, -quickSlotsOffset.Value.y);
             hotBarRect.localScale = Vector3.one * quickSlotsScale.Value;
         }
 

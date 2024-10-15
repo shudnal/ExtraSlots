@@ -2,6 +2,7 @@
 using static ExtraSlots.Slots;
 using static ExtraSlots.ExtraSlots;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace ExtraSlots
 {
@@ -18,9 +19,18 @@ namespace ExtraSlots
 
             ItemsSlotsValidation.ValidateItems();
         }
-        
+
+        [HarmonyPatch(typeof(Player), nameof(Player.Awake))]
+        private static class Player_Awake_ExcludeRedundantSlots
+        {
+            private static void Postfix(Player __instance)
+            {
+                __instance.m_inventory.m_height = InventoryHeightFull;
+            }
+        }
+
         [HarmonyPatch(typeof(Player), nameof(Player.OnSpawned))]
-        private static class Player_OnSpawned_ExcludeRedundantSlots
+        private static class Player_OnSpawned_UpdateInventoryOnSpawn
         {
             private static void Postfix(Player __instance)
             {
@@ -124,11 +134,14 @@ namespace ExtraSlots
                     __result = slot.GridPosition;
                 }
 
+                if (__result == new Vector2i(-1, -1) && TryFindFreeEquipmentSlotForItem(Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot, out Slot slot1))
+                    __result = slot1.GridPosition;
+
+                if (__result == new Vector2i(-1, -1) && TryFindFreeSlotForItem(Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot, out Slot slot2))
+                    __result = slot2.GridPosition;
+
                 if (__result == new Vector2i(-1, -1))
                     __result = FindEmptyQuickSlot();
-
-                if (__result == new Vector2i(-1, -1) && TryFindFreeSlotForItem(Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot, out Slot slot1))
-                    __result = slot1.GridPosition;
             }
         }
 
@@ -212,6 +225,28 @@ namespace ExtraSlots
                 LogInfo($"AddItem X Y Rerouted {item.m_shared.m_name} from {x},{y} to slot {freeSlot} {freeSlot.GridPosition}");
                 x = freeSlot.GridPosition.x;
                 y = freeSlot.GridPosition.y;
+            }
+
+            [HarmonyPriority(Priority.First)]
+            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, int amount, ref bool __result)
+            {
+                if (__instance == PlayerInventory && Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall && !__result)
+                {
+                    // Prevent item disappearing
+                    ItemDrop.ItemData itemData = item.Clone();
+                    itemData.m_stack = amount;
+
+                    if (TryFindFreeEquipmentSlotForItem(itemData, out Slot slot))
+                        itemData.m_gridPos = slot.GridPosition;
+                    else if (TryFindFreeSlotForItem(itemData, out Slot slot1))
+                        itemData.m_gridPos = slot1.GridPosition;
+                    else
+                        itemData.m_gridPos = new Vector2i(0, InventoryHeightFull); // Put out of grid and item will find its place sooner or later
+
+                    __instance.m_inventory.Add(itemData);
+                    item.m_stack -= amount;
+                    __result = true;
+                }
             }
         }
 
@@ -312,6 +347,56 @@ namespace ExtraSlots
 
             [HarmonyPriority(Priority.First)]
             private static void Postfix() => itemToFindSlot = null;
+        }
+
+        [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(string), typeof(int), typeof(float), typeof(Vector2i), typeof(bool), typeof(int), typeof(int), typeof(long), typeof(string), typeof(Dictionary<string, string>), typeof(int), typeof(bool))]
+        public static class Inventory_AddItem_OnLoad_FindAppropriateSlot
+        {
+            public static bool inCall = false;
+
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(Inventory __instance, string name, ref Vector2i pos, bool equipped)
+            {
+                inCall = true;
+
+                if (__instance != PlayerInventory)
+                    return;
+
+                bool extraInventory = pos.y >= InventoryHeightPlayer;
+                if (!extraInventory && !equipped)
+                    return;
+
+                if (__instance.GetItemAt(pos.x, pos.y) == null)
+                    return;
+
+                ItemDrop component = ObjectDB.instance?.GetItemPrefab(name)?.GetComponent<ItemDrop>();
+                if (component == null)
+                    return;
+
+                ItemDrop.ItemData item = component.m_itemData;
+
+                if (equipped)
+                {
+                    if (TryFindFreeEquipmentSlotForItem(item, out Slot slot1))
+                    {
+                        pos = slot1.GridPosition;
+                        return;
+                    }
+                    else if (TryFindFirstUnequippedSlotForItem(item, out Slot slot))
+                    {
+                        pos = slot.GridPosition;
+                        return;
+                    }
+                }
+                
+                if (TryFindFreeSlotForItem(item, out Slot slot3))
+                    pos = slot3.GridPosition;
+                else
+                    pos = FindEmptyQuickSlot();
+            }
+
+            [HarmonyPriority(Priority.First)]
+            private static void Postfix() => inCall = false;
         }
     }
 }

@@ -93,20 +93,20 @@ namespace ExtraSlots
                 if (PlayerInventory == null || PlayerInventory.m_inventory == null)
                     return;
 
-                PlayerInventory.m_inventory.RemoveAll(item => item == null || item.m_stack <= 0);
-
                 occupiedPositions.Clear();
                 tempItems.Clear();
                 for (int index = 0; index < PlayerInventory.m_inventory.Count; index++)
                 {
                     ItemDrop.ItemData item = PlayerInventory.m_inventory[index];
+                    if (item == null) 
+                        continue;
 
-                    if (Player.m_localPlayer.IsItemEquiped(item) && GetItemSlot(item) == null)
+                    if (Player.m_localPlayer.IsItemEquiped(item) && (GetItemSlot(item) is not Slot slotItem || !slotItem.IsEquipmentSlot))
                     {
                         // Try putting equipped item in slot
-                        if (TryFindFreeSlotForItem(item, out Slot slot))
+                        if (TryFindFreeEquipmentSlotForItem(item, out Slot slot))
                         {
-                            LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into free slot {slot}");
+                            LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into free equipment slot {slot} {slot.GridPosition}");
                             item.m_gridPos = slot.GridPosition;
                             PlayerInventory.Changed();
                         }
@@ -114,22 +114,24 @@ namespace ExtraSlots
                         {
                             if (slotToSwap.IsFree)
                             {
-                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into unequipped slot {slot}");
+                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into unequipped slot {slotToSwap} {slotToSwap.GridPosition}");
                                 item.m_gridPos = slotToSwap.GridPosition;
                             }
                             else
                             {
                                 ItemDrop.ItemData itemToSwap = slotToSwap.Item;
-                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was swapped with unequipped {itemToSwap.m_shared.m_name} into slot {slot}");
-                                (item.m_gridPos, itemToSwap.m_gridPos) = (itemToSwap.m_gridPos, item.m_gridPos);
+                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was swapped with unequipped {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos} into slot {slotToSwap} {slotToSwap.GridPosition}");
+                                itemToSwap.m_gridPos = item.m_gridPos;
+                                item.m_gridPos = slotToSwap.GridPosition;
+                                LogInfo($"{item.m_shared.m_name} {item.m_gridPos} {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos}");
                             }
                             PlayerInventory.Changed();
                         }
                     }
 
-                    if (ItemIsOverlapping(item))
+                    if (ItemIsOverlapping(item) && PlayerInventory.GetOtherItemAt(item.m_gridPos.x, item.m_gridPos.y, item) is ItemDrop.ItemData otherItem)
                     {
-                        LogWarning($"Item {item.m_shared.m_name} {item.m_gridPos} is overlapping other item");
+                        LogWarning($"Item {item.m_shared.m_name} {item.m_gridPos} is overlapping other item {otherItem.m_shared.m_name} {otherItem.m_gridPos}");
                         tempItems.Add(item);
                     }
                     else if (ItemIsOutOfGrid(item))

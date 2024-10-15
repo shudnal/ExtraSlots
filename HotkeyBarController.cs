@@ -22,10 +22,12 @@ namespace ExtraSlots
         {
             public static void Postfix(Hud __instance)
             {
+                QuickSlotsHotBar.UpdateBar();
+
                 HotkeyBars ??= __instance.transform.parent.GetComponentsInChildren<HotkeyBar>().ToList();
 
                 if (Player.m_localPlayer)
-                    if (SelectedHotkeyBarIndex >= 0 && SelectedHotkeyBarIndex < HotkeyBars.Count)
+                    if (SelectedHotkeyBarIndex >= 0 && SelectedHotkeyBarIndex < HotkeyBars.Count)   
                         UpdateHotkeyBarInput(HotkeyBars[SelectedHotkeyBarIndex]);
                     else
                         UpdateInitialHotkeyBarInput();
@@ -126,8 +128,6 @@ namespace ExtraSlots
                 return;
 
             inCall = true;
-
-            QuickSlotsHotBar.UpdateBar();
         }
 
         public static void Postfix(HotkeyBar __instance)

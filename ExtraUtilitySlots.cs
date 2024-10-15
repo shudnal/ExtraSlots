@@ -29,6 +29,7 @@ namespace ExtraSlots
     public static class ExtraUtilitySlots
     {
         private static readonly List<ItemDrop.ItemData> tempItems = new List<ItemDrop.ItemData>();
+        private static readonly HashSet<StatusEffect> tempEffects = new HashSet<StatusEffect>();
 
         public static ItemDrop.ItemData Item1 => Player.m_localPlayer?.GetExtraUtility(0);
 
@@ -72,23 +73,40 @@ namespace ExtraSlots
             [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.UpdateEquipmentStatusEffects))]
             private static class Humanoid_UpdateEquipmentStatusEffects_ExtraUtility
             {
-                private static readonly HashSet<StatusEffect> effects = new HashSet<StatusEffect>();
-
-                private static void Postfix(Humanoid __instance)
+                private static void Prefix(Humanoid __instance)
                 {
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    effects.Clear();
+                    tempEffects.Clear();
 
-                    GetEquippedItems().DoIf(item => (bool)item.m_shared.m_equipStatusEffect, item => effects.Add(item.m_shared.m_equipStatusEffect));
+                    GetEquippedItems().DoIf(item => (bool)item.m_shared.m_equipStatusEffect, item => tempEffects.Add(item.m_shared.m_equipStatusEffect));
 
-                    GetEquippedItems().DoIf(item => __instance.HaveSetEffect(item), item => effects.Add(item.m_shared.m_setStatusEffect));
+                    GetEquippedItems().DoIf(item => __instance.HaveSetEffect(item), item => tempEffects.Add(item.m_shared.m_setStatusEffect));
+                }
 
-                    foreach (StatusEffect item in effects.Where(item => !__instance.m_equipmentStatusEffects.Contains(item)))
+                private static void Postfix(Humanoid __instance)
+                {
+                    foreach (StatusEffect item in tempEffects.Where(item => !__instance.m_equipmentStatusEffects.Contains(item)))
                         __instance.m_seman.AddStatusEffect(item);
 
-                    __instance.m_equipmentStatusEffects.UnionWith(effects);
+                    __instance.m_equipmentStatusEffects.UnionWith(tempEffects);
+
+                    tempEffects.Clear();
+                }
+            }
+
+            [HarmonyPatch(typeof(SEMan), nameof(SEMan.RemoveStatusEffect), typeof(int), typeof(bool))]
+            private static class SEMan_RemoveStatusEffect_ExtraUtilityPreventRemoval
+            {
+                private static void Prefix(SEMan __instance, ref int nameHash)
+                {
+                    if (__instance != CurrentPlayer?.GetSEMan() || tempEffects.Count == 0)
+                        return;
+
+                    foreach (StatusEffect se in tempEffects)
+                        if (se.NameHash() == nameHash)
+                            nameHash = 0;
                 }
             }
 
@@ -115,8 +133,10 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    __state = GetEmptySlot();
-                    if (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility && __instance.m_utilityItem != null && !IsItemEquipped(item) && __state != -1)
+                    if (item == null)
+                        return;
+
+                    if (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility && __instance.m_utilityItem != null && !IsItemEquipped(item) && (__state = GetEmptySlot()) != -1)
                     {
                         item.m_shared.m_itemType = tempType;
                         if (__instance.m_visEquipment && __instance.m_visEquipment.m_isPlayer)
@@ -146,6 +166,28 @@ namespace ExtraSlots
                     }
 
                     __instance.SetupEquipment();
+                }
+            }
+
+            [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.UnequipItem))]
+            public static class Humanoid_UnequipItem_ExtraUtility
+            {
+                private static void Postfix(Humanoid __instance, ItemDrop.ItemData item)
+                {
+                    if (item == null)
+                        return;
+
+                    if (__instance.GetExtraUtility(0) == item)
+                    {
+                        __instance.SetExtraUtility(0, null);
+                        __instance.SetupEquipment();
+                    }
+
+                    if (__instance.GetExtraUtility(1) == item)
+                    {
+                        __instance.SetExtraUtility(1, null);
+                        __instance.SetupEquipment();
+                    }
                 }
             }
 

@@ -12,7 +12,7 @@ namespace ExtraSlots
     [BepInIncompatibility("randyknapp.mods.equipmentandquickslots")]
     [BepInIncompatibility("moreslots")]
     [BepInIncompatibility("randyknapp.mods.auga")]
-    //[BepInDependency("vapok.mods.adventurebackpacks", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("vapok.mods.adventurebackpacks", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("ishid4.mods.betterarchery", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     public class ExtraSlots : BaseUnityPlugin
@@ -108,6 +108,8 @@ namespace ExtraSlots
             Game.isModded = true;
 
             Slots.InitializeSlots();
+
+            EquipmentPanel.ReorderVanillaSlots();
         }
 
         private void LateUpdate()
@@ -142,7 +144,12 @@ namespace ExtraSlots
                                                                          "\nIf both Food and Ammo slots are disabled there will be no Misc slots [Synced with Server]", synchronizedSetting: true);
             ammoSlotsEnabled = config("Extra slots", "Ammo slots", true, "Enable 3 slots for ammo [Synced with Server]", synchronizedSetting: true);
 
-            //EquipmentPanel.UpdatePanel();
+            extraRows.SettingChanged += (s, e) => { Slots.UpdateSlotsGridPosition(); EquipmentPanel.UpdatePanel(); };
+            extraUtilitySlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            foodSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            miscSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            ammoSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
             helmetLabel = config("Extra slots - Labels", "Helmet", "Head", "Text for helmet slot.");
             chestLabel = config("Extra slots - Labels", "Chest", "Chest", "Text for chest slot.");
@@ -155,12 +162,18 @@ namespace ExtraSlots
 
             vanillaSlotsOrder = config("Equipment slots - Panel", "Regular equipment slots order", Slots.VanillaOrder, "Comma separated list defining order of vanilla equipment slots");
             equipmentSlotsAlignment = config("Equipment slots - Panel", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalMiddle, "Equipment slots alignment");
-            equipmentPanelOffset = config("Equipment slots - Panel", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory");
+            equipmentPanelOffset = config("Equipment slots - Panel", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
             quickSlotsAlignmentCenter = config("Equipment slots - Panel", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle of the panel");
 
+            vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
+            equipmentSlotsAlignment.SettingChanged += (s,e) => EquipmentPanel.UpdatePanel();
+            equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+
             quickSlotsEnabled = config("Quick slots - Panel", "Enabled", defaultValue: true, "Enable hotbar with quick slots");
-            quickSlotsOffset = config("Quick slots - Panel", "Offset", defaultValue: new Vector2(216f, 150f), "On screen position of quickslots hotbar panel");
+            quickSlotsOffset = config("Quick slots - Panel", "Offset", defaultValue: new Vector2(230f, 923f), "On screen position of quickslots hotbar panel");
             quickSlotsScale = config("Quick slots - Panel", "Scale", defaultValue: 1f, "Relative size");
+
+            quickSlotsEnabled.SettingChanged += (s, e) => QuickSlotsHotBar.MarkDirty();
 
             ammoSlotHotKey1 = config("Hotkeys", "Ammo 1", new KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
             ammoSlotHotKey2 = config("Hotkeys", "Ammo 2", new KeyboardShortcut(KeyCode.Alpha2, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
