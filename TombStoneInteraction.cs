@@ -6,6 +6,22 @@ namespace ExtraSlots
 {
     internal static class TombStoneInteraction
     {
+        private const string megingjordName = "BeltStrength";
+        
+        [HarmonyPatch(typeof(TombStone), nameof(TombStone.OnTakeAllSuccess))]
+        private static class TombStone_OnTakeAllSuccess_CheckMegingjordAutoEquip
+        {
+            private static void Prefix()
+            {
+                if (PlayerInventory == null)
+                    return;
+
+                ItemDrop.ItemData belt = PlayerInventory.GetItem(megingjordName, isPrefabName: true);
+                if (belt != null && !CurrentPlayer.IsItemEquiped(belt))
+                    CurrentPlayer.EquipItem(belt);
+            }
+        }
+
         [HarmonyPatch(typeof(Container), nameof(Container.Awake))]
         private static class Container_Awake_TombstoneContainerHeightAdjustment
         {
@@ -51,13 +67,22 @@ namespace ExtraSlots
         [HarmonyPatch(typeof(TombStone), nameof(TombStone.EasyFitInInventory))]
         private static class TombStone_EasyFitInInventory_HeightAdjustment
         {
-            [HarmonyPriority(Priority.First)]
-            private static void Postfix(ref bool __result)
-            {
-                if (__result)
-                    return;
+            private static float megingjordCarryWeight = 0f;
 
-                // TODO 
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(TombStone __instance, ref bool __state)
+            {
+                megingjordCarryWeight = (ObjectDB.instance?.GetStatusEffect(megingjordName.GetStableHashCode()) as SE_Stats)?.m_addMaxCarryWeight ?? 150f;
+
+                __state = __instance.m_container.GetInventory().ContainsItemByName(megingjordName);
+                if (__state)
+                    Player.m_localPlayer.m_maxCarryWeight += megingjordCarryWeight;
+            }
+
+            private static void Postfix(bool __state)
+            {
+                if (__state)
+                    Player.m_localPlayer.m_maxCarryWeight -= megingjordCarryWeight;
             }
         }
 

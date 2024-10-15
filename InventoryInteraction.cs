@@ -254,15 +254,27 @@ namespace ExtraSlots
         private static class Inventory_CanAddItem_ItemData_TryFindAppropriateExtraSlot
         {
             [HarmonyPriority(Priority.First)]
-            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, ref bool __result)
+            private static void Prefix(Inventory __instance, ref bool __state)
             {
                 if (__instance != PlayerInventory)
                     return;
 
+                __instance.m_height = InventoryHeightPlayer;
+                __state = true;
+            }
+
+            [HarmonyPriority(Priority.First)]
+            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, int stack, ref bool __result)
+            {
+                if (__instance != PlayerInventory)
+                    return;
+
+                __instance.m_height = InventoryHeightFull;
+
                 if (__result)
                     return;
 
-                __result = TryFindFreeSlotForItem(item, out _);
+                __result = GetEmptyQuickSlots() * item.m_shared.m_maxStackSize >= stack || TryFindFreeSlotForItem(item, out _);
             }
         }
 
@@ -397,6 +409,18 @@ namespace ExtraSlots
 
             [HarmonyPriority(Priority.First)]
             private static void Postfix() => inCall = false;
+        }
+
+        [HarmonyPatch(typeof(Inventory), nameof(Inventory.MoveInventoryToGrave))]
+        private static class Inventory_MoveInventoryToGrave_UpdateGraveInventory
+        {
+            private static void Prefix(Inventory __instance, Inventory original)
+            {
+                if (original != PlayerInventory)
+                    return;
+
+                original.m_height = InventoryHeightFull;
+            }
         }
     }
 }
