@@ -211,7 +211,22 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    GetEquippedItems().Do(item => __instance.UnequipItem(item, triggerEquipEffects: false));
+                    bool setupEq = Item1 != null || Item2 != null;
+
+                    if (Item1 != null)
+                    {
+                        Item1.m_equipped = false;
+                        Player.m_localPlayer.SetExtraUtility(0, null);
+                    }
+
+                    if (Item2 != null)
+                    {
+                        Item2.m_equipped = false;
+                        Player.m_localPlayer.SetExtraUtility(1, null);
+                    }
+
+                    if (setupEq)
+                        Player.m_localPlayer.SetupEquipment();
                 }
             }
 
