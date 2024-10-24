@@ -120,7 +120,7 @@ namespace ExtraSlots
 
         internal static void SetSlotLabel(Transform binding, Slot slot)
         {
-            if (!binding)
+            if (!binding && !slot.IsActive)
                 return;
 
             // Make component size of parent to let TMP_Text do its job on text positioning
@@ -137,12 +137,12 @@ namespace ExtraSlots
             textComp.text = slot.Name;
             textComp.enabled = true;
             textComp.overflowMode = TextOverflowModes.Overflow;
-            textComp.fontSizeMin = slot.IsHotkeySlot ? quickSlotLabelFontSize.Value.x : equipmentSlotLabelFontSize.Value.x;
-            textComp.fontSizeMax = slot.IsHotkeySlot ? quickSlotLabelFontSize.Value.y : equipmentSlotLabelFontSize.Value.y;
-            textComp.color = slot.IsHotkeySlot ? quickSlotLabelFontColor.Value : equipmentSlotLabelFontColor.Value;
-            textComp.margin = slot.IsHotkeySlot ? quickSlotLabelMargin.Value : equipmentSlotLabelMargin.Value;
-            textComp.textWrappingMode = slot.IsHotkeySlot ? quickSlotLabelWrappingMode.Value : equipmentSlotLabelWrappingMode.Value;
-            textComp.horizontalAlignment = slot.IsHotkeySlot ? quickSlotLabelAlignment.Value : equipmentSlotLabelAlignment.Value;
+            textComp.fontSizeMin = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelFontSize.Value.x : quickSlotLabelFontSize.Value.x) : equipmentSlotLabelFontSize.Value.x;
+            textComp.fontSizeMax = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelFontSize.Value.y : quickSlotLabelFontSize.Value.y) : equipmentSlotLabelFontSize.Value.y;
+            textComp.color = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelFontColor.Value : quickSlotLabelFontColor.Value) : equipmentSlotLabelFontColor.Value;
+            textComp.margin = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelMargin.Value : quickSlotLabelMargin.Value) : equipmentSlotLabelMargin.Value;
+            textComp.textWrappingMode = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelWrappingMode.Value : quickSlotLabelWrappingMode.Value) : equipmentSlotLabelWrappingMode.Value;
+            textComp.horizontalAlignment = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelAlignment.Value : quickSlotLabelAlignment.Value) : equipmentSlotLabelAlignment.Value;
             textComp.verticalAlignment = VerticalAlignmentOptions.Top;
         }
 

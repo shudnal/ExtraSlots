@@ -37,6 +37,8 @@
     <Compile Include="EquipmentPanel.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="InventoryInteraction.cs" />
+    <Compile Include="AmmoHotBar.cs" />
+    <Compile Include="PreventSimilarHotkeys.cs" />
     <Compile Include="TombStoneInteraction.cs" />
     <Compile Include="QuickSlotsHotBar.cs" />
     <Compile Include="ExtraUtilitySlots.cs" />
@@ -69,6 +71,10 @@
     <Reference Include="System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\stable\System.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.InputSystem, Version=1.10.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\beta\Unity.InputSystem.dll</HintPath>
     </Reference>
     <Reference Include="Unity.TextMeshPro, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

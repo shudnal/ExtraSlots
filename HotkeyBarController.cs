@@ -23,6 +23,7 @@ namespace ExtraSlots
             public static void Postfix(Hud __instance)
             {
                 QuickSlotsHotBar.UpdateBar();
+                AmmoSlotsHotBar.UpdateBar();
 
                 HotkeyBars ??= __instance.transform.parent.GetComponentsInChildren<HotkeyBar>().ToList();
 
@@ -66,6 +67,8 @@ namespace ExtraSlots
                     if (ZInput.GetButtonDown("JoyDPadUp"))
                         if (hotkeyBar.name == QuickSlotsHotBar.barName)
                             player.UseItem(null, QuickSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), false);
+                        else if (hotkeyBar.name == AmmoSlotsHotBar.barName)
+                            player.UseItem(null, AmmoSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), false);
                         else
                             player.UseHotbarItem(hotkeyBar.m_selected + 1);
                 }
@@ -118,14 +121,17 @@ namespace ExtraSlots
     }
 
     [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.UpdateIcons))]
-    public static class HotkeyBar_UpdateIcons_QuickSlotsBar
+    public static class HotkeyBar_UpdateIcons_QuickBars
     {
         public static bool inCall;
+        public static string barName;
         
         public static void Prefix(HotkeyBar __instance)
         {
-            if (__instance.name != QuickSlotsHotBar.barName)
+            if (__instance.name != QuickSlotsHotBar.barName && __instance.name != AmmoSlotsHotBar.barName)
                 return;
+
+            barName = __instance.name;
 
             inCall = true;
         }
@@ -138,7 +144,10 @@ namespace ExtraSlots
             inCall = false;
 
             for (int index = 0; index < __instance.m_elements.Count; index++)
-                EquipmentPanel.SetSlotLabel(__instance.m_elements[index].m_go.transform.Find("binding"), slots[index]);
+                if (__instance.name == QuickSlotsHotBar.barName)
+                    EquipmentPanel.SetSlotLabel(__instance.m_elements[index].m_go.transform.Find("binding"), slots[index]);
+                else if (__instance.name == AmmoSlotsHotBar.barName)
+                    EquipmentPanel.SetSlotLabel(__instance.m_elements[index].m_go.transform.Find("binding"), slots[index + 8]);
         }
     }
 
@@ -147,10 +156,13 @@ namespace ExtraSlots
     {
         public static void Postfix(Inventory __instance, List<ItemDrop.ItemData> bound)
         {
-            if (__instance == PlayerInventory && HotkeyBar_UpdateIcons_QuickSlotsBar.inCall)
+            if (__instance == PlayerInventory && HotkeyBar_UpdateIcons_QuickBars.inCall)
             {
                 bound.Clear();
-                QuickSlotsHotBar.GetItems(bound);
+                if (HotkeyBar_UpdateIcons_QuickBars.barName == QuickSlotsHotBar.barName)
+                    QuickSlotsHotBar.GetItems(bound);
+                else if (HotkeyBar_UpdateIcons_QuickBars.barName == AmmoSlotsHotBar.barName)
+                    AmmoSlotsHotBar.GetItems(bound);
             }
         }
     }
@@ -158,12 +170,22 @@ namespace ExtraSlots
     [HarmonyPatch(typeof(Hud), nameof(Hud.Awake))]
     public static class Hud_Awake_CreateQuickSlotsBar
     {
-        public static void Postfix() => QuickSlotsHotBar.MarkDirty();
+        public static void Postfix()
+        {
+            QuickSlotsHotBar.MarkDirty();
+            AmmoSlotsHotBar.MarkDirty();
+        }
     }
 
     [HarmonyPatch(typeof(Hud), nameof(Hud.OnDestroy))]
     public static class Hud_OnDestroy_ClearQuickSlotBar
     {
-        public static void Postfix() => QuickSlotsHotBar.ClearBar();
+        public static void Postfix()
+        {
+            QuickSlotsHotBar.ClearBar();
+            AmmoSlotsHotBar.ClearBar();
+        }
     }
+
+
 }

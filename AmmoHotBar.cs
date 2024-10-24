@@ -7,15 +7,15 @@ using static ExtraSlots.Slots;
 
 namespace ExtraSlots
 {
-    public static class QuickSlotsHotBar
+    public static class AmmoSlotsHotBar
     {
-        public const string barName = "ExtraSlotsQuickSlotsHotBar";
+        public const string barName = "ExtraSlotsAmmoHotBar";
         public static bool isDirty = true;
         private static HotkeyBar hotBar = null;
         private static RectTransform hotBarRect = null; 
-        private static Slot[] quickSlots;
+        private static Slot[] ammoSlots = new Slot[0];
 
-        internal static void UpdateQuickSlots() => quickSlots = GetQuickSlots();
+        internal static void UpdateAmmoSlots() => ammoSlots = GetAmmoSlots();
 
         public static void GetItems(List<ItemDrop.ItemData> bound)
         {
@@ -27,7 +27,7 @@ namespace ExtraSlots
 
         public static List<ItemDrop.ItemData> GetItems()
         {
-            return quickSlots.Where(slot => slot.IsActive).Select(slot => slot.Item).Where(item => item != null).ToList();
+            return ammoSlots.Where(slot => slot.IsActive).Select(slot => slot.Item).Where(item => item != null).ToList();
         }
 
         public static ItemDrop.ItemData GetItemInSlot(int slotIndex) => slots[slotIndex].Item;
@@ -48,9 +48,9 @@ namespace ExtraSlots
             if (!isDirty)
                 return;
 
-            if (quickSlotsHotBarEnabled.Value && hotBarRect == null)
+            if (ammoSlotsHotBarEnabled.Value && hotBarRect == null)
                 CreateBar();
-            else if (!quickSlotsHotBarEnabled.Value && hotBarRect != null)
+            else if (!ammoSlotsHotBarEnabled.Value && hotBarRect != null)
                 ClearBar();
 
             if (hotBar)
@@ -81,15 +81,15 @@ namespace ExtraSlots
             if (!Player.m_localPlayer.TakeInput())
                 return;
 
-            if (quickSlots.Length == 0)
+            if (ammoSlots.Length == 0)
                 return;
 
             int hotkey = 0;
-            while (!quickSlots[hotkey].IsShortcutDown())
-                if (++hotkey == quickSlots.Length)
+            while (!ammoSlots[hotkey].IsShortcutDown())
+                if (++hotkey == ammoSlots.Length)
                     return;
 
-            Player.m_localPlayer.UseItem(PlayerInventory, quickSlots[hotkey].Item, fromInventoryGui: false);
+            Player.m_localPlayer.UseItem(PlayerInventory, ammoSlots[hotkey].Item, fromInventoryGui: false);
         }
 
         // Runs every frame Hud.Update
@@ -98,12 +98,12 @@ namespace ExtraSlots
             if (!hotBar)
                 return;
 
-            hotBarRect.anchoredPosition = new Vector2(quickSlotsHotBarOffset.Value.x, -quickSlotsHotBarOffset.Value.y);
-            hotBarRect.localScale = Vector3.one * quickSlotsHotBarScale.Value;
+            hotBarRect.anchoredPosition = new Vector2(ammoSlotsHotBarOffset.Value.x, -ammoSlotsHotBarOffset.Value.y);
+            hotBarRect.localScale = Vector3.one * ammoSlotsHotBarScale.Value;
         }
 
         [HarmonyPatch(typeof(Player), nameof(Player.Update))]
-        private static class Player_Update_UpdateQuickSlotsUse
+        private static class Player_Update_UpdateammoSlotsUse
         {
             private static void Postfix(Player __instance)
             {
@@ -115,7 +115,7 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(Hud), nameof(Hud.Update))]
-        private static class Hud_Update_UpdateQuickSlotsPosition
+        private static class Hud_Update_UpdateammoSlotsPosition
         {
             private static void Postfix() => UpdatePosition();
         }

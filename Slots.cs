@@ -55,6 +55,9 @@ namespace ExtraSlots
             public bool IsHotkeySlot => _getShortcut != null;
             public bool IsEquipmentSlot => _index > 13;
             public bool IsQuickSlot => _index < 6;
+            public bool IsMiscSlot => 6 <= _index && _index <= 7;
+            public bool IsAmmoSlot => 8 <= _index && _index <= 10;
+            public bool IsFoodSlot => 11 <= _index && _index <= 13;
             public bool IsCustomSlot => _index > 20;
 
             internal void SetPosition(Vector2 newPosition)
@@ -86,6 +89,8 @@ namespace ExtraSlots
 
             public bool IsShortcutDown() => IsActive && _getShortcut != null && Player.m_localPlayer != null && Player.m_localPlayer.TakeInput() && IsShortcutDown(_getShortcut());
 
+            public KeyboardShortcut GetShortcut() => _getShortcut == null ? KeyboardShortcut.Empty : _getShortcut();
+
             public ItemDrop.ItemData Item => PlayerInventory == null || _gridPos == emptyPosition ? null : PlayerInventory.GetItemAt(_gridPos.x, _gridPos.y);
             public bool IsFree => Item == null;
 
@@ -114,7 +119,6 @@ namespace ExtraSlots
 
             public override string ToString() => (Name == "" ? ID : Name) + (IsActive ? "" : " (inactive)");
 
-            //private static bool IsShortcutDown(KeyboardShortcut shortcut) => shortcut.IsDown() || UnityInput.Current.GetKeyDown(shortcut.MainKey) && !shortcut.Modifiers.Any();
             private static bool IsShortcutDown(KeyboardShortcut shortcut) => shortcut.MainKey != KeyCode.None && ZInput.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(key => ZInput.GetKey(key));
         }
 
@@ -156,9 +160,9 @@ namespace ExtraSlots
             return equipment.ToArray();
         }
         public static Slot[] GetQuickSlots() => Array.FindAll(slots, slot => slot.IsQuickSlot);
-        public static Slot[] GetFoodSlots() => Array.FindAll(slots, slot => slot.ID.StartsWith(foodSlotID));
-        public static Slot[] GetAmmoSlots() => Array.FindAll(slots, slot => slot.ID.StartsWith(ammoSlotID));
-        public static Slot[] GetMiscSlots() => Array.FindAll(slots, slot => slot.ID.StartsWith(miscSlotID));
+        public static Slot[] GetFoodSlots() => Array.FindAll(slots, slot => slot.IsFoodSlot);
+        public static Slot[] GetAmmoSlots() => Array.FindAll(slots, slot => slot.IsAmmoSlot);
+        public static Slot[] GetMiscSlots() => Array.FindAll(slots, slot => slot.IsMiscSlot);
 
         public static bool TryFindFreeSlotForItem(ItemDrop.ItemData item, out Slot slot)
         {
@@ -329,6 +333,7 @@ namespace ExtraSlots
             UpdateSlotsGridPosition();
 
             QuickSlotsHotBar.UpdateQuickSlots();
+            AmmoSlotsHotBar.UpdateAmmoSlots();
             EquipmentPanel.UpdateSlotsCount();
 
             void AddSlot(string id, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive)

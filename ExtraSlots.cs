@@ -51,9 +51,9 @@ namespace ExtraSlots
         public static ConfigEntry<Vector2> equipmentPanelOffset;
         public static ConfigEntry<bool> quickSlotsAlignmentCenter;
 
-        public static ConfigEntry<bool> quickSlotsEnabled;
-        public static ConfigEntry<Vector2> quickSlotsOffset;
-        public static ConfigEntry<float> quickSlotsScale;
+        public static ConfigEntry<bool> ammoSlotsHotBarEnabled;
+        public static ConfigEntry<Vector2> ammoSlotsHotBarOffset;
+        public static ConfigEntry<float> ammoSlotsHotBarScale;
 
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey2;
@@ -62,6 +62,10 @@ namespace ExtraSlots
         public static ConfigEntry<string> ammoSlotHotKey1Text;
         public static ConfigEntry<string> ammoSlotHotKey2Text;
         public static ConfigEntry<string> ammoSlotHotKey3Text;
+
+        public static ConfigEntry<bool> quickSlotsHotBarEnabled;
+        public static ConfigEntry<Vector2> quickSlotsHotBarOffset;
+        public static ConfigEntry<float> quickSlotsHotBarScale;
 
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey2;
@@ -88,6 +92,12 @@ namespace ExtraSlots
         public static ConfigEntry<Vector4> quickSlotLabelMargin;
         public static ConfigEntry<Vector2> quickSlotLabelFontSize;
         public static ConfigEntry<Color> quickSlotLabelFontColor;
+
+        public static ConfigEntry<TMPro.HorizontalAlignmentOptions> ammoSlotLabelAlignment;
+        public static ConfigEntry<TMPro.TextWrappingModes> ammoSlotLabelWrappingMode;
+        public static ConfigEntry<Vector4> ammoSlotLabelMargin;
+        public static ConfigEntry<Vector2> ammoSlotLabelFontSize;
+        public static ConfigEntry<Color> ammoSlotLabelFontColor;
 
         public enum SlotsAlignment
         {
@@ -160,48 +170,65 @@ namespace ExtraSlots
             miscLabel = config("Extra slots - Labels", "Misc", "Misc", "Text for misc slot.");
             ammoLabel = config("Extra slots - Labels", "Ammo", "Ammo", "Text for ammo slot.");
 
-            vanillaSlotsOrder = config("Equipment slots - Panel", "Regular equipment slots order", Slots.VanillaOrder, "Comma separated list defining order of vanilla equipment slots");
-            equipmentSlotsAlignment = config("Equipment slots - Panel", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalMiddle, "Equipment slots alignment");
-            equipmentPanelOffset = config("Equipment slots - Panel", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
-            quickSlotsAlignmentCenter = config("Equipment slots - Panel", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle of the panel");
+            vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder, "Comma separated list defining order of vanilla equipment slots");
+            equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalMiddle, "Equipment slots alignment");
+            equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
+            quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle of the panel");
 
             vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
-            equipmentSlotsAlignment.SettingChanged += (s,e) => EquipmentPanel.UpdatePanel();
+            equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
-            quickSlotsEnabled = config("Quick slots - Panel", "Enabled", defaultValue: true, "Enable hotbar with quick slots");
-            quickSlotsOffset = config("Quick slots - Panel", "Offset", defaultValue: new Vector2(230f, 923f), "On screen position of quickslots hotbar panel");
-            quickSlotsScale = config("Quick slots - Panel", "Scale", defaultValue: 1f, "Relative size");
+            ammoSlotsHotBarEnabled = config("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots");
+            ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 850f), "On screen position of ammo slots hotbar panel");
+            ammoSlotsHotBarScale = config("Panels - Ammo slots", "Scale", defaultValue: 1f, "Relative size");
 
-            quickSlotsEnabled.SettingChanged += (s, e) => QuickSlotsHotBar.MarkDirty();
+            ammoSlotsHotBarEnabled.SettingChanged += (s, e) => AmmoSlotsHotBar.MarkDirty();
 
             ammoSlotHotKey1 = config("Hotkeys", "Ammo 1", new KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
             ammoSlotHotKey2 = config("Hotkeys", "Ammo 2", new KeyboardShortcut(KeyCode.Alpha2, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
             ammoSlotHotKey3 = config("Hotkeys", "Ammo 3", new KeyboardShortcut(KeyCode.Alpha3, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
 
-            ammoSlotHotKey1Text = config("Hotkeys", "Ammo 1 Text", "", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
-            ammoSlotHotKey2Text = config("Hotkeys", "Ammo 2 Text", "", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
-            ammoSlotHotKey3Text = config("Hotkeys", "Ammo 3 Text", "", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
+            ammoSlotHotKey1Text = config("Hotkeys", "Ammo 1 Text", "Alt + 1", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
+            ammoSlotHotKey2Text = config("Hotkeys", "Ammo 2 Text", "Alt + 2", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
+            ammoSlotHotKey3Text = config("Hotkeys", "Ammo 3 Text", "Alt + 3", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
 
-            quickSlotHotKey1 = config("Hotkeys", "Quickslot 1", new KeyboardShortcut(KeyCode.Z), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
-            quickSlotHotKey2 = config("Hotkeys", "Quickslot 2", new KeyboardShortcut(KeyCode.X), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
-            quickSlotHotKey3 = config("Hotkeys", "Quickslot 3", new KeyboardShortcut(KeyCode.C), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
-            quickSlotHotKey4 = config("Hotkeys", "Quickslot 4", new KeyboardShortcut(KeyCode.V), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
+            ammoSlotHotKey1.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
+            ammoSlotHotKey2.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
+            ammoSlotHotKey3.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
+
+            quickSlotsHotBarEnabled = config("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots");
+            quickSlotsHotBarOffset = config("Panels - Quick slots", "Offset", defaultValue: new Vector2(230f, 923f), "On screen position of quick slots hotbar panel");
+            quickSlotsHotBarScale = config("Panels - Quick slots", "Scale", defaultValue: 1f, "Relative size");
+
+            quickSlotsHotBarEnabled.SettingChanged += (s, e) => QuickSlotsHotBar.MarkDirty();
+
+            quickSlotHotKey1 = config("Hotkeys", "Quickslot 1", new KeyboardShortcut(KeyCode.Z, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
+            quickSlotHotKey2 = config("Hotkeys", "Quickslot 2", new KeyboardShortcut(KeyCode.X, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
+            quickSlotHotKey3 = config("Hotkeys", "Quickslot 3", new KeyboardShortcut(KeyCode.C, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
+            quickSlotHotKey4 = config("Hotkeys", "Quickslot 4", new KeyboardShortcut(KeyCode.V, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
             quickSlotHotKey5 = config("Hotkeys", "Quickslot 5", new KeyboardShortcut(KeyCode.B), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
             quickSlotHotKey6 = config("Hotkeys", "Quickslot 6", new KeyboardShortcut(KeyCode.N), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
 
-            quickSlotHotKey1Text = config("Hotkeys", "Quickslot 1 Text", "", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
-            quickSlotHotKey2Text = config("Hotkeys", "Quickslot 2 Text", "", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
-            quickSlotHotKey3Text = config("Hotkeys", "Quickslot 3 Text", "", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
-            quickSlotHotKey4Text = config("Hotkeys", "Quickslot 4 Text", "", "Hotkey 4 Display Text. Leave blank to use the hotkey itself.");
+            quickSlotHotKey1.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
+            quickSlotHotKey2.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
+            quickSlotHotKey3.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
+            quickSlotHotKey4.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
+            quickSlotHotKey5.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
+            quickSlotHotKey6.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
+
+            quickSlotHotKey1Text = config("Hotkeys", "Quickslot 1 Text", "Alt + Z", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
+            quickSlotHotKey2Text = config("Hotkeys", "Quickslot 2 Text", "Alt + X", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
+            quickSlotHotKey3Text = config("Hotkeys", "Quickslot 3 Text", "Alt + C", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
+            quickSlotHotKey4Text = config("Hotkeys", "Quickslot 4 Text", "Alt + V", "Hotkey 4 Display Text. Leave blank to use the hotkey itself.");
             quickSlotHotKey5Text = config("Hotkeys", "Quickslot 5 Text", "", "Hotkey 5 Display Text. Leave blank to use the hotkey itself.");
             quickSlotHotKey6Text = config("Hotkeys", "Quickslot 6 Text", "", "Hotkey 6 Display Text. Leave blank to use the hotkey itself.");
 
-            equipmentSlotLabelAlignment = config("Equipment slots - Panel - Label style", "Horizontal alignment", TMPro.HorizontalAlignmentOptions.Left, "Horizontal alignment of text component in equipment slot label");
-            equipmentSlotLabelWrappingMode = config("Equipment slots - Panel - Label style", "Text wrapping mode", TMPro.TextWrappingModes.Normal, "Size of text component in slot label");
-            equipmentSlotLabelMargin = config("Equipment slots - Panel - Label style", "Margin", new Vector4(5f, 0f, 5f, 0f), "Margin: left top right bottom");
-            equipmentSlotLabelFontSize = config("Equipment slots - Panel - Label style", "Font size", new Vector2(12f, 16f), "Min and Max text size in slot label");
-            equipmentSlotLabelFontColor = config("Equipment slots - Panel - Label style", "Font color", new Color(0.596f, 0.816f, 1f), "Text color in slot label");
+            equipmentSlotLabelAlignment = config("Panels - Equipment slots - Label style", "Horizontal alignment", TMPro.HorizontalAlignmentOptions.Left, "Horizontal alignment of text component in equipment slot label");
+            equipmentSlotLabelWrappingMode = config("Panels - Equipment slots - Label style", "Text wrapping mode", TMPro.TextWrappingModes.Normal, "Size of text component in slot label");
+            equipmentSlotLabelMargin = config("Panels - Equipment slots - Label style", "Margin", new Vector4(5f, 0f, 5f, 0f), "Margin: left top right bottom");
+            equipmentSlotLabelFontSize = config("Panels - Equipment slots - Label style", "Font size", new Vector2(10f, 14f), "Min and Max text size in slot label");
+            equipmentSlotLabelFontColor = config("Panels - Equipment slots - Label style", "Font color", new Color(0.596f, 0.816f, 1f), "Text color in slot label");
 
             equipmentSlotLabelAlignment.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             equipmentSlotLabelWrappingMode.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
@@ -209,17 +236,29 @@ namespace ExtraSlots
             equipmentSlotLabelFontSize.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             equipmentSlotLabelFontColor.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
 
-            quickSlotLabelAlignment = config("Quick slots - Panel - Label style", "Horizontal alignment", TMPro.HorizontalAlignmentOptions.Left, "Horizontal alignment of text component in slot label");
-            quickSlotLabelWrappingMode = config("Quick slots - Panel - Label style", "Text wrapping mode", TMPro.TextWrappingModes.Normal, "Size of text component in slot label");
-            quickSlotLabelMargin = config("Quick slots - Panel - Label style", "Margin", new Vector4(5f, 0f, 5f, 0f), "Margin: left top right bottom");
-            quickSlotLabelFontSize = config("Quick slots - Panel - Label style", "Font size", new Vector2(12f, 16f), "Min and Max text size in slot label");
-            quickSlotLabelFontColor = config("Quick slots - Panel - Label style", "Font color", new Color(0.596f, 0.816f, 1f), "Text color in slot label");
+            quickSlotLabelAlignment = config("Panels - Quick slots - Label style", "Horizontal alignment", TMPro.HorizontalAlignmentOptions.Left, "Horizontal alignment of text component in slot label");
+            quickSlotLabelWrappingMode = config("Panels - Quick slots - Label style", "Text wrapping mode", TMPro.TextWrappingModes.Normal, "Size of text component in slot label");
+            quickSlotLabelMargin = config("Panels - Quick slots - Label style", "Margin", new Vector4(3f, 0f, 3f, 0f), "Margin: left top right bottom");
+            quickSlotLabelFontSize = config("Panels - Quick slots - Label style", "Font size", new Vector2(10f, 14f), "Min and Max text size in slot label");
+            quickSlotLabelFontColor = config("Panels - Quick slots - Label style", "Font color", new Color(0.596f, 0.816f, 1f), "Text color in slot label");
 
             quickSlotLabelAlignment.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             quickSlotLabelWrappingMode.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             quickSlotLabelMargin.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             quickSlotLabelFontSize.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             quickSlotLabelFontColor.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
+
+            ammoSlotLabelAlignment = config("Panels - Ammo slots - Label style", "Horizontal alignment", TMPro.HorizontalAlignmentOptions.Left, "Horizontal alignment of text component in slot label");
+            ammoSlotLabelWrappingMode = config("Panels - Ammo slots - Label style", "Text wrapping mode", TMPro.TextWrappingModes.Normal, "Size of text component in slot label");
+            ammoSlotLabelMargin = config("Panels - Ammo slots - Label style", "Margin", new Vector4(3f, 0f, 3f, 0f), "Margin: left top right bottom");
+            ammoSlotLabelFontSize = config("Panels - Ammo slots - Label style", "Font size", new Vector2(10f, 14f), "Min and Max text size in slot label");
+            ammoSlotLabelFontColor = config("Panels - Ammo slots - Label style", "Font color", new Color(0.596f, 0.816f, 1f), "Text color in slot label");
+
+            ammoSlotLabelAlignment.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
+            ammoSlotLabelWrappingMode.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
+            ammoSlotLabelMargin.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
+            ammoSlotLabelFontSize.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
+            ammoSlotLabelFontColor.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
         }
 
         public static void LogInfo(object data)
