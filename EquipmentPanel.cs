@@ -34,6 +34,11 @@ namespace ExtraSlots
 
         private static bool isDirty = true;
 
+        private static Color normalColor = Color.clear;
+        private static Color highlightedColor = Color.clear;
+        private static Color normalColorUnfit = Color.clear;
+        private static Color highlightedColorUnfit = Color.clear;
+
         public static void MarkDirty() => isDirty = true;
 
         internal static void UpdateSlotsCount()
@@ -116,11 +121,12 @@ namespace ExtraSlots
             transform.gameObject.SetActive(slot.IsActive);
             transform.GetComponent<RectTransform>().anchoredPosition = slot.Position;
             SetSlotLabel(transform.Find("binding"), slot);
+            SetSlotColor(transform.GetComponent<Button>(), slot);
         }
 
         internal static void SetSlotLabel(Transform binding, Slot slot)
         {
-            if (!binding && !slot.IsActive)
+            if (!binding || !slot.IsActive)
                 return;
 
             // Make component size of parent to let TMP_Text do its job on text positioning
@@ -144,6 +150,29 @@ namespace ExtraSlots
             textComp.textWrappingMode = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelWrappingMode.Value : quickSlotLabelWrappingMode.Value) : equipmentSlotLabelWrappingMode.Value;
             textComp.horizontalAlignment = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelAlignment.Value : quickSlotLabelAlignment.Value) : equipmentSlotLabelAlignment.Value;
             textComp.verticalAlignment = VerticalAlignmentOptions.Top;
+        }
+
+        internal static void SetSlotColor(Button button, Slot slot)
+        {
+            if (!button || !slot.IsActive || InventoryGui.instance == null)
+                return;
+
+            if (normalColor == Color.clear)
+                normalColor = button.colors.normalColor;
+
+            if (highlightedColor == Color.clear)
+                highlightedColor = button.colors.highlightedColor;
+
+            if (normalColorUnfit == Color.clear)
+                normalColorUnfit = button.colors.normalColor + new Color(0.3f, 0f, 0f, 0.1f);
+
+            if (highlightedColorUnfit == Color.clear)
+                highlightedColorUnfit = button.colors.highlightedColor + new Color(0.3f, 0f, 0f, 0.1f);
+
+            ColorBlock buttonColors = button.colors;
+            buttonColors.normalColor = InventoryGui.instance.m_dragItem != null && !slot.ItemFit(InventoryGui.instance.m_dragItem) ? normalColorUnfit : normalColor;
+            buttonColors.highlightedColor = InventoryGui.instance.m_dragItem != null && !slot.ItemFit(InventoryGui.instance.m_dragItem) ? highlightedColorUnfit : highlightedColor;
+            button.colors = buttonColors;
         }
 
         internal static void SetSlotsPositions()
@@ -287,7 +316,7 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Update))]
-        private static class InventoryGuiUpdatePatch
+        private static class InventoryGui_Update_UpdateEquipmentPanel
         {
             private static void Postfix()
             {
@@ -302,7 +331,7 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateInventory))]
-        internal static class UpdateInventory_Patch
+        internal static class InventoryGui_UpdateInventory_UpdateSlotsOnDirty
         {
             private static void Prefix(InventoryGui __instance, ref int __state)
             {
@@ -316,6 +345,12 @@ namespace ExtraSlots
 
                 UpdateInventorySlots();
             }
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.SetupDragItem))]
+        private static class InventoryGui_SetupDragItem_UpdateSlotsOnItemDrag
+        {
+            private static void Postfix() => MarkDirty();
         }
     }
 }

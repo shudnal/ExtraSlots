@@ -186,6 +186,4 @@ namespace ExtraSlots
             AmmoSlotsHotBar.ClearBar();
         }
     }
-
-
 }
