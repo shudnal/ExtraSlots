@@ -39,6 +39,12 @@ namespace ExtraSlots
         private static Color normalColorUnfit = Color.clear;
         private static Color highlightedColorUnfit = Color.clear;
 
+        private static Material iconMaterial;
+        
+        internal static Sprite ammoSlot;
+        internal static Sprite miscSlot;
+        internal static Sprite quickSlot;
+
         public static void MarkDirty() => isDirty = true;
 
         internal static void UpdateSlotsCount()
@@ -79,6 +85,10 @@ namespace ExtraSlots
         // Runs every frame InventoryGui.UpdateInventory if visible
         internal static void UpdateInventorySlots()
         {
+            int startIndex = InventorySizePlayer;
+            for (int i = 0; i < Math.Min(slots.Length, InventoryGui.instance.m_playerGrid.m_elements.Count - startIndex); ++i)
+                SetSlotBackgroundImage(InventoryGui.instance.m_playerGrid.m_elements[startIndex + i], slots[i]);
+
             if (!isDirty)
                 return;
 
@@ -88,18 +98,8 @@ namespace ExtraSlots
             if (!InventoryGui.instance.m_playerGrid)
                 return;
 
-            int startIndex = InventorySizePlayer;
-            for (int i = 0; i < slots.Length; ++i)
-            {
-                if (startIndex + i >= InventoryGui.instance.m_playerGrid.m_elements.Count)
-                    break;
-
-                GameObject currentChild = InventoryGui.instance.m_playerGrid.m_elements[startIndex + i]?.m_go;
-                if (!currentChild)
-                    continue;
-
-                SetSlotElement(currentChild.transform, slots[i]);
-            }
+            for (int i = 0; i < Math.Min(slots.Length, InventoryGui.instance.m_playerGrid.m_elements.Count - startIndex); ++i)
+                SetSlotElement(InventoryGui.instance.m_playerGrid.m_elements[startIndex + i], slots[i]);
 
             for (int i = startIndex + slots.Length; i < InventoryGui.instance.m_playerGrid.m_elements.Count; i++)
                 InventoryGui.instance.m_playerGrid.m_elements[i]?.m_go?.SetActive(false);
@@ -116,15 +116,19 @@ namespace ExtraSlots
             equipmentBackground.anchoredPosition = PanelPosition + new Vector2(PanelWidth / 2, -PanelHeight / 2);
         }
 
-        internal static void SetSlotElement(Transform transform, Slot slot)
+        internal static void SetSlotElement(InventoryGrid.Element element, Slot slot)
         {
-            transform.gameObject.SetActive(slot.IsActive);
-            transform.GetComponent<RectTransform>().anchoredPosition = slot.Position;
-            SetSlotLabel(transform.Find("binding"), slot);
-            SetSlotColor(transform.GetComponent<Button>(), slot);
+            GameObject currentChild = element?.m_go;
+            if (!currentChild)
+                return;
+
+            currentChild.gameObject.SetActive(slot.IsActive);
+            currentChild.GetComponent<RectTransform>().anchoredPosition = slot.Position;
+            SetSlotLabel(currentChild.transform.Find("binding"), slot);
+            SetSlotColor(currentChild.GetComponent<Button>(), slot);
         }
 
-        internal static void SetSlotLabel(Transform binding, Slot slot)
+        internal static void SetSlotLabel(Transform binding, Slot slot, bool hotbarElement = false)
         {
             if (!binding || !slot.IsActive)
                 return;
@@ -140,7 +144,7 @@ namespace ExtraSlots
 
             TMP_Text textComp = binding.GetComponent<TMP_Text>();
             textComp.enableAutoSizing = true;
-            textComp.text = slot.Name;
+            textComp.text = hotbarElement ? slot.GetShortcutText() : slot.Name;
             textComp.enabled = true;
             textComp.overflowMode = TextOverflowModes.Overflow;
             textComp.fontSizeMin = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelFontSize.Value.x : quickSlotLabelFontSize.Value.x) : equipmentSlotLabelFontSize.Value.x;
@@ -173,6 +177,59 @@ namespace ExtraSlots
             buttonColors.normalColor = InventoryGui.instance.m_dragItem != null && !slot.ItemFit(InventoryGui.instance.m_dragItem) ? normalColorUnfit : normalColor;
             buttonColors.highlightedColor = InventoryGui.instance.m_dragItem != null && !slot.ItemFit(InventoryGui.instance.m_dragItem) ? highlightedColorUnfit : highlightedColor;
             button.colors = buttonColors;
+        }
+
+        private static void SetSlotBackgroundImage(InventoryGrid.Element element, Slot slot)
+        {
+            bool freeSlot = slot.IsFree;
+            if (slot.IsEquipmentSlot || !freeSlot)
+                return;
+
+            Image bkgImage = element.m_icon;
+
+            if (iconMaterial == null)
+                iconMaterial = bkgImage.material;
+
+            if (bkgImage.material == null)
+                bkgImage.material = iconMaterial;
+
+            if (slot.IsAmmoSlot)
+            {
+                bkgImage.enabled = ammoSlotsShowHintImage.Value;
+                bkgImage.material = null;
+                bkgImage.sprite = ammoSlot;
+                bkgImage.transform.localScale = Vector3.one * 0.8f;
+                bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.1f);
+                if (ammoSlotsShowTooltip.Value)
+                    element.m_tooltip.Set("Ammo slot", "Ammo and fishing baits", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+            }
+            else if (slot.IsQuickSlot)
+            {
+                bkgImage.enabled = quickSlotsShowHintImage.Value;
+                bkgImage.material = null;
+                bkgImage.sprite = quickSlot;
+                bkgImage.transform.localScale = Vector3.one * 0.6f;
+                bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.6f);
+                if (quickSlotsShowTooltip.Value)
+                    element.m_tooltip.Set("Quick slot", "Any items", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+            }
+            else if (slot.IsMiscSlot)
+            {
+                bkgImage.enabled = miscSlotsShowHintImage.Value;
+                bkgImage.material = null;
+                bkgImage.sprite = miscSlot;
+                bkgImage.transform.localScale = Vector3.one * 0.8f;
+                bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.75f);
+                if (miscSlotsShowTooltip.Value) 
+                    element.m_tooltip.Set("Misc slot", "Quest items, keys and trophies", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+            }
+            else if (slot.IsFoodSlot && freeSlot)
+            {
+                element.m_food.enabled = foodSlotsShowHintImage.Value;
+                element.m_food.color = Color.grey - new Color(0f, 0f, 0f, 0.5f);
+                if (foodSlotsShowTooltip.Value)
+                    element.m_tooltip.Set("Food slot", "Consumable food", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+            }
         }
 
         internal static void SetSlotsPositions()
@@ -295,6 +352,13 @@ namespace ExtraSlots
             equipmentBackground = null;
             equipmentBackgroundImage = null;
             inventoryBackgroundImage = null;
+
+            normalColor = Color.clear;
+            highlightedColor = Color.clear;
+            normalColorUnfit = Color.clear;
+            highlightedColorUnfit = Color.clear;
+
+            iconMaterial = null;
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]

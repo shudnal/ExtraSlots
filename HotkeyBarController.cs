@@ -145,9 +145,9 @@ namespace ExtraSlots
 
             for (int index = 0; index < __instance.m_elements.Count; index++)
                 if (__instance.name == QuickSlotsHotBar.barName)
-                    EquipmentPanel.SetSlotLabel(__instance.m_elements[index].m_go.transform.Find("binding"), slots[index]);
+                    EquipmentPanel.SetSlotLabel(__instance.m_elements[index].m_go.transform.Find("binding"), slots[index], hotbarElement: true);
                 else if (__instance.name == AmmoSlotsHotBar.barName)
-                    EquipmentPanel.SetSlotLabel(__instance.m_elements[index].m_go.transform.Find("binding"), slots[index + 8]);
+                    EquipmentPanel.SetSlotLabel(__instance.m_elements[index].m_go.transform.Find("binding"), slots[index + 8], hotbarElement: true);
         }
     }
 

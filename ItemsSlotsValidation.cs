@@ -72,8 +72,12 @@ namespace ExtraSlots
             {
                 private static void Postfix(Player __instance)
                 {
-                    if (IsValidPlayer(__instance) && !__instance.m_isLoading)
-                        MarkDirty();
+                    if (!IsValidPlayer(__instance) || __instance.m_isLoading)
+                        return;
+
+                    MarkDirty();
+
+                    ClearCachedItems();
                 }
             }
         }

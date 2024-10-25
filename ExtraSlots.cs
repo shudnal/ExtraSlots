@@ -2,6 +2,9 @@
 using BepInEx.Configuration;
 using HarmonyLib;
 using ServerSync;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace ExtraSlots
@@ -35,9 +38,6 @@ namespace ExtraSlots
         public static ConfigEntry<string> legsLabel;
         public static ConfigEntry<string> shoulderLabel;
         public static ConfigEntry<string> utilityLabel;
-        public static ConfigEntry<string> foodLabel;
-        public static ConfigEntry<string> miscLabel;
-        public static ConfigEntry<string> ammoLabel;
 
         public static ConfigEntry<int> extraRows;
         public static ConfigEntry<int> quickSlotsAmount;
@@ -50,10 +50,24 @@ namespace ExtraSlots
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
         public static ConfigEntry<Vector2> equipmentPanelOffset;
         public static ConfigEntry<bool> quickSlotsAlignmentCenter;
+        
+        public static ConfigEntry<string> foodSlotsLabel;
+        public static ConfigEntry<bool> foodSlotsShowLabel;
+        public static ConfigEntry<bool> foodSlotsShowHintImage;
+        public static ConfigEntry<bool> foodSlotsShowTooltip;
+        
+        public static ConfigEntry<string> miscSlotsLabel;
+        public static ConfigEntry<bool> miscSlotsShowLabel;
+        public static ConfigEntry<bool> miscSlotsShowHintImage;
+        public static ConfigEntry<bool> miscSlotsShowTooltip;
 
         public static ConfigEntry<bool> ammoSlotsHotBarEnabled;
         public static ConfigEntry<Vector2> ammoSlotsHotBarOffset;
         public static ConfigEntry<float> ammoSlotsHotBarScale;
+        public static ConfigEntry<bool> ammoSlotsShowLabel;
+        public static ConfigEntry<bool> ammoSlotsShowHintImage;
+        public static ConfigEntry<bool> ammoSlotsShowTooltip;
+        public static ConfigEntry<string> ammoSlotsLabel;
 
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey2;
@@ -66,6 +80,9 @@ namespace ExtraSlots
         public static ConfigEntry<bool> quickSlotsHotBarEnabled;
         public static ConfigEntry<Vector2> quickSlotsHotBarOffset;
         public static ConfigEntry<float> quickSlotsHotBarScale;
+        public static ConfigEntry<bool> quickSlotsShowLabel;
+        public static ConfigEntry<bool> quickSlotsShowHintImage;
+        public static ConfigEntry<bool> quickSlotsShowTooltip;
 
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey2;
@@ -99,6 +116,8 @@ namespace ExtraSlots
         public static ConfigEntry<Vector2> ammoSlotLabelFontSize;
         public static ConfigEntry<Color> ammoSlotLabelFontColor;
 
+        public static string configDirectory;
+
         public enum SlotsAlignment
         {
             VerticalTopHorizontalLeft,
@@ -115,7 +134,11 @@ namespace ExtraSlots
             ConfigInit();
             _ = configSync.AddLockingConfigEntry(configLocked);
 
+            configDirectory = Path.Combine(Paths.ConfigPath, pluginID);
+
             Game.isModded = true;
+
+            LoadIcons();
 
             Slots.InitializeSlots();
 
@@ -161,15 +184,6 @@ namespace ExtraSlots
             miscSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             ammoSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
-            helmetLabel = config("Extra slots - Labels", "Helmet", "Head", "Text for helmet slot.");
-            chestLabel = config("Extra slots - Labels", "Chest", "Chest", "Text for chest slot.");
-            legsLabel = config("Extra slots - Labels", "Legs", "Legs", "Text for legs slot.");
-            shoulderLabel = config("Extra slots - Labels", "Shoulders", "Back", "Text for back slot.");
-            utilityLabel = config("Extra slots - Labels", "Utility", "Utility", "Text for utility slots.");
-            foodLabel = config("Extra slots - Labels", "Food", "Food", "Text for food slots.");
-            miscLabel = config("Extra slots - Labels", "Misc", "Misc", "Text for misc slot.");
-            ammoLabel = config("Extra slots - Labels", "Ammo", "Ammo", "Text for ammo slot.");
-
             vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder, "Comma separated list defining order of vanilla equipment slots");
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalMiddle, "Equipment slots alignment");
             equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
@@ -179,9 +193,29 @@ namespace ExtraSlots
             equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
+            helmetLabel = config("Panels - Equipment slots - Labels", "Helmet", "Head", "Text for helmet slot.");
+            chestLabel = config("Panels - Equipment slots - Labels", "Chest", "Chest", "Text for chest slot.");
+            legsLabel = config("Panels - Equipment slots - Labels", "Legs", "Legs", "Text for legs slot.");
+            shoulderLabel = config("Panels - Equipment slots - Labels", "Shoulders", "Back", "Text for back slot.");
+            utilityLabel = config("Panels - Equipment slots - Labels", "Utility", "Utility", "Text for utility slots.");
+
+            foodSlotsLabel = config("Panels - Food slots", "Food", "Food", "Text for food slots.");
+            foodSlotsShowLabel = config("Panels - Food slots", "Show label", defaultValue: false, "Show slot label");
+            foodSlotsShowHintImage = config("Panels - Food slots", "Show hint image", defaultValue: true, "Show slot background hint image");
+            foodSlotsShowTooltip = config("Panels - Food slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
+
+            miscSlotsLabel = config("Panels - Misc slots", "Label", "Misc", "Text for misc slot.");
+            miscSlotsShowLabel = config("Panels - Misc slots", "Show label", defaultValue: false, "Show slot label");
+            miscSlotsShowHintImage = config("Panels - Misc slots", "Show hint image", defaultValue: true, "Show slot background hint image");
+            miscSlotsShowTooltip = config("Panels - Misc slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
+
             ammoSlotsHotBarEnabled = config("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots");
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 850f), "On screen position of ammo slots hotbar panel");
             ammoSlotsHotBarScale = config("Panels - Ammo slots", "Scale", defaultValue: 1f, "Relative size");
+            ammoSlotsLabel = config("Panels - Ammo slots", "Label", "Ammo", "Text for ammo slot.");
+            ammoSlotsShowLabel = config("Panels - Ammo slots", "Show label", defaultValue: false, "Show slot label");
+            ammoSlotsShowHintImage = config("Panels - Ammo slots", "Show hint image", defaultValue: true, "Show slot background hint image");
+            ammoSlotsShowTooltip = config("Panels - Ammo slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
 
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => AmmoSlotsHotBar.MarkDirty();
 
@@ -200,6 +234,9 @@ namespace ExtraSlots
             quickSlotsHotBarEnabled = config("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots");
             quickSlotsHotBarOffset = config("Panels - Quick slots", "Offset", defaultValue: new Vector2(230f, 923f), "On screen position of quick slots hotbar panel");
             quickSlotsHotBarScale = config("Panels - Quick slots", "Scale", defaultValue: 1f, "Relative size");
+            quickSlotsShowLabel = config("Panels - Quick slots", "Show label", defaultValue: false, "Show slot label");
+            quickSlotsShowHintImage = config("Panels - Quick slots", "Show hint image", defaultValue: true, "Show slot background hint image");
+            quickSlotsShowTooltip = config("Panels - Quick slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
 
             quickSlotsHotBarEnabled.SettingChanged += (s, e) => QuickSlotsHotBar.MarkDirty();
 
@@ -283,5 +320,42 @@ namespace ExtraSlots
         }
 
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, string description, bool synchronizedSetting = false) => config(group, name, defaultValue, new ConfigDescription(description), synchronizedSetting);
+
+        private void LoadIcons()
+        {
+            LoadIcon("ammoslot.png", ref EquipmentPanel.ammoSlot);
+            LoadIcon("miscslot.png", ref EquipmentPanel.miscSlot);
+            LoadIcon("quickslot.png", ref EquipmentPanel.quickSlot);
+        }
+
+        internal static void LoadIcon(string filename, ref Sprite icon)
+        {
+            Texture2D tex = new Texture2D(2, 2);
+            if (LoadTexture(filename, ref tex))
+                icon = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.zero);
+        }
+
+        internal static bool LoadTexture(string filename, ref Texture2D tex)
+        {
+            string fileInConfigFolder = Path.Combine(configDirectory, filename);
+            if (File.Exists(fileInConfigFolder))
+            {
+                LogInfo($"Loaded image: {fileInConfigFolder}");
+                return tex.LoadImage(File.ReadAllBytes(fileInConfigFolder));
+            }
+
+            Assembly executingAssembly = Assembly.GetExecutingAssembly();
+
+            string name = executingAssembly.GetManifestResourceNames().Single(str => str.EndsWith(filename));
+
+            Stream resourceStream = executingAssembly.GetManifestResourceStream(name);
+
+            byte[] data = new byte[resourceStream.Length];
+            resourceStream.Read(data, 0, data.Length);
+
+            tex.name = Path.GetFileNameWithoutExtension(filename);
+
+            return tex.LoadImage(data, true);
+        }
     }
 }

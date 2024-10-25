@@ -35,6 +35,7 @@ namespace ExtraSlots
             private readonly string _id;
             private readonly Func<string> _getName;
             private readonly Func<KeyboardShortcut> _getShortcut;
+            private readonly Func<string> _getShortcutText;
             private readonly Func<ItemDrop.ItemData, bool> _itemIsValid;
             private readonly Func<bool> _isActive;
 
@@ -90,8 +91,25 @@ namespace ExtraSlots
             public bool IsShortcutDown() => IsActive && _getShortcut != null && Player.m_localPlayer != null && Player.m_localPlayer.TakeInput() && IsShortcutDown(_getShortcut());
 
             public KeyboardShortcut GetShortcut() => _getShortcut == null ? KeyboardShortcut.Empty : _getShortcut();
+            public string GetShortcutText() => _getShortcutText == null ? Name : _getShortcutText();
 
-            public ItemDrop.ItemData Item => PlayerInventory == null || _gridPos == emptyPosition ? null : PlayerInventory.GetItemAt(_gridPos.x, _gridPos.y);
+            public ItemDrop.ItemData Item
+            {
+                get
+                {
+                    if (PlayerInventory == null || _gridPos == emptyPosition)
+                        return null;
+
+                    if (cachedItems.TryGetValue(_gridPos, out ItemDrop.ItemData item))
+                        return item;
+
+                    // Cache will be clear on inventory change
+                    item = PlayerInventory.GetItemAt(_gridPos.x, _gridPos.y);
+                    cachedItems[_gridPos] = item;
+                    return item;
+                }
+            }
+
             public bool IsFree => Item == null;
 
             public bool ItemFit(ItemDrop.ItemData item) => item != null && IsActive && (_itemIsValid == null || _itemIsValid(item));
@@ -107,13 +125,14 @@ namespace ExtraSlots
                 _isActive = isActive;
             }
 
-            public Slot(string slotID, int slotIndex, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive, Func<KeyboardShortcut> getShortcut)
+            public Slot(string slotID, int slotIndex, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive, Func<KeyboardShortcut> getShortcut, Func<string> getShortcutText)
             {
                 _id = slotID;
                 _index = slotIndex;
                 _getName = getName;
                 _itemIsValid = itemIsValid;
                 _getShortcut = getShortcut;
+                _getShortcutText = getShortcutText;
                 _isActive = isActive;
             }
 
@@ -130,7 +149,7 @@ namespace ExtraSlots
         }
 
         public static readonly Slot[] slots = new Slot[36];
-        
+        public static readonly Dictionary<Vector2i, ItemDrop.ItemData> cachedItems = new Dictionary<Vector2i, ItemDrop.ItemData>();
         public const int vanillaInventoryHeight = 4;
 
         public static PlayerProfile PlayerProfile => Game.instance?.GetPlayerProfile() ?? FejdStartup.instance?.m_profiles[FejdStartup.instance.m_profileIndex];
@@ -279,43 +298,57 @@ namespace ExtraSlots
             item.m_customData.Remove(customKeySlotID);
         }
 
+        public static string GetQuickSlot1Text() => quickSlotHotKey1Text.Value == "" ? quickSlotHotKey1.Value.ToString() : quickSlotHotKey1Text.Value;
+        public static string GetQuickSlot2Text() => quickSlotHotKey2Text.Value == "" ? quickSlotHotKey2.Value.ToString() : quickSlotHotKey2Text.Value;
+        public static string GetQuickSlot3Text() => quickSlotHotKey3Text.Value == "" ? quickSlotHotKey3.Value.ToString() : quickSlotHotKey3Text.Value;
+        public static string GetQuickSlot4Text() => quickSlotHotKey4Text.Value == "" ? quickSlotHotKey4.Value.ToString() : quickSlotHotKey4Text.Value;
+        public static string GetQuickSlot5Text() => quickSlotHotKey5Text.Value == "" ? quickSlotHotKey5.Value.ToString() : quickSlotHotKey5Text.Value;
+        public static string GetQuickSlot6Text() => quickSlotHotKey6Text.Value == "" ? quickSlotHotKey6.Value.ToString() : quickSlotHotKey6Text.Value;
+
+        public static string GetAmmoSlot1Text() => ammoSlotHotKey1Text.Value == "" ? (ammoSlotHotKey1.Value.Equals(KeyboardShortcut.Empty) ? ammoSlotsLabel.Value : ammoSlotHotKey1.Value.ToString()) : ammoSlotHotKey1Text.Value;
+        public static string GetAmmoSlot2Text() => ammoSlotHotKey2Text.Value == "" ? (ammoSlotHotKey2.Value.Equals(KeyboardShortcut.Empty) ? ammoSlotsLabel.Value : ammoSlotHotKey2.Value.ToString()) : ammoSlotHotKey2Text.Value;
+        public static string GetAmmoSlot3Text() => ammoSlotHotKey3Text.Value == "" ? (ammoSlotHotKey3.Value.Equals(KeyboardShortcut.Empty) ? ammoSlotsLabel.Value : ammoSlotHotKey3.Value.ToString()) : ammoSlotHotKey3Text.Value;
+
         public static void InitializeSlots()
         {
             int index = 0;
 
             // First row
-            AddHotkeySlot($"{quickSlotID}1", () => quickSlotHotKey1Text.Value == "" ? quickSlotHotKey1.Value.ToString() : quickSlotHotKey1Text.Value, null, () => quickSlotsAmount.Value > 0, () => quickSlotHotKey1.Value);
-            AddHotkeySlot($"{quickSlotID}2", () => quickSlotHotKey2Text.Value == "" ? quickSlotHotKey2.Value.ToString() : quickSlotHotKey2Text.Value, null, () => quickSlotsAmount.Value > 1, () => quickSlotHotKey2.Value);
-            AddHotkeySlot($"{quickSlotID}3", () => quickSlotHotKey3Text.Value == "" ? quickSlotHotKey3.Value.ToString() : quickSlotHotKey3Text.Value, null, () => quickSlotsAmount.Value > 2, () => quickSlotHotKey3.Value);
-            AddHotkeySlot($"{quickSlotID}4", () => quickSlotHotKey4Text.Value == "" ? quickSlotHotKey4.Value.ToString() : quickSlotHotKey4Text.Value, null, () => quickSlotsAmount.Value > 3, () => quickSlotHotKey4.Value);
-            AddHotkeySlot($"{quickSlotID}5", () => quickSlotHotKey5Text.Value == "" ? quickSlotHotKey5.Value.ToString() : quickSlotHotKey5Text.Value, null, () => quickSlotsAmount.Value > 4, () => quickSlotHotKey5.Value);
-            AddHotkeySlot($"{quickSlotID}6", () => quickSlotHotKey6Text.Value == "" ? quickSlotHotKey6.Value.ToString() : quickSlotHotKey6Text.Value, null, () => quickSlotsAmount.Value > 5, () => quickSlotHotKey6.Value);
+            AddHotkeySlot($"{quickSlotID}1", () => quickSlotsShowLabel.Value ? GetQuickSlot1Text() : "", null, () => quickSlotsAmount.Value > 0, () => quickSlotHotKey1.Value, () => GetQuickSlot1Text());
+            AddHotkeySlot($"{quickSlotID}2", () => quickSlotsShowLabel.Value ? GetQuickSlot2Text() : "", null, () => quickSlotsAmount.Value > 1, () => quickSlotHotKey2.Value, () => GetQuickSlot2Text());
+            AddHotkeySlot($"{quickSlotID}3", () => quickSlotsShowLabel.Value ? GetQuickSlot3Text() : "", null, () => quickSlotsAmount.Value > 2, () => quickSlotHotKey3.Value, () => GetQuickSlot3Text());
+            AddHotkeySlot($"{quickSlotID}4", () => quickSlotsShowLabel.Value ? GetQuickSlot4Text() : "", null, () => quickSlotsAmount.Value > 3, () => quickSlotHotKey4.Value, () => GetQuickSlot4Text());
+            AddHotkeySlot($"{quickSlotID}5", () => quickSlotsShowLabel.Value ? GetQuickSlot5Text() : "", null, () => quickSlotsAmount.Value > 4, () => quickSlotHotKey5.Value, () => GetQuickSlot5Text());
+            AddHotkeySlot($"{quickSlotID}6", () => quickSlotsShowLabel.Value ? GetQuickSlot6Text() : "", null, () => quickSlotsAmount.Value > 5, () => quickSlotHotKey6.Value, () => GetQuickSlot6Text());
 
-            AddSlot($"{miscSlotID}1", () => miscLabel.Value, IsMiscSlotItem, () => miscSlotsEnabled.Value && (foodSlotsEnabled.Value || ammoSlotsEnabled.Value));
-            AddSlot($"{miscSlotID}2", () => miscLabel.Value, IsMiscSlotItem, () => miscSlotsEnabled.Value && foodSlotsEnabled.Value && ammoSlotsEnabled.Value);
+            AddSlot($"{miscSlotID}1", () => miscSlotsShowLabel.Value ? miscSlotsLabel.Value : "", IsMiscSlotItem, () => miscSlotsEnabled.Value && (foodSlotsEnabled.Value || ammoSlotsEnabled.Value));
+            AddSlot($"{miscSlotID}2", () => miscSlotsShowLabel.Value ? miscSlotsLabel.Value : "", IsMiscSlotItem, () => miscSlotsEnabled.Value && foodSlotsEnabled.Value && ammoSlotsEnabled.Value);
 
             // Second row
             AddHotkeySlot($"{ammoSlotID}1", 
-                          () => ammoSlotHotKey1Text.Value == "" ? ammoSlotHotKey1.Value.Equals(KeyboardShortcut.Empty) ? ammoLabel.Value : ammoSlotHotKey1.Value.ToString() : ammoSlotHotKey1Text.Value, 
+                          () => ammoSlotsShowLabel.Value ? GetAmmoSlot1Text() : "", 
                           (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo, 
                           () => ammoSlotsEnabled.Value, 
-                          () => ammoSlotHotKey1.Value);
+                          () => ammoSlotHotKey1.Value,
+                          () => GetAmmoSlot1Text());
 
             AddHotkeySlot($"{ammoSlotID}2",
-                          () => ammoSlotHotKey2Text.Value == "" ? ammoSlotHotKey2.Value.Equals(KeyboardShortcut.Empty) ? ammoLabel.Value : ammoSlotHotKey2.Value.ToString() : ammoSlotHotKey2Text.Value,
+                          () => ammoSlotsShowLabel.Value ? GetAmmoSlot2Text() : "",
                           (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo,
                           () => ammoSlotsEnabled.Value,
-                          () => ammoSlotHotKey2.Value);
+                          () => ammoSlotHotKey2.Value,
+                          () => GetAmmoSlot2Text());
 
             AddHotkeySlot($"{ammoSlotID}3",
-                          () => ammoSlotHotKey3Text.Value == "" ? ammoSlotHotKey3.Value.Equals(KeyboardShortcut.Empty) ? ammoLabel.Value : ammoSlotHotKey3.Value.ToString() : ammoSlotHotKey3Text.Value,
+                          () => ammoSlotsShowLabel.Value ? GetAmmoSlot3Text() : "",
                           (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo,
                           () => ammoSlotsEnabled.Value,
-                          () => ammoSlotHotKey3.Value);
+                          () => ammoSlotHotKey3.Value,
+                          () => GetAmmoSlot3Text());
 
-            AddSlot($"{foodSlotID}1", () => foodLabel.Value, IsFoodSlotItem, () => foodSlotsEnabled.Value);
-            AddSlot($"{foodSlotID}2", () => foodLabel.Value, IsFoodSlotItem, () => foodSlotsEnabled.Value);
-            AddSlot($"{foodSlotID}3", () => foodLabel.Value, IsFoodSlotItem, () => foodSlotsEnabled.Value);
+            AddSlot($"{foodSlotID}1", () => foodSlotsShowLabel.Value ? foodSlotsLabel.Value : "", IsFoodSlotItem, () => foodSlotsEnabled.Value);
+            AddSlot($"{foodSlotID}2", () => foodSlotsShowLabel.Value ? foodSlotsLabel.Value : "", IsFoodSlotItem, () => foodSlotsEnabled.Value);
+            AddSlot($"{foodSlotID}3", () => foodSlotsShowLabel.Value ? foodSlotsLabel.Value : "", IsFoodSlotItem, () => foodSlotsEnabled.Value);
 
             AddSlot($"{extraUtilitySlotID}1", () => utilityLabel.Value, (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => extraUtilitySlotsAmount.Value > 0);
             AddSlot($"{extraUtilitySlotID}2", () => utilityLabel.Value, (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => extraUtilitySlotsAmount.Value > 1);
@@ -342,9 +375,9 @@ namespace ExtraSlots
                 index++;
             }
 
-            void AddHotkeySlot(string id, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive, Func<KeyboardShortcut> getShortcut)
+            void AddHotkeySlot(string id, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive, Func<KeyboardShortcut> getShortcut, Func<string> getShortcutText)
             {
-                slots[index] = new Slot(id, index, getName, itemIsValid, isActive, getShortcut);
+                slots[index] = new Slot(id, index, getName, itemIsValid, isActive, getShortcut, getShortcutText);
                 index++;
             }
         }
@@ -389,5 +422,7 @@ namespace ExtraSlots
 
             return null;
         }
+
+        internal static void ClearCachedItems() => cachedItems.Clear();
     }
 }

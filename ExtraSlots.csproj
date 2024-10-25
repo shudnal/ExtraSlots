@@ -90,11 +90,18 @@
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\Assemblies\stable\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\stable\UnityEngine.ImageConversionModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>..\Assemblies\stable\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Assets\ammoslot.png" />
+    <EmbeddedResource Include="Assets\miscslot.png" />
+    <EmbeddedResource Include="Assets\quickslot.png" />
     <Content Include="Libs\ServerSync.dll" />
   </ItemGroup>
   <ItemGroup>
