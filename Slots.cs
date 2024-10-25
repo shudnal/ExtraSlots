@@ -45,7 +45,7 @@ namespace ExtraSlots
 
             public string ID => _id;
 
-            public string Name => _getName != null ? _getName() : "";
+            public string Name => _getName != null ? Localization.instance.Localize(_getName()) : "";
 
             public bool IsActive => _isActive == null || _isActive();
 
@@ -91,7 +91,7 @@ namespace ExtraSlots
             public bool IsShortcutDown() => IsActive && _getShortcut != null && Player.m_localPlayer != null && Player.m_localPlayer.TakeInput() && IsShortcutDown(_getShortcut());
 
             public KeyboardShortcut GetShortcut() => _getShortcut == null ? KeyboardShortcut.Empty : _getShortcut();
-            public string GetShortcutText() => _getShortcutText == null ? Name : _getShortcutText();
+            public string GetShortcutText() => _getShortcutText == null ? Name : Localization.instance.Localize(_getShortcutText());
 
             public ItemDrop.ItemData Item
             {
@@ -305,9 +305,9 @@ namespace ExtraSlots
         public static string GetQuickSlot5Text() => quickSlotHotKey5Text.Value == "" ? quickSlotHotKey5.Value.ToString() : quickSlotHotKey5Text.Value;
         public static string GetQuickSlot6Text() => quickSlotHotKey6Text.Value == "" ? quickSlotHotKey6.Value.ToString() : quickSlotHotKey6Text.Value;
 
-        public static string GetAmmoSlot1Text() => ammoSlotHotKey1Text.Value == "" ? (ammoSlotHotKey1.Value.Equals(KeyboardShortcut.Empty) ? ammoSlotsLabel.Value : ammoSlotHotKey1.Value.ToString()) : ammoSlotHotKey1Text.Value;
-        public static string GetAmmoSlot2Text() => ammoSlotHotKey2Text.Value == "" ? (ammoSlotHotKey2.Value.Equals(KeyboardShortcut.Empty) ? ammoSlotsLabel.Value : ammoSlotHotKey2.Value.ToString()) : ammoSlotHotKey2Text.Value;
-        public static string GetAmmoSlot3Text() => ammoSlotHotKey3Text.Value == "" ? (ammoSlotHotKey3.Value.Equals(KeyboardShortcut.Empty) ? ammoSlotsLabel.Value : ammoSlotHotKey3.Value.ToString()) : ammoSlotHotKey3Text.Value;
+        public static string GetAmmoSlot1Text() => ammoSlotHotKey1Text.Value == "" ? (ammoSlotHotKey1.Value.Equals(KeyboardShortcut.Empty) ? "$exsl_slot_ammo_label" : ammoSlotHotKey1.Value.ToString()) : ammoSlotHotKey1Text.Value;
+        public static string GetAmmoSlot2Text() => ammoSlotHotKey2Text.Value == "" ? (ammoSlotHotKey2.Value.Equals(KeyboardShortcut.Empty) ? "$exsl_slot_ammo_label" : ammoSlotHotKey2.Value.ToString()) : ammoSlotHotKey2Text.Value;
+        public static string GetAmmoSlot3Text() => ammoSlotHotKey3Text.Value == "" ? (ammoSlotHotKey3.Value.Equals(KeyboardShortcut.Empty) ? "$exsl_slot_ammo_label" : ammoSlotHotKey3.Value.ToString()) : ammoSlotHotKey3Text.Value;
 
         public static void InitializeSlots()
         {
@@ -321,8 +321,8 @@ namespace ExtraSlots
             AddHotkeySlot($"{quickSlotID}5", () => quickSlotsShowLabel.Value ? GetQuickSlot5Text() : "", null, () => quickSlotsAmount.Value > 4, () => quickSlotHotKey5.Value, () => GetQuickSlot5Text());
             AddHotkeySlot($"{quickSlotID}6", () => quickSlotsShowLabel.Value ? GetQuickSlot6Text() : "", null, () => quickSlotsAmount.Value > 5, () => quickSlotHotKey6.Value, () => GetQuickSlot6Text());
 
-            AddSlot($"{miscSlotID}1", () => miscSlotsShowLabel.Value ? miscSlotsLabel.Value : "", IsMiscSlotItem, () => miscSlotsEnabled.Value && (foodSlotsEnabled.Value || ammoSlotsEnabled.Value));
-            AddSlot($"{miscSlotID}2", () => miscSlotsShowLabel.Value ? miscSlotsLabel.Value : "", IsMiscSlotItem, () => miscSlotsEnabled.Value && foodSlotsEnabled.Value && ammoSlotsEnabled.Value);
+            AddSlot($"{miscSlotID}1", () => miscSlotsShowLabel.Value ? "$exsl_slot_misc_label" : "", IsMiscSlotItem, () => miscSlotsEnabled.Value && (foodSlotsEnabled.Value || ammoSlotsEnabled.Value));
+            AddSlot($"{miscSlotID}2", () => miscSlotsShowLabel.Value ? "$exsl_slot_misc_label" : "", IsMiscSlotItem, () => miscSlotsEnabled.Value && foodSlotsEnabled.Value && ammoSlotsEnabled.Value);
 
             // Second row
             AddHotkeySlot($"{ammoSlotID}1", 
@@ -346,19 +346,19 @@ namespace ExtraSlots
                           () => ammoSlotHotKey3.Value,
                           () => GetAmmoSlot3Text());
 
-            AddSlot($"{foodSlotID}1", () => foodSlotsShowLabel.Value ? foodSlotsLabel.Value : "", IsFoodSlotItem, () => foodSlotsEnabled.Value);
-            AddSlot($"{foodSlotID}2", () => foodSlotsShowLabel.Value ? foodSlotsLabel.Value : "", IsFoodSlotItem, () => foodSlotsEnabled.Value);
-            AddSlot($"{foodSlotID}3", () => foodSlotsShowLabel.Value ? foodSlotsLabel.Value : "", IsFoodSlotItem, () => foodSlotsEnabled.Value);
+            AddSlot($"{foodSlotID}1", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => foodSlotsEnabled.Value);
+            AddSlot($"{foodSlotID}2", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => foodSlotsEnabled.Value);
+            AddSlot($"{foodSlotID}3", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => foodSlotsEnabled.Value);
 
-            AddSlot($"{extraUtilitySlotID}1", () => utilityLabel.Value, (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => extraUtilitySlotsAmount.Value > 0);
-            AddSlot($"{extraUtilitySlotID}2", () => utilityLabel.Value, (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => extraUtilitySlotsAmount.Value > 1);
+            AddSlot($"{extraUtilitySlotID}1", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => extraUtilitySlotsAmount.Value > 0);
+            AddSlot($"{extraUtilitySlotID}2", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => extraUtilitySlotsAmount.Value > 1);
 
             // Third row
-            AddSlot(helmetSlotID, () => helmetLabel.Value, (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet, null);
-            AddSlot(chestSlotID, () => chestLabel.Value, (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Chest, null);
-            AddSlot(legsSlotID, () => legsLabel.Value, (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Legs, null);
-            AddSlot(shoulderSlotID, () => shoulderLabel.Value, (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Shoulder, null);
-            AddSlot(utilitySlotID, () => utilityLabel.Value, (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, null);
+            AddSlot(helmetSlotID, () => "$exsl_slot_equipment_helmet_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet, null);
+            AddSlot(chestSlotID, () => "$exsl_slot_equipment_chest_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Chest, null);
+            AddSlot(legsSlotID, () => "$exsl_slot_equipment_legs_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Legs, null);
+            AddSlot(shoulderSlotID, () => "$exsl_slot_equipment_shoulders_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Shoulder, null);
+            AddSlot(utilitySlotID, () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, null);
 
             for (int i = index; i < slots.Length; i++)
                 AddSlot($"{emptySlotID}{i}", null, (item) => false, () => false);

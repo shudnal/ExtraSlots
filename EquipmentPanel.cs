@@ -182,8 +182,12 @@ namespace ExtraSlots
         private static void SetSlotBackgroundImage(InventoryGrid.Element element, Slot slot)
         {
             bool freeSlot = slot.IsFree;
-            if (slot.IsEquipmentSlot || !freeSlot)
+            if (!freeSlot)
+            {
+                ItemDrop.ItemData item = slot.Item;
+                element.m_tooltip.Set(item.m_shared.m_name, item.GetTooltip(), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
                 return;
+            }
 
             Image bkgImage = element.m_icon;
 
@@ -193,7 +197,12 @@ namespace ExtraSlots
             if (bkgImage.material == null)
                 bkgImage.material = iconMaterial;
 
-            if (slot.IsAmmoSlot)
+            if (slot.IsEquipmentSlot)
+            {
+                if (equipmentSlotsShowTooltip.Value)
+                    element.m_tooltip.Set("$exsl_slot_equipment", "$exsl_slot_equipment_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+            }
+            else if (slot.IsAmmoSlot)
             {
                 bkgImage.enabled = ammoSlotsShowHintImage.Value;
                 bkgImage.material = null;
@@ -201,7 +210,7 @@ namespace ExtraSlots
                 bkgImage.transform.localScale = Vector3.one * 0.8f;
                 bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.1f);
                 if (ammoSlotsShowTooltip.Value)
-                    element.m_tooltip.Set(Localization.instance.Localize("$exsl_slot_ammo"), Localization.instance.Localize("$exsl_slot_ammo_desc"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    element.m_tooltip.Set("$exsl_slot_ammo", "$exsl_slot_ammo_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
             else if (slot.IsQuickSlot)
             {
@@ -211,7 +220,7 @@ namespace ExtraSlots
                 bkgImage.transform.localScale = Vector3.one * 0.6f;
                 bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.6f);
                 if (quickSlotsShowTooltip.Value)
-                    element.m_tooltip.Set(Localization.instance.Localize("$exsl_slot_quick"), Localization.instance.Localize("$exsl_slot_quick_desc"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    element.m_tooltip.Set("$exsl_slot_quick", "$exsl_slot_quick_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
             else if (slot.IsMiscSlot)
             {
@@ -221,14 +230,14 @@ namespace ExtraSlots
                 bkgImage.transform.localScale = Vector3.one * 0.8f;
                 bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.75f);
                 if (miscSlotsShowTooltip.Value)
-                    element.m_tooltip.Set(Localization.instance.Localize("$exsl_slot_misc"), Localization.instance.Localize("$exsl_slot_misc_desc"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    element.m_tooltip.Set("$exsl_slot_misc", "$exsl_slot_misc_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
             else if (slot.IsFoodSlot && freeSlot)
             {
                 element.m_food.enabled = foodSlotsShowHintImage.Value;
                 element.m_food.color = Color.grey - new Color(0f, 0f, 0f, 0.5f);
                 if (foodSlotsShowTooltip.Value)
-                    element.m_tooltip.Set(Localization.instance.Localize("$exsl_slot_food"), Localization.instance.Localize("$exsl_slot_food_desc"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    element.m_tooltip.Set("$exsl_slot_food", "$exsl_slot_food_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
         }
 

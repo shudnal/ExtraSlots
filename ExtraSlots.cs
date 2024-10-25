@@ -34,12 +34,6 @@ namespace ExtraSlots
         internal static ConfigEntry<bool> configLocked;
         internal static ConfigEntry<bool> loggingEnabled;
 
-        public static ConfigEntry<string> helmetLabel;
-        public static ConfigEntry<string> chestLabel;
-        public static ConfigEntry<string> legsLabel;
-        public static ConfigEntry<string> shoulderLabel;
-        public static ConfigEntry<string> utilityLabel;
-
         public static ConfigEntry<int> extraRows;
         public static ConfigEntry<int> quickSlotsAmount;
         public static ConfigEntry<int> extraUtilitySlotsAmount;
@@ -51,13 +45,12 @@ namespace ExtraSlots
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
         public static ConfigEntry<Vector2> equipmentPanelOffset;
         public static ConfigEntry<bool> quickSlotsAlignmentCenter;
-        
-        public static ConfigEntry<string> foodSlotsLabel;
+        public static ConfigEntry<bool> equipmentSlotsShowTooltip;
+
         public static ConfigEntry<bool> foodSlotsShowLabel;
         public static ConfigEntry<bool> foodSlotsShowHintImage;
         public static ConfigEntry<bool> foodSlotsShowTooltip;
         
-        public static ConfigEntry<string> miscSlotsLabel;
         public static ConfigEntry<bool> miscSlotsShowLabel;
         public static ConfigEntry<bool> miscSlotsShowHintImage;
         public static ConfigEntry<bool> miscSlotsShowTooltip;
@@ -68,7 +61,6 @@ namespace ExtraSlots
         public static ConfigEntry<bool> ammoSlotsShowLabel;
         public static ConfigEntry<bool> ammoSlotsShowHintImage;
         public static ConfigEntry<bool> ammoSlotsShowTooltip;
-        public static ConfigEntry<string> ammoSlotsLabel;
 
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey2;
@@ -166,7 +158,7 @@ namespace ExtraSlots
 
         public void ConfigInit()
         {
-            config("General", "NexusID", 0, "Nexus mod ID for updates");
+            config("General", "NexusID", 2901, "Nexus mod ID for updates");
 
             configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only. [Synced with Server]", synchronizedSetting: true);
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.");
@@ -174,7 +166,7 @@ namespace ExtraSlots
             quickSlotsAmount = config("Extra slots", "Quick slots", 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
             extraUtilitySlotsAmount = config("Extra slots", "Extra utility slots", 1, new ConfigDescription("How much utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
             extraRows = config("Extra slots", "Extra inventory rows", 0, new ConfigDescription("How much rows to add in regular inventory [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
-            foodSlotsEnabled = config("Extra slots", "Food slots", true, "Enable 3 slots for food", synchronizedSetting: true);
+            foodSlotsEnabled = config("Extra slots", "Food slots", true, "Enable 3 slots for food [Synced with Server]", synchronizedSetting: true);
             miscSlotsEnabled = config("Extra slots", "Misc slots", true, "Enable up to 2 slots for trophies, miscellaneous, keys and quest items." +
                                                                          "\n1 slot comes with Food slots, 1 slot comes with Ammo slots." +
                                                                          "\nIf both Food and Ammo slots are disabled there will be no Misc slots [Synced with Server]", synchronizedSetting: true);
@@ -191,23 +183,16 @@ namespace ExtraSlots
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalMiddle, "Equipment slots alignment");
             equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
             quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle of the panel");
+            equipmentSlotsShowTooltip = config("Panels - Equipment slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
 
             vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
             equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
-            helmetLabel = config("Panels - Equipment slots - Labels", "Helmet", "Head", "Text for helmet slot.");
-            chestLabel = config("Panels - Equipment slots - Labels", "Chest", "Chest", "Text for chest slot.");
-            legsLabel = config("Panels - Equipment slots - Labels", "Legs", "Legs", "Text for legs slot.");
-            shoulderLabel = config("Panels - Equipment slots - Labels", "Shoulders", "Back", "Text for back slot.");
-            utilityLabel = config("Panels - Equipment slots - Labels", "Utility", "Utility", "Text for utility slots.");
-
-            foodSlotsLabel = config("Panels - Food slots", "Food", "Food", "Text for food slots.");
             foodSlotsShowLabel = config("Panels - Food slots", "Show label", defaultValue: false, "Show slot label");
             foodSlotsShowHintImage = config("Panels - Food slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             foodSlotsShowTooltip = config("Panels - Food slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
 
-            miscSlotsLabel = config("Panels - Misc slots", "Label", "Misc", "Text for misc slot.");
             miscSlotsShowLabel = config("Panels - Misc slots", "Show label", defaultValue: false, "Show slot label");
             miscSlotsShowHintImage = config("Panels - Misc slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             miscSlotsShowTooltip = config("Panels - Misc slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
@@ -215,7 +200,6 @@ namespace ExtraSlots
             ammoSlotsHotBarEnabled = config("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots");
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 850f), "On screen position of ammo slots hotbar panel");
             ammoSlotsHotBarScale = config("Panels - Ammo slots", "Scale", defaultValue: 1f, "Relative size");
-            ammoSlotsLabel = config("Panels - Ammo slots", "Label", "Ammo", "Text for ammo slot.");
             ammoSlotsShowLabel = config("Panels - Ammo slots", "Show label", defaultValue: false, "Show slot label");
             ammoSlotsShowHintImage = config("Panels - Ammo slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             ammoSlotsShowTooltip = config("Panels - Ammo slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
