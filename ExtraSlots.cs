@@ -313,6 +313,8 @@ namespace ExtraSlots
             LoadIcon("ammoslot.png", ref EquipmentPanel.ammoSlot);
             LoadIcon("miscslot.png", ref EquipmentPanel.miscSlot);
             LoadIcon("quickslot.png", ref EquipmentPanel.quickSlot);
+
+            LoadIcon("background.png", ref EquipmentPanel.background);
         }
 
         internal static void LoadIcon(string filename, ref Sprite icon)
@@ -322,27 +324,39 @@ namespace ExtraSlots
                 icon = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.zero);
         }
 
-        internal static bool LoadTexture(string filename, ref Texture2D tex)
+        internal static bool LoadTextureFromConfigDirectory(string filename, ref Texture2D tex)
         {
             string fileInConfigFolder = Path.Combine(configDirectory, filename);
-            if (File.Exists(fileInConfigFolder))
-            {
-                LogInfo($"Loaded image: {fileInConfigFolder}");
-                return tex.LoadImage(File.ReadAllBytes(fileInConfigFolder));
-            }
+            if (!File.Exists(fileInConfigFolder))
+                return false;
 
+            LogInfo($"Loaded image from config folder: {filename}");
+            return tex.LoadImage(File.ReadAllBytes(fileInConfigFolder));
+        }
+
+        internal static bool LoadTexture(string filename, ref Texture2D tex)
+        {
+            if (LoadTextureFromConfigDirectory(filename, ref tex))
+                return true;
+
+            tex.name = Path.GetFileNameWithoutExtension(filename);
+            return tex.LoadImage(GetEmbeddedFileData(filename), true);
+        }
+
+        internal static byte[] GetEmbeddedFileData(string filename)
+        {
             Assembly executingAssembly = Assembly.GetExecutingAssembly();
 
-            string name = executingAssembly.GetManifestResourceNames().Single(str => str.EndsWith(filename));
+            string name = executingAssembly.GetManifestResourceNames().SingleOrDefault(str => str.EndsWith(filename));
+            if (name.IsNullOrWhiteSpace())
+                return null;
 
             Stream resourceStream = executingAssembly.GetManifestResourceStream(name);
 
             byte[] data = new byte[resourceStream.Length];
             resourceStream.Read(data, 0, data.Length);
 
-            tex.name = Path.GetFileNameWithoutExtension(filename);
-
-            return tex.LoadImage(data, true);
+            return data;
         }
     }
 }

@@ -44,6 +44,7 @@ namespace ExtraSlots
         internal static Sprite ammoSlot;
         internal static Sprite miscSlot;
         internal static Sprite quickSlot;
+        internal static Sprite background;
 
         public static void MarkDirty() => isDirty = true;
 
@@ -346,11 +347,20 @@ namespace ExtraSlots
                 UpdateBackground();
             }
 
-            if (inventoryBackgroundImage && equipmentBackgroundImage)
+            if (equipmentBackgroundImage)
             {
-                equipmentBackgroundImage.sprite = inventoryBackgroundImage.sprite;
-                equipmentBackgroundImage.overrideSprite = inventoryBackgroundImage.overrideSprite;
-                equipmentBackgroundImage.color = inventoryBackgroundImage.color;
+                if (inventoryBackgroundImage)
+                {
+                    equipmentBackgroundImage.sprite = inventoryBackgroundImage.sprite;
+                    equipmentBackgroundImage.overrideSprite = inventoryBackgroundImage.overrideSprite;
+                    equipmentBackgroundImage.color = inventoryBackgroundImage.color;
+                }
+                
+                if (background)
+                {
+                    equipmentBackgroundImage.sprite = background;
+                    equipmentBackgroundImage.overrideSprite = background;
+                }
             }
         }
 
