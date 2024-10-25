@@ -1,0 +1,10 @@
+{
+    "exsl_slot_ammo" : "Ammo slot",
+    "exsl_slot_ammo_desc" : "Ammo and fishing baits",
+    "exsl_slot_quick" : "Quick slot",
+    "exsl_slot_quick_desc" : "Any items",
+    "exsl_slot_misc" : "Misc slot",
+    "exsl_slot_misc_desc" : "Quest items, keys and trophies",
+    "exsl_slot_food" : "Food slot",
+    "exsl_slot_food_desc" : "Consumable food"
+}

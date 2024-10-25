@@ -201,7 +201,7 @@ namespace ExtraSlots
                 bkgImage.transform.localScale = Vector3.one * 0.8f;
                 bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.1f);
                 if (ammoSlotsShowTooltip.Value)
-                    element.m_tooltip.Set("Ammo slot", "Ammo and fishing baits", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    element.m_tooltip.Set(Localization.instance.Localize("$exsl_slot_ammo"), Localization.instance.Localize("$exsl_slot_ammo_desc"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
             else if (slot.IsQuickSlot)
             {
@@ -211,7 +211,7 @@ namespace ExtraSlots
                 bkgImage.transform.localScale = Vector3.one * 0.6f;
                 bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.6f);
                 if (quickSlotsShowTooltip.Value)
-                    element.m_tooltip.Set("Quick slot", "Any items", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    element.m_tooltip.Set(Localization.instance.Localize("$exsl_slot_quick"), Localization.instance.Localize("$exsl_slot_quick_desc"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
             else if (slot.IsMiscSlot)
             {
@@ -220,15 +220,15 @@ namespace ExtraSlots
                 bkgImage.sprite = miscSlot;
                 bkgImage.transform.localScale = Vector3.one * 0.8f;
                 bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.75f);
-                if (miscSlotsShowTooltip.Value) 
-                    element.m_tooltip.Set("Misc slot", "Quest items, keys and trophies", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                if (miscSlotsShowTooltip.Value)
+                    element.m_tooltip.Set(Localization.instance.Localize("$exsl_slot_misc"), Localization.instance.Localize("$exsl_slot_misc_desc"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
             else if (slot.IsFoodSlot && freeSlot)
             {
                 element.m_food.enabled = foodSlotsShowHintImage.Value;
                 element.m_food.color = Color.grey - new Color(0f, 0f, 0f, 0.5f);
                 if (foodSlotsShowTooltip.Value)
-                    element.m_tooltip.Set("Food slot", "Consumable food", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    element.m_tooltip.Set(Localization.instance.Localize("$exsl_slot_food"), Localization.instance.Localize("$exsl_slot_food_desc"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
         }
 

@@ -1,0 +1,10 @@
+{
+    "exsl_slot_ammo": "Слот для боеприпасов",
+    "exsl_slot_ammo_desc": "Боеприпасы и рыболовные наживки",
+    "exsl_slot_quick": "Быстрый слот",
+    "exsl_slot_quick_desc": "Любые предметы",
+    "exsl_slot_misc": "Разное",
+    "exsl_slot_misc_desc": "Предметы заданий, ключи и трофеи",
+    "exsl_slot_food": "Слот для еды",
+    "exsl_slot_food_desc": "Готовая к употреблению еда"
+}

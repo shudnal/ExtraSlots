@@ -64,6 +64,10 @@
     <Reference Include="BepInEx">
       <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
+    <Reference Include="LocalizationManager, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Libs\LocalizationManager.dll</HintPath>
+    </Reference>
     <Reference Include="ServerSync, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Libs\ServerSync.dll</HintPath>
@@ -102,11 +106,14 @@
     <EmbeddedResource Include="Assets\ammoslot.png" />
     <EmbeddedResource Include="Assets\miscslot.png" />
     <EmbeddedResource Include="Assets\quickslot.png" />
+    <Content Include="Libs\LocalizationManager.dll" />
     <Content Include="Libs\ServerSync.dll" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
     <None Include="ILRepack.targets" />
+    <EmbeddedResource Include="translations\English.json" />
+    <EmbeddedResource Include="translations\Russian.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ILRepack.Lib.MSBuild.Task">

@@ -4,6 +4,7 @@
 		<ItemGroup>
 			<InputAssemblies Include="$(TargetPath)" />
 			<InputAssemblies Include="$(OutputPath)ServerSync.dll" />
+			<InputAssemblies Include="$(OutputPath)LocalizationManager.dll" />
 		</ItemGroup>
 		<ILRepack Parallel="true" DebugInfo="true" Internalize="true" InputAssemblies="@(InputAssemblies)" OutputFile="$(TargetPath)" TargetKind="SameAsPrimaryAssembly" LibraryPath="$(OutputPath)" />
 	</Target>
@@ -11,7 +12,11 @@
 		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ProjectDir)package\thunderstore\$(SolutionName)\" />
 		<Message Text="Copied to thunderstore package folder." Importance="High" />
 	</Target>
-	<Target Name="ZipOutputPath" AfterTargets="CopyDLLPackage">
+	<Target Name="CopyLanguageFile" AfterTargets="CopyDLLPackage">
+		<Copy SourceFiles="$(ProjectDir)translations\English.json" DestinationFolder="$(ProjectDir)package\thunderstore\$(SolutionName)" />
+		<Message Text="Copied English.json to thunderstore package folder." Importance="High" />
+	</Target>
+	<Target Name="ZipOutputPath" AfterTargets="CopyLanguageFile">
 		<ZipDirectory
 				SourceDirectory="$(ProjectDir)package\thunderstore\$(SolutionName)\"
 				DestinationFile="$(ProjectDir)package\thunderstore\$(SolutionName).zip"

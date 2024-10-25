@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
+using LocalizationManager;
 using ServerSync;
 using System.IO;
 using System.Linq;
@@ -143,6 +144,8 @@ namespace ExtraSlots
             Slots.InitializeSlots();
 
             EquipmentPanel.ReorderVanillaSlots();
+
+            Localizer.Load();
         }
 
         private void LateUpdate()
