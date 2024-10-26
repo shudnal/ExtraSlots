@@ -9,7 +9,7 @@ using static ExtraSlots.Slots;
 
 namespace ExtraSlots
 {
-    internal class EquipmentPanel
+    public static class EquipmentPanel
     {
         private const string BackgroundName = "ExtraSlotsEquipmentPanel";
 
@@ -40,7 +40,8 @@ namespace ExtraSlots
         private static Color highlightedColorUnfit = Color.clear;
 
         private static Material iconMaterial;
-        
+        private static Vector3 originalScale = Vector3.zero;
+
         internal static Sprite ammoSlot;
         internal static Sprite miscSlot;
         internal static Sprite quickSlot;
@@ -86,6 +87,11 @@ namespace ExtraSlots
         // Runs every frame InventoryGui.UpdateInventory if visible
         internal static void UpdateInventorySlots()
         {
+            if (originalScale == Vector3.zero && InventoryGui.instance.m_playerGrid.m_elements.Count > 0 
+                                              && InventoryGui.instance.m_playerGrid.m_elements[0].m_icon.material != null 
+                                              && InventoryGui.instance.m_playerGrid.m_elements[0].m_icon.transform.localScale != Vector3.one)
+                originalScale = InventoryGui.instance.m_playerGrid.m_elements[0].m_icon.transform.localScale;
+
             int startIndex = InventorySizePlayer;
             for (int i = 0; i < Math.Min(slots.Length, InventoryGui.instance.m_playerGrid.m_elements.Count - startIndex); ++i)
                 SetSlotBackgroundImage(InventoryGui.instance.m_playerGrid.m_elements[startIndex + i], slots[i]);
@@ -182,21 +188,20 @@ namespace ExtraSlots
 
         private static void SetSlotBackgroundImage(InventoryGrid.Element element, Slot slot)
         {
+            if (iconMaterial == null && element.m_icon.material != null)
+                iconMaterial = element.m_icon.material;
+
+            if (element.m_icon.material == null)
+                element.m_icon.material = iconMaterial;
+
             bool freeSlot = slot.IsFree;
             if (!freeSlot)
             {
                 ItemDrop.ItemData item = slot.Item;
-                element.m_tooltip.Set(item.m_shared.m_name, item.GetTooltip(), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                element.m_tooltip.Set(item.m_shared.m_name, item.GetTooltip(), InventoryGui.instance.m_playerGrid.m_tooltipAnchor); // Fix possible tooltip lose
+                element.m_icon.transform.localScale = originalScale == Vector3.zero ? Vector3.one: originalScale;
                 return;
             }
-
-            Image bkgImage = element.m_icon;
-
-            if (iconMaterial == null)
-                iconMaterial = bkgImage.material;
-
-            if (bkgImage.material == null)
-                bkgImage.material = iconMaterial;
 
             if (slot.IsEquipmentSlot)
             {
@@ -205,31 +210,31 @@ namespace ExtraSlots
             }
             else if (slot.IsAmmoSlot)
             {
-                bkgImage.enabled = ammoSlotsShowHintImage.Value;
-                bkgImage.material = null;
-                bkgImage.sprite = ammoSlot;
-                bkgImage.transform.localScale = Vector3.one * 0.8f;
-                bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.1f);
+                element.m_icon.enabled = ammoSlotsShowHintImage.Value;
+                element.m_icon.material = null;
+                element.m_icon.sprite = ammoSlot;
+                element.m_icon.transform.localScale = Vector3.one * 0.8f;
+                element.m_icon.color = Color.grey - new Color(0f, 0f, 0f, 0.1f);
                 if (ammoSlotsShowTooltip.Value)
                     element.m_tooltip.Set("$exsl_slot_ammo", "$exsl_slot_ammo_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
             else if (slot.IsQuickSlot)
             {
-                bkgImage.enabled = quickSlotsShowHintImage.Value;
-                bkgImage.material = null;
-                bkgImage.sprite = quickSlot;
-                bkgImage.transform.localScale = Vector3.one * 0.6f;
-                bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.6f);
+                element.m_icon.enabled = quickSlotsShowHintImage.Value;
+                element.m_icon.material = null;
+                element.m_icon.sprite = quickSlot;
+                element.m_icon.transform.localScale = Vector3.one * 0.6f;
+                element.m_icon.color = Color.grey - new Color(0f, 0f, 0f, 0.6f);
                 if (quickSlotsShowTooltip.Value)
                     element.m_tooltip.Set("$exsl_slot_quick", "$exsl_slot_quick_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
             else if (slot.IsMiscSlot)
             {
-                bkgImage.enabled = miscSlotsShowHintImage.Value;
-                bkgImage.material = null;
-                bkgImage.sprite = miscSlot;
-                bkgImage.transform.localScale = Vector3.one * 0.8f;
-                bkgImage.color = Color.grey - new Color(0f, 0f, 0f, 0.75f);
+                element.m_icon.enabled = miscSlotsShowHintImage.Value;
+                element.m_icon.material = null;
+                element.m_icon.sprite = miscSlot;
+                element.m_icon.transform.localScale = Vector3.one * 0.8f;
+                element.m_icon.color = Color.grey - new Color(0f, 0f, 0f, 0.75f);
                 if (miscSlotsShowTooltip.Value)
                     element.m_tooltip.Set("$exsl_slot_misc", "$exsl_slot_misc_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
@@ -317,8 +322,6 @@ namespace ExtraSlots
             if (!inventoryBackground)
                 return;
 
-            inventoryBackground.anchorMin = new Vector2(0.0f, extraRows.Value * -1f / vanillaInventoryHeight);
-
             if (!equipmentBackground)
             {
                 inventoryDarken = InventoryGui.instance.m_player.Find("Darken").GetComponent<RectTransform>();
@@ -362,6 +365,11 @@ namespace ExtraSlots
                     equipmentBackgroundImage.overrideSprite = background;
                 }
             }
+
+            inventoryBackground.anchorMin = new Vector2(0.0f, extraRows.Value * -1f / vanillaInventoryHeight);
+
+            if (fixContainerPosition.Value)
+                InventoryGui.instance.m_container.pivot = new Vector2(0f, 1f + extraRows.Value * 0.2f);
         }
 
         internal static void ClearPanel()
@@ -378,6 +386,7 @@ namespace ExtraSlots
             highlightedColorUnfit = Color.clear;
 
             iconMaterial = null;
+            originalScale = Vector3.zero;
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]
@@ -413,17 +422,23 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.UpdateInventory))]
-        internal static class InventoryGui_UpdateInventory_UpdateSlotsOnDirty
+        [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui))]
+        internal static class InventoryGrid_UpdateGui_UpdateSlotsOnDirty
         {
-            private static void Prefix(InventoryGui __instance, ref int __state)
+            private static void Prefix(InventoryGrid __instance, ref int __state)
             {
-                __state = __instance.m_playerGrid.m_elements.Count;
+                if (__instance != InventoryGui.instance.m_playerGrid)
+                    return;
+
+                __state = __instance.m_elements.Count;
             }
 
-            private static void Postfix(InventoryGui __instance, int __state)
+            private static void Postfix(InventoryGrid __instance, int __state)
             {
-                if (__state != __instance.m_playerGrid.m_elements.Count)
+                if (__instance != InventoryGui.instance.m_playerGrid)
+                    return;
+
+                if (__state != __instance.m_elements.Count)
                     MarkDirty();
 
                 UpdateInventorySlots();

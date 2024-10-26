@@ -46,6 +46,7 @@ namespace ExtraSlots
         public static ConfigEntry<Vector2> equipmentPanelOffset;
         public static ConfigEntry<bool> quickSlotsAlignmentCenter;
         public static ConfigEntry<bool> equipmentSlotsShowTooltip;
+        public static ConfigEntry<bool> fixContainerPosition;
 
         public static ConfigEntry<bool> foodSlotsShowLabel;
         public static ConfigEntry<bool> foodSlotsShowHintImage;
@@ -162,6 +163,8 @@ namespace ExtraSlots
 
             configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only. [Synced with Server]", synchronizedSetting: true);
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.");
+            fixContainerPosition = config("General", "Fix container position for extra rows", defaultValue: true, "Moves container lower if there are extra inventory rows." +
+                                                                                                                "\nDisable this if you have other mods repositioning the container grid element");
 
             quickSlotsAmount = config("Extra slots", "Quick slots", 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
             extraUtilitySlotsAmount = config("Extra slots", "Extra utility slots", 1, new ConfigDescription("How much utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);

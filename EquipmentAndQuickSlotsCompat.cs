@@ -52,6 +52,7 @@ namespace ExtraSlots
             static void TransferItemsToPlayerInventory(Inventory fromInventory, bool equipItem)
             {
                 foreach (ItemDrop.ItemData item in fromInventory.GetAllItemsInGridOrder().Where(item => item != null))
+                //foreach (ItemDrop.ItemData item in fromInventory.GetAllItemsSorted().Where(item => item != null))
                 {
                     if (!(TryFindFreeSlotForItem(item, out Slot slot) ? PlayerInventory.AddItem(item, slot.GridPosition) : PlayerInventory.AddItem(item)))
                     {

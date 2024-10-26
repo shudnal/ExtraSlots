@@ -36,7 +36,7 @@ namespace ExtraSlots
 
         internal static void CreateBar()
         {
-            hotBarRect = UnityEngine.Object.Instantiate(Hud.instance.m_rootObject.transform.Find("HotKeyBar"), Hud.instance.m_rootObject.transform, true).GetComponent<RectTransform>();
+            hotBarRect = UnityEngine.Object.Instantiate(Hud.instance.m_rootObject.transform.Find("HotKeyBar"), Hud.instance.m_rootObject.transform, true) as RectTransform;
             hotBarRect.name = barName;
             hotBarRect.localPosition = Vector3.zero;
 
@@ -69,7 +69,7 @@ namespace ExtraSlots
         internal static void ClearBar()
         {
             if (hotBarRect != null)
-                UnityEngine.Object.Destroy(hotBarRect);
+                UnityEngine.Object.Destroy(hotBarRect.gameObject);
 
             hotBar = null;
             hotBarRect = null;
