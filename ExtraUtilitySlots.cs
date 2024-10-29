@@ -191,6 +191,19 @@ namespace ExtraSlots
                 }
             }
 
+            [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.UnequipAllItems))]
+            public static class Humanoid_UnequipAllItems_ExtraUtility
+            {
+                private static void Postfix(Humanoid __instance)
+                {
+                    if (!IsValidPlayer(__instance))
+                        return;
+
+                    __instance.UnequipItem(Item1, triggerEquipEffects: false);
+                    __instance.UnequipItem(Item2, triggerEquipEffects: false);
+                }
+            }
+
             [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.IsItemEquiped))]
             private static class Humanoid_IsItemEquiped_ExtraUtility
             {
@@ -321,6 +334,26 @@ namespace ExtraSlots
                             Player.m_localPlayer.SetExtraUtility(1, null);
                             Player.m_localPlayer.SetupEquipment();
                         }
+                    }
+                }
+            }
+
+            [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.GetSetCount))]
+            private static class Humanoid_GetSetCount_ExtraUtility
+            {
+                private static void Postfix(Humanoid __instance, string setName, ref int __result)
+                {
+                    if (!IsValidPlayer(__instance))
+                        return;
+
+                    if (Item1 != null && Item1.m_shared.m_setName == setName)
+                    {
+                        __result++;
+                    }
+
+                    if (Item2 != null && Item2.m_shared.m_setName == setName)
+                    {
+                        __result++;
                     }
                 }
             }
