@@ -13,7 +13,7 @@
 		<Message Text="Copied to thunderstore package folder." Importance="High" />
 	</Target>
 	<Target Name="CopyLanguageFile" AfterTargets="CopyDLLPackage">
-		<Copy SourceFiles="$(ProjectDir)translations\English.json" DestinationFolder="$(ProjectDir)package\thunderstore\$(SolutionName)" />
+		<Copy SourceFiles="$(ProjectDir)translations\English.json" DestinationFiles="$(ProjectDir)package\thunderstore\$(SolutionName)\$(SolutionName).English.json" />
 		<Message Text="Copied English.json to thunderstore package folder." Importance="High" />
 	</Target>
 	<Target Name="ZipOutputPath" AfterTargets="CopyLanguageFile">
