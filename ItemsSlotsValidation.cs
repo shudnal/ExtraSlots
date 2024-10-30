@@ -25,6 +25,13 @@ namespace ExtraSlots
                 return true;
             }
 
+            if (TryMakeFreeSpaceInPlayerInventory(out Vector2i gridPosEmptied))
+            {
+                LogInfo($"Item {item.m_shared.m_name} {item.m_gridPos} was put into created free space {gridPosEmptied}");
+                item.m_gridPos = gridPosEmptied;
+                return true;
+            }
+
             return false;
         }
 
@@ -75,9 +82,9 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance) || __instance.m_isLoading)
                         return;
 
-                    MarkDirty();
-
                     ClearCachedItems();
+                    
+                    MarkDirty();
                 }
             }
         }

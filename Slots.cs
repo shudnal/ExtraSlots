@@ -183,6 +183,23 @@ namespace ExtraSlots
         public static Slot[] GetAmmoSlots() => Array.FindAll(slots, slot => slot.IsAmmoSlot);
         public static Slot[] GetMiscSlots() => Array.FindAll(slots, slot => slot.IsMiscSlot);
 
+        public static bool TryGetSavedPlayerSlot(ItemDrop.ItemData item, out Slot slot)
+        {
+            slot = null;
+
+            if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == PlayerProfile?.GetPlayerID().ToString())
+            {
+                int prevSlotIndex = Array.FindIndex(slots, slot => slot.ID == slotID);
+                if (prevSlotIndex > -1)
+                {
+                    slot = slots[prevSlotIndex];
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static bool TryFindFreeSlotForItem(ItemDrop.ItemData item, out Slot slot)
         {
             slot = null;
@@ -190,18 +207,10 @@ namespace ExtraSlots
             if (item == null)
                 return false;
 
-            if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == PlayerProfile?.GetPlayerID().ToString())
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.ItemFit(item) && prevSlot.IsFree)
             {
-                int prevSlotIndex = Array.FindIndex(slots, slot => slot.ID == slotID);
-                if (prevSlotIndex > -1)
-                {
-                    Slot prevSlot = slots[prevSlotIndex];
-                    if (prevSlot.IsActive && prevSlot.ItemFit(item) && prevSlot.IsFree)
-                    {
-                        slot = prevSlot;
-                        return true;
-                    }
-                }
+                slot = prevSlot;
+                return true;
             }
 
             int index = Array.FindIndex(slots, slot => slot.IsActive && slot.IsFree && slot.ItemFit(item));
@@ -219,18 +228,10 @@ namespace ExtraSlots
             if (item == null)
                 return false;
 
-            if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == PlayerProfile?.GetPlayerID().ToString())
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFit(item) && prevSlot.IsFree)
             {
-                int prevSlotIndex = Array.FindIndex(slots, slot => slot.ID == slotID);
-                if (prevSlotIndex > -1)
-                {
-                    Slot prevSlot = slots[prevSlotIndex];
-                    if (prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFit(item) && prevSlot.IsFree)
-                    {
-                        slot = prevSlot;
-                        return true;
-                    }
-                }
+                slot = prevSlot;
+                return true;
             }
 
             slot = GetEquipmentSlots().FirstOrDefault(slot => slot.ItemFit(item) && slot.IsFree);
@@ -244,22 +245,40 @@ namespace ExtraSlots
             if (item == null)
                 return false;
 
-            if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == PlayerProfile?.GetPlayerID().ToString())
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFit(item) && !CurrentPlayer.IsItemEquiped(prevSlot.Item))
             {
-                int prevSlotIndex = Array.FindIndex(slots, slot => slot.ID == slotID);
-                if (prevSlotIndex > -1)
-                {
-                    Slot prevSlot = slots[prevSlotIndex];
-                    if (prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFit(item) && !CurrentPlayer.IsItemEquiped(prevSlot.Item))
-                    {
-                        slot = prevSlot;
-                        return true;
-                    }
-                }
+                slot = prevSlot;
+                return true;
             }
 
             slot = GetEquipmentSlots().FirstOrDefault(slot => slot.ItemFit(item) && !CurrentPlayer.IsItemEquiped(slot.Item));
             return slot != null;
+        }
+
+        public static bool TryMakeFreeSpaceInPlayerInventory(out Vector2i gridPos)
+        {
+            gridPos = emptyPosition;
+
+            foreach (ItemDrop.ItemData item in PlayerInventory.GetAllItemsInGridOrder().Where(item => item.m_gridPos.y < InventoryHeightPlayer).Union(QuickSlotsHotBar.GetItems()))
+            {
+                if (TryFindFreeEquipmentSlotForItem(item, out Slot equipmentSlot))
+                {
+                    LogInfo($"In attempt to create free space {item.m_shared.m_name} from {item.m_gridPos} was moved into equipment slot {equipmentSlot} {equipmentSlot.GridPosition}");
+                    gridPos = item.m_gridPos;
+                    item.m_gridPos = equipmentSlot.GridPosition;
+                    return true;
+                }
+
+                if (TryFindFreeSlotForItem(item, out Slot slot))
+                {
+                    LogInfo($"In attempt to create free space {item.m_shared.m_name} from {item.m_gridPos} was moved into free slot {slot} {slot.GridPosition}");
+                    gridPos = item.m_gridPos;
+                    item.m_gridPos = slot.GridPosition;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static bool HaveEmptyQuickSlot() => slots.Any(slot => slot.IsFreeQuickSlot());

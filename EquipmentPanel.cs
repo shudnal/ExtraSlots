@@ -216,7 +216,7 @@ namespace ExtraSlots
                 element.m_icon.transform.localScale = Vector3.one * 0.8f;
                 element.m_icon.color = Color.grey - new Color(0f, 0f, 0f, 0.1f);
                 if (ammoSlotsShowTooltip.Value)
-                    element.m_tooltip.Set("$exsl_slot_ammo", "$exsl_slot_ammo_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    element.m_tooltip.Set($"$exsl_slot_ammo ({slot.GetShortcutText()})", "$exsl_slot_ammo_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
             else if (slot.IsQuickSlot)
             {
@@ -226,7 +226,7 @@ namespace ExtraSlots
                 element.m_icon.transform.localScale = Vector3.one * 0.6f;
                 element.m_icon.color = Color.grey - new Color(0f, 0f, 0f, 0.6f);
                 if (quickSlotsShowTooltip.Value)
-                    element.m_tooltip.Set("$exsl_slot_quick", "$exsl_slot_quick_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    element.m_tooltip.Set($"$exsl_slot_quick ({slot.GetShortcutText()})", "$exsl_slot_quick_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
             }
             else if (slot.IsMiscSlot)
             {

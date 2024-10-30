@@ -52,14 +52,23 @@ namespace ExtraSlots
             static void TransferItemsToPlayerInventory(Inventory fromInventory, bool equipItem)
             {
                 foreach (ItemDrop.ItemData item in fromInventory.GetAllItemsInGridOrder().Where(item => item != null))
-                //foreach (ItemDrop.ItemData item in fromInventory.GetAllItemsSorted().Where(item => item != null))
                 {
                     if (!(TryFindFreeSlotForItem(item, out Slot slot) ? PlayerInventory.AddItem(item, slot.GridPosition) : PlayerInventory.AddItem(item)))
                     {
-                        // Put item out of grid. Eventually it will be put into first free slot.
-                        LogWarning($"Item {item.m_shared.m_name} was temporary put out of grid. It will return to inventory first free slot.");
-                        item.m_gridPos = new Vector2i(0, InventoryHeightFull);
+                        if (TryMakeFreeSpaceInPlayerInventory(out Vector2i gridPos))
+                        {
+                            LogInfo($"Item {item.m_shared.m_name} from EaQS was put to created free space {gridPos}");
+                            item.m_gridPos = gridPos;
+                        }
+                        else
+                        {
+                            // Put item out of grid. Eventually it will be put into first free slot.
+                            LogWarning($"Item {item.m_shared.m_name} was temporary put out of grid. It will return to inventory first free slot.");
+                            item.m_gridPos = new Vector2i(0, InventoryHeightFull);
+                        }
+
                         PlayerInventory.m_inventory.Add(item);
+                        LogInfo($"Item {item.m_shared.m_name} from EquipmentAndQuickSlots was moved into regular inventory");
                     }
 
                     if (equipItem)

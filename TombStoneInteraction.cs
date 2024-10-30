@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using static ExtraSlots.Slots;
 using static ExtraSlots.ExtraSlots;
+using System.Collections.Generic;
 
 namespace ExtraSlots
 {
@@ -67,22 +68,68 @@ namespace ExtraSlots
         [HarmonyPatch(typeof(TombStone), nameof(TombStone.EasyFitInInventory))]
         private static class TombStone_EasyFitInInventory_HeightAdjustment
         {
-            private static float megingjordCarryWeight = 0f;
-
-            [HarmonyPriority(Priority.First)]
-            private static void Prefix(TombStone __instance, ref bool __state)
+            private static void Prefix(TombStone __instance, Player player, ref float __state)
             {
-                megingjordCarryWeight = (ObjectDB.instance?.GetStatusEffect(megingjordName.GetStableHashCode()) as SE_Stats)?.m_addMaxCarryWeight ?? 150f;
+                if (!IsValidPlayer(player))
+                    return;
 
-                __state = __instance.m_container.GetInventory().ContainsItemByName(megingjordName);
-                if (__state)
-                    Player.m_localPlayer.m_maxCarryWeight += megingjordCarryWeight;
+                __state = (__instance.m_lootStatusEffect as SE_Stats)?.m_addMaxCarryWeight ?? 0f;
+                Player.m_localPlayer.m_maxCarryWeight += __state;
             }
 
-            private static void Postfix(bool __state)
+            private static void Postfix(TombStone __instance, Player player, float __state, ref bool __result)
             {
-                if (__state)
-                    Player.m_localPlayer.m_maxCarryWeight -= megingjordCarryWeight;
+                if (!IsValidPlayer(player))
+                    return;
+
+                Player.m_localPlayer.m_maxCarryWeight -= __state;
+                if (__result)
+                    return;
+
+                if (__instance.m_container.GetInventory().NrOfItems() > InventorySizeActive)
+                    return;
+
+                int nrOfItems = 0; HashSet<Slot> takenSlots = new HashSet<Slot>();
+                foreach (ItemDrop.ItemData item in __instance.m_container.GetInventory().GetAllItemsInGridOrder())
+                {
+                    if (item.m_gridPos.y < InventoryHeightPlayer)
+                    {
+                        nrOfItems++;
+                        continue;
+                    }
+
+                    Slot slot = GetSlotInGrid(item.m_gridPos);
+                    if (slot == null)
+                    {
+                        nrOfItems++;
+                        continue;
+                    }
+                        
+                    if (takenSlots.Contains(slot))
+                    {
+                        nrOfItems++;
+                        continue;
+                    }
+
+                    takenSlots.Add(slot);
+                    if (slot.IsQuickSlot)
+                    {
+                        nrOfItems++;
+                        continue;
+                    }
+
+                    if (!slot.ItemFit(item))
+                    {
+                        nrOfItems++;
+                        continue;
+                    }
+
+                    // Item position is slot, slot is free, item fits slot, slot is dedicated slot (not quick slot).
+                    // At least this item will be moved into that slot on inventory transfer
+                    // This item can be excluded from items amount counting
+                }
+
+                __result = nrOfItems <= PlayerInventory.GetEmptySlots() && player.GetInventory().GetTotalWeight() + __instance.m_container.GetInventory().GetTotalWeight() < player.GetMaxCarryWeight() + __state;
             }
         }
 
@@ -96,6 +143,27 @@ namespace ExtraSlots
                     return;
 
                 SaveLastEquippedSlotsToItems();
+            }
+        }
+
+        [HarmonyPatch(typeof(Container), nameof(Container.RPC_TakeAllRespons))]
+        private static class Container_RPC_TakeAllRespons_AutoPickupPreventNRE
+        {
+            private static void Prefix(Container __instance, bool granted, ref bool __state)
+            {
+                // Check only tombstone container causing NRE
+                if (!granted || !__instance.GetComponent<TombStone>())
+                    return;
+
+                // Game version 0.219.13 Bog Witch, Player.AutoPickup NullReferenceException prevention
+                if (__state = Player.m_enableAutoPickup)
+                    Player.m_enableAutoPickup = false; 
+            }
+
+            private static void Postfix(bool __state)
+            {
+                if (__state)
+                    Player.m_enableAutoPickup = true;
             }
         }
     }
