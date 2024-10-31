@@ -1,5 +1,4 @@
-﻿using BepInEx;
-using BepInEx.Configuration;
+﻿using BepInEx.Configuration;
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
@@ -21,6 +20,7 @@ namespace ExtraSlots
         public const string foodSlotID = "Food";
         public const string ammoSlotID = "Ammo";
         public const string miscSlotID = "Misc";
+        public const string customSlotID = "Custom";
         public const string emptySlotID = "Empty";
 
         public static readonly Vector2i emptyPosition = new Vector2i(-1, -1);
@@ -141,11 +141,33 @@ namespace ExtraSlots
             private static bool IsShortcutDown(KeyboardShortcut shortcut) => shortcut.MainKey != KeyCode.None && ZInput.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(key => ZInput.GetKey(key));
         }
 
-        public class CustomSlot : Slot
+        public class CustomSlot
         {
-            public CustomSlot(string slotID, int slotIndex, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive) : base(slotID, slotIndex + 20, getName, itemIsValid, isActive)
+            public static bool TryAddNewSlot(string slotID, int slotIndex = -1, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
+                if (slots.Any(slot => slot.ID == GetSlotID(slotID)))
+                    return true;
+                
+                if (slotIndex < 0)
+                    slotIndex = Array.FindIndex(slots, slot => slot.IsCustomSlot && !slot.IsActive);
+                else 
+                    slotIndex += 20;
+
+                return new Slot(GetSlotID(slotID), slotIndex, getName, itemIsValid, isActive) != null;
             }
+
+            public static bool TryRemoveSlot(string slotID)
+            {
+                int index = Array.FindIndex(slots, slot => slot.IsCustomSlot && slot.IsActive && slot.ID == GetSlotID(slotID));
+                if (index == -1)
+                    return false;
+
+                slots[index] = new Slot($"{emptySlotID}{index}", index, null, (item) => false, () => false);
+
+                return true;
+            }
+
+            private static string GetSlotID(string slotID) => $"{customSlotID}{slotID}";
         }
 
         public static readonly Slot[] slots = new Slot[36];
@@ -155,8 +177,9 @@ namespace ExtraSlots
         public static PlayerProfile PlayerProfile => Game.instance?.GetPlayerProfile() ?? FejdStartup.instance?.m_profiles[FejdStartup.instance.m_profileIndex];
         public static Player CurrentPlayer => Player.m_localPlayer ?? EquipmentAndQuickSlotsCompat.playerToLoad;
         public static Inventory PlayerInventory => CurrentPlayer?.GetInventory();
+        public static int ExtraRowsPlayer => extraRows.Value;
         public static int InventoryWidth => PlayerInventory != null ? PlayerInventory.GetWidth() : 8;
-        public static int InventoryHeightPlayer => vanillaInventoryHeight + extraRows.Value;
+        public static int InventoryHeightPlayer => vanillaInventoryHeight + ExtraRowsPlayer;
         public static int InventoryHeightFull => InventoryHeightPlayer + GetTargetInventoryHeight(slots.Length, InventoryWidth);
         public static int InventorySizePlayer => InventoryHeightPlayer * InventoryWidth;
         public static int InventorySizeFull => InventoryHeightFull * InventoryWidth;
@@ -435,8 +458,11 @@ namespace ExtraSlots
 
         public static Slot GetItemSlot(ItemDrop.ItemData item)
         {
+            if (!PlayerInventory.ContainsItem(item))
+                return null;
+
             foreach (Slot slot in slots)
-                if (slot.Item == item)
+                if (slot.GridPosition == item.m_gridPos)
                     return slot;
 
             return null;

@@ -1,4 +1,5 @@
-﻿using BepInEx;
+﻿using APIManager;
+using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
 using LocalizationManager;
@@ -121,9 +122,11 @@ namespace ExtraSlots
 
         private void Awake()
         {
-            harmony.PatchAll();
-
             instance = this;
+
+            Patcher.Patch();
+
+            harmony.PatchAll();
 
             ConfigInit();
             _ = configSync.AddLockingConfigEntry(configLocked);
