@@ -84,24 +84,12 @@ namespace ExtraSlots
         private static class Inventory_GetEmptySlots_CheckRegularInventoryAndQuickSlots
         {
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory __instance, ref bool __state)
+            private static void Postfix(Inventory __instance, ref int __result, bool __state)
             {
                 if (__instance != PlayerInventory)
                     return;
 
-                __instance.m_height = InventoryHeightPlayer;
-                __state = true;
-            }
-
-            [HarmonyPriority(Priority.First)]
-            private static void Postfix(Inventory __instance, ref int __result, bool __state)
-            {
-                if (!__state)
-                    return;
-
-                __instance.m_height = InventoryHeightFull;
-
-                __result += GetEmptyQuickSlots();
+                __result = InventoryHeightPlayer * __instance.m_width - __instance.m_inventory.Count(item => !API.IsItemInSlot(item)) + GetEmptyQuickSlots();
             }
         }
 
@@ -152,23 +140,12 @@ namespace ExtraSlots
         private static class Inventory_HaveEmptySlot_CheckRegularInventoryAndQuickSlots
         {
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory __instance, ref bool __state)
-            {
-                if (__instance != PlayerInventory)
-                    return;
-
-                __instance.m_height = InventoryHeightPlayer;
-                __state = true;
-            }
-
-            [HarmonyPriority(Priority.First)]
             private static void Postfix(Inventory __instance, ref bool __result, bool __state)
             {
                 if (!__state)
                     return;
 
-                __instance.m_height = InventoryHeightFull;
-                __result = __result || HaveEmptyQuickSlot();
+                __result = __instance.GetEmptySlots() > 0;
             }
         }
 
@@ -266,13 +243,12 @@ namespace ExtraSlots
         private static class Inventory_CanAddItem_ItemData_TryFindAppropriateExtraSlot
         {
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory __instance, ref bool __state)
+            private static void Prefix(Inventory __instance)
             {
                 if (__instance != PlayerInventory)
                     return;
 
                 __instance.m_height = InventoryHeightPlayer;
-                __state = true;
             }
 
             [HarmonyPriority(Priority.First)]
@@ -286,7 +262,7 @@ namespace ExtraSlots
                 if (__result)
                     return;
 
-                __result = GetEmptyQuickSlots() * item.m_shared.m_maxStackSize >= stack || (stack <= item.m_shared.m_maxStackSize && TryFindFreeSlotForItem(item, out _));
+                __result = __instance.FindFreeStackSpace(item.m_shared.m_name, item.m_worldLevel) + __instance.GetEmptySlots() * item.m_shared.m_maxStackSize >= stack || stack <= item.m_shared.m_maxStackSize && TryFindFreeSlotForItem(item, out _);
             }
         }
 
