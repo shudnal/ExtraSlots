@@ -55,7 +55,7 @@ namespace ExtraSlots
                 {
                     Slot slot = slots[i];
                     ItemDrop.ItemData item = slot.Item;
-                    if (item == null || slot.ItemFit(item))
+                    if (item == null || slot.ItemFits(item))
                         continue;
                 
                     LogInfo($"Item {item.m_shared.m_name} unfits slot {slot}");
@@ -88,7 +88,7 @@ namespace ExtraSlots
                                 LogInfo($"{item.m_shared.m_name} {item.m_gridPos} {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos}");
 
                                 slotToSwap.ClearItemCache();
-                                if (slot.ItemFit(item = slot.Item))
+                                if (slot.ItemFits(item = slot.Item))
                                     continue;
                             }
                         }

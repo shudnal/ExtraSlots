@@ -63,18 +63,16 @@
   <ItemGroup>
     <Compile Include="API\API.cs" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
     <Reference Include="0Harmony">
       <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\0Harmony.dll</HintPath>
     </Reference>
+    <Reference Include="AdventureBackpacksAPI, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\API\AdventureBackpacksAPI.dll</HintPath>
+    </Reference>
     <Reference Include="assembly_guiutils_publicized">
       <HintPath>..\Assemblies\stable\publicized_assemblies\assembly_guiutils_publicized.dll</HintPath>
-    </Reference>
-    <Reference Include="assembly_utils_publicized">
-      <HintPath>..\Assemblies\stable\publicized_assemblies\assembly_utils_publicized.dll</HintPath>
-    </Reference>
-    <Reference Include="assembly_valheim_publicized">
-      <HintPath>..\Assemblies\stable\publicized_assemblies\assembly_valheim_publicized.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">
       <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\BepInEx.dll</HintPath>
@@ -114,9 +112,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\stable\UnityEngine.AnimationModule.dll</HintPath>
     </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\Assemblies\stable\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
     <Reference Include="UnityEngine.ImageConversionModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\stable\UnityEngine.ImageConversionModule.dll</HintPath>
@@ -125,12 +120,24 @@
       <HintPath>..\Assemblies\stable\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="assembly_utils_publicized">
+      <HintPath>..\Assemblies\stable\publicized_assemblies\assembly_utils_publicized.dll</HintPath>
+    </Reference>
+    <Reference Include="assembly_valheim_publicized">
+      <HintPath>..\Assemblies\stable\publicized_assemblies\assembly_valheim_publicized.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>..\Assemblies\stable\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+  </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
     <EmbeddedResource Include="Assets\ammoslot.png" />
     <EmbeddedResource Include="Assets\miscslot.png" />
     <EmbeddedResource Include="Assets\quickslot.png" />
     <Content Include="Libs\LocalizationManager.dll" />
     <Content Include="Libs\ServerSync.dll" />
+    <Content Include="Libs\AdventureBackpacksAPI.dll" />
   </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
     <None Include=".editorconfig" />

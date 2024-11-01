@@ -181,8 +181,8 @@ namespace ExtraSlots
                 highlightedColorUnfit = button.colors.highlightedColor + new Color(0.3f, 0f, 0f, 0.1f);
 
             ColorBlock buttonColors = button.colors;
-            buttonColors.normalColor = InventoryGui.instance.m_dragItem != null && !slot.ItemFit(InventoryGui.instance.m_dragItem) ? normalColorUnfit : normalColor;
-            buttonColors.highlightedColor = InventoryGui.instance.m_dragItem != null && !slot.ItemFit(InventoryGui.instance.m_dragItem) ? highlightedColorUnfit : highlightedColor;
+            buttonColors.normalColor = InventoryGui.instance.m_dragItem != null && !slot.ItemFits(InventoryGui.instance.m_dragItem) ? normalColorUnfit : normalColor;
+            buttonColors.highlightedColor = InventoryGui.instance.m_dragItem != null && !slot.ItemFits(InventoryGui.instance.m_dragItem) ? highlightedColorUnfit : highlightedColor;
             button.colors = buttonColors;
         }
 

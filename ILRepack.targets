@@ -5,14 +5,15 @@
 			<InputAssemblies Include="$(TargetPath)" />
 			<InputAssemblies Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' " Include="$(OutputPath)ServerSync.dll" />
 			<InputAssemblies Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' " Include="$(OutputPath)LocalizationManager.dll" />
+			<InputAssemblies Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' " Include="$(OutputPath)AdventureBackpacksAPI.dll" />
 		</ItemGroup>
 		<ILRepack Parallel="true" DebugInfo="true" Internalize="true" InputAssemblies="@(InputAssemblies)" OutputFile="$(TargetPath)" TargetKind="SameAsPrimaryAssembly" LibraryPath="$(OutputPath)" />
 	</Target>
-	<Target Name="CopyDLLPackageAPI" AfterTargets="ILRepacker" Condition=" '$(Configuration)|$(Platform)' == 'API|AnyCPU' ">
+	<Target Name="CopyDLLPackageAPIPackage" AfterTargets="ILRepacker" Condition=" '$(Configuration)|$(Platform)' == 'API|AnyCPU' ">
 		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ProjectDir)package\API\" />
 		<Message Text="Copied to API package folder." Importance="High" />
 	</Target>
-	<Target Name="CopyDLLPackageAPI" AfterTargets="ILRepacker" Condition=" '$(Configuration)|$(Platform)' == 'API|AnyCPU' ">
+	<Target Name="CopyDLLPackageAPIAssemblies" AfterTargets="ILRepacker" Condition=" '$(Configuration)|$(Platform)' == 'API|AnyCPU' ">
 		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ProjectDir)\..\Assemblies\API" />
 		<Message Text="Copied to API Assemblies folder." Importance="High" />
 	</Target>

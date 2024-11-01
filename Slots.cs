@@ -128,7 +128,7 @@ namespace ExtraSlots
 
             public bool IsFree => Item == null;
 
-            public bool ItemFit(ItemDrop.ItemData item) => item != null && IsActive && (_itemIsValid == null || _itemIsValid(item));
+            public bool ItemFits(ItemDrop.ItemData item) => item != null && IsActive && (_itemIsValid == null || _itemIsValid(item));
 
             public bool IsFreeQuickSlot() => IsQuickSlot && IsActive && IsFree;
 
@@ -160,6 +160,28 @@ namespace ExtraSlots
             public override string ToString() => (Name == "" ? ID : Name) + (IsActive ? "" : " (inactive)");
 
             private static bool IsShortcutDown(KeyboardShortcut shortcut) => shortcut.MainKey != KeyCode.None && ZInput.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(key => ZInput.GetKey(key));
+
+            internal ExtraSlot ToExtraSlot()
+            {
+                return new ExtraSlot()
+                {
+                    _id = () => ID,
+                    _name = () => Name,
+                    _gridPosition = () => GridPosition,
+                    _item = () => Item,
+                    _itemFits = (item) => ItemFits(item),
+                    _isActive = () => IsActive,
+                    _isFree = () => IsFree,
+                    _isHotkeySlot = () => IsHotkeySlot,
+                    _isEquipmentSlot = () => IsEquipmentSlot,
+                    _isQuickSlot = () => IsQuickSlot,
+                    _isMiscSlot = () => IsMiscSlot,
+                    _isAmmoSlot = () => IsAmmoSlot,
+                    _isFoodSlot = () => IsFoodSlot,
+                    _isCustomSlot = () => IsCustomSlot,
+                    _isEmptySlot = () => IsEmptySlot
+                };
+            }
         }
 
         public class CustomSlot
@@ -284,7 +306,7 @@ namespace ExtraSlots
                     slots[i].UpdateGridPosition();
             }
 
-            private static string GetSlotID(string slotID) => $"{customSlotID}{slotID}";
+            internal static string GetSlotID(string slotID) => $"{customSlotID}{slotID}";
         }
 
         public static readonly Slot[] slots = new Slot[36];
@@ -347,13 +369,13 @@ namespace ExtraSlots
             if (item == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.ItemFit(item) && prevSlot.IsFree)
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.ItemFits(item) && prevSlot.IsFree)
             {
                 slot = prevSlot;
                 return true;
             }
 
-            int index = Array.FindIndex(slots, slot => slot.IsActive && slot.IsFree && slot.ItemFit(item));
+            int index = Array.FindIndex(slots, slot => slot.IsActive && slot.IsFree && slot.ItemFits(item));
             if (index == -1)
                 return false;
 
@@ -368,13 +390,13 @@ namespace ExtraSlots
             if (item == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFit(item) && prevSlot.IsFree)
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && prevSlot.IsFree)
             {
                 slot = prevSlot;
                 return true;
             }
 
-            slot = GetEquipmentSlots().FirstOrDefault(slot => slot.ItemFit(item) && slot.IsFree);
+            slot = GetEquipmentSlots().FirstOrDefault(slot => slot.ItemFits(item) && slot.IsFree);
             return slot != null;
         }
 
@@ -385,13 +407,13 @@ namespace ExtraSlots
             if (item == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFit(item) && !CurrentPlayer.IsItemEquiped(prevSlot.Item))
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && !CurrentPlayer.IsItemEquiped(prevSlot.Item))
             {
                 slot = prevSlot;
                 return true;
             }
 
-            slot = GetEquipmentSlots().FirstOrDefault(slot => slot.ItemFit(item) && !CurrentPlayer.IsItemEquiped(slot.Item));
+            slot = GetEquipmentSlots().FirstOrDefault(slot => slot.ItemFits(item) && !CurrentPlayer.IsItemEquiped(slot.Item));
             return slot != null;
         }
 

@@ -118,7 +118,7 @@ namespace ExtraSlots
                         continue;
                     }
 
-                    if (!slot.ItemFit(item))
+                    if (!slot.ItemFits(item))
                     {
                         nrOfItems++;
                         continue;

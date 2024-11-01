@@ -25,6 +25,91 @@ public class API
     }
 
     /// <summary>
+    /// Returns list of all slots
+    /// </summary>
+    public static List<ExtraSlot> GetExtraSlots()
+    {
+#if !API
+        return slots.Select(slot => slot.ToExtraSlot()).ToList();
+#else
+        return new List<ExtraSlot>();
+#endif
+    }
+
+    /// <summary>
+    /// Returns list of corresponding slots
+    /// </summary>
+    public static List<ExtraSlot> GetEquipmentSlots()
+    {
+#if !API
+        return slots.Where(slot => slot.IsEquipmentSlot).Select(slot => slot.ToExtraSlot()).ToList();
+#else
+        return new List<ExtraSlot>();
+#endif
+    }
+
+    /// <summary>
+    /// Returns list of corresponding slots
+    /// </summary>
+    public static List<ExtraSlot> GetQuickSlots()
+    {
+#if !API
+        return slots.Where(slot => slot.IsQuickSlot).Select(slot => slot.ToExtraSlot()).ToList();
+#else
+        return new List<ExtraSlot>();
+#endif
+    }
+
+    /// <summary>
+    /// Returns list of corresponding slots
+    /// </summary>
+    public static List<ExtraSlot> GetFoodSlots()
+    {
+#if !API
+        return slots.Where(slot => slot.IsFoodSlot).Select(slot => slot.ToExtraSlot()).ToList();
+#else
+        return new List<ExtraSlot>();
+#endif
+    }
+
+    /// <summary>
+    /// Returns list of corresponding slots
+    /// </summary>
+    public static List<ExtraSlot> GetAmmoSlots()
+    {
+#if !API
+        return slots.Where(slot => slot.IsAmmoSlot).Select(slot => slot.ToExtraSlot()).ToList();
+#else
+        return new List<ExtraSlot>();
+#endif
+    }
+
+    /// <summary>
+    /// Returns list of corresponding slots
+    /// </summary>
+    public static List<ExtraSlot> GetMiscSlots()
+    {
+#if !API
+        return slots.Where(slot => slot.IsMiscSlot).Select(slot => slot.ToExtraSlot()).ToList();
+#else
+        return new List<ExtraSlot>();
+#endif
+    }
+
+    /// <summary>
+    /// Returns slot with given ID
+    /// </summary>
+    /// <param name="slotID"></param>
+    public static ExtraSlot FindSlot(string slotID)
+    {
+#if !API
+        return slots.Where(slot => slot.ID == slotID || slot.ID == CustomSlot.GetSlotID(slotID)).Select(slot => slot.ToExtraSlot()).FirstOrDefault();
+#else
+        return null;
+#endif
+    }
+
+    /// <summary>
     /// Returns list of items located in extra slots
     /// </summary>
     /// <returns>List of not null ItemDrop.ItemData</returns>
@@ -260,4 +345,42 @@ public class API
         EquipmentPanel.UpdatePanel();
 #endif
     }
+}
+
+[PublicAPI]
+public class ExtraSlot
+{
+    internal Func<string> _id;
+    internal Func<string> _name;
+    internal Func<Vector2i> _gridPosition;
+    internal Func<ItemDrop.ItemData> _item;
+    internal Func<ItemDrop.ItemData, bool> _itemFits;
+    internal Func<bool> _isActive;
+    internal Func<bool> _isFree;
+    internal Func<bool> _isHotkeySlot;
+    internal Func<bool> _isEquipmentSlot;
+    internal Func<bool> _isQuickSlot;
+    internal Func<bool> _isMiscSlot;
+    internal Func<bool> _isAmmoSlot;
+    internal Func<bool> _isFoodSlot;
+    internal Func<bool> _isCustomSlot;
+    internal Func<bool> _isEmptySlot;
+
+    public static readonly Vector2i emptyPosition = new Vector2i(-1, -1);
+
+    public string ID => _id == null ? "" : _id();
+    public string Name => _name == null ? "" : _name();
+    public Vector2i GridPosition => _gridPosition == null ? emptyPosition : _gridPosition();
+    public ItemDrop.ItemData Item => _item == null ? null : _item();
+    public bool ItemFits(ItemDrop.ItemData item) => _itemFits != null && _itemFits(item);
+    public bool IsActive => _isActive != null && _isActive();
+    public bool IsFree => _isFree != null && _isFree();
+    public bool IsHotkeySlot => _isHotkeySlot != null && _isHotkeySlot();
+    public bool IsEquipmentSlot => _isEquipmentSlot != null && _isEquipmentSlot();
+    public bool IsQuickSlot => _isQuickSlot != null && _isQuickSlot();
+    public bool IsMiscSlot => _isMiscSlot != null && _isMiscSlot();
+    public bool IsAmmoSlot => _isAmmoSlot != null && _isAmmoSlot();
+    public bool IsFoodSlot => _isFoodSlot != null && _isFoodSlot();
+    public bool IsCustomSlot => _isCustomSlot != null && _isCustomSlot();
+    public bool IsEmptySlot => _isEmptySlot != null && _isEmptySlot();
 }

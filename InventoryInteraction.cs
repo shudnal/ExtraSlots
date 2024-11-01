@@ -162,14 +162,14 @@ namespace ExtraSlots
                     return true;
 
                 // If the dropped item is unfit for target slot
-                if (__instance.m_inventory == PlayerInventory && GetSlotInGrid(pos) is Slot slot && !slot.ItemFit(item))
+                if (__instance.m_inventory == PlayerInventory && GetSlotInGrid(pos) is Slot slot && !slot.ItemFits(item))
                 {
                     LogInfo($"DropItem Prevented dropping {item.m_shared.m_name} {item.m_gridPos} into unfit slot {slot}");
                     return false;
                 }
 
                 // If dropped item is in slot and interchanged item is unfit for dragged item slot
-                if (itemAt != null && fromInventory == PlayerInventory && GetSlotInGrid(item.m_gridPos) is Slot slot1 && !slot1.ItemFit(itemAt))
+                if (itemAt != null && fromInventory == PlayerInventory && GetSlotInGrid(item.m_gridPos) is Slot slot1 && !slot1.ItemFits(itemAt))
                 {
                     LogInfo($"DropItem Prevented swapping {item.m_shared.m_name} {slot1} with unfit item {itemAt.m_shared.m_name} {pos}");
                     return false;
@@ -196,7 +196,7 @@ namespace ExtraSlots
                     return;
 
                 // If the dropped item fits for target slot
-                if (GetSlotInGrid(new Vector2i(x, y)) is not Slot slot || slot.ItemFit(item))
+                if (GetSlotInGrid(new Vector2i(x, y)) is not Slot slot || slot.ItemFits(item))
                     return;
 
                 if (TryFindFreeSlotForItem(item, out Slot freeSlot))
@@ -302,7 +302,7 @@ namespace ExtraSlots
                     return;
 
                 // If already overlapping or not slot or slot fit - let logic go
-                if (__instance.GetItemAt(pos.x, pos.y) != null || GetSlotInGrid(pos) is not Slot slot || slot.ItemFit(item))
+                if (__instance.GetItemAt(pos.x, pos.y) != null || GetSlotInGrid(pos) is not Slot slot || slot.ItemFits(item))
                     return;
 
                 // If inventory has available free stack items with the same quality - let stack logic go

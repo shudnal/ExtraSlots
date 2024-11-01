@@ -42,6 +42,10 @@ namespace ExtraSlots
         public static ConfigEntry<bool> miscSlotsEnabled;
         public static ConfigEntry<bool> ammoSlotsEnabled;
 
+        public static ConfigEntry<bool> adventureBackpacksSlotEnabled;
+        public static ConfigEntry<string> adventureBackpacksSlotName;
+        public static ConfigEntry<int> adventureBackpacksSlotIndex;
+
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
         public static ConfigEntry<Vector2> equipmentPanelOffset;
@@ -142,6 +146,9 @@ namespace ExtraSlots
             EquipmentPanel.ReorderVanillaSlots();
 
             Localizer.Load();
+
+            if (AdventureBackpacks.API.ABAPI.IsLoaded())
+                API.AddSlotWithIndex("AdventureBackpacks", adventureBackpacksSlotIndex.Value, () => adventureBackpacksSlotName.Value, item => AdventureBackpacks.API.ABAPI.IsBackpack(item), () => adventureBackpacksSlotEnabled.Value);
         }
 
         private void LateUpdate()
@@ -169,21 +176,27 @@ namespace ExtraSlots
             fixContainerPosition = config("General", "Fix container position for extra rows", defaultValue: true, "Moves container lower if there are extra inventory rows." +
                                                                                                                 "\nDisable this if you have other mods repositioning the container grid element");
 
-            quickSlotsAmount = config("Extra slots", "Quick slots", 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
-            extraUtilitySlotsAmount = config("Extra slots", "Extra utility slots", 1, new ConfigDescription("How much utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
-            extraRows = config("Extra slots", "Extra inventory rows", 0, new ConfigDescription("How much rows to add in regular inventory [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
-            foodSlotsEnabled = config("Extra slots", "Food slots", true, "Enable 3 slots for food [Synced with Server]", synchronizedSetting: true);
-            miscSlotsEnabled = config("Extra slots", "Misc slots", true, "Enable up to 2 slots for trophies, miscellaneous, keys and quest items." +
+            quickSlotsAmount = config("Extra slots", "Quick slots", defaultValue: 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
+            extraUtilitySlotsAmount = config("Extra slots", "Extra utility slots", defaultValue: 1, new ConfigDescription("How much utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
+            extraRows = config("Extra slots", "Extra inventory rows", defaultValue: 0, new ConfigDescription("How much rows to add in regular inventory [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
+            foodSlotsEnabled = config("Extra slots", "Food slots", defaultValue: true, "Enable 3 slots for food [Synced with Server]", synchronizedSetting: true);
+            miscSlotsEnabled = config("Extra slots", "Misc slots", defaultValue: true, "Enable up to 2 slots for trophies, miscellaneous, keys and quest items." +
                                                                          "\n1 slot comes with Food slots, 1 slot comes with Ammo slots." +
                                                                          "\nIf both Food and Ammo slots are disabled there will be no Misc slots [Synced with Server]", synchronizedSetting: true);
-            ammoSlotsEnabled = config("Extra slots", "Ammo slots", true, "Enable 3 slots for ammo [Synced with Server]", synchronizedSetting: true);
+            ammoSlotsEnabled = config("Extra slots", "Ammo slots", defaultValue: true, "Enable 3 slots for ammo [Synced with Server]", synchronizedSetting: true);
 
-            extraRows.SettingChanged += (s, e) => { API.UpdateSlots(); };
+            extraRows.SettingChanged += (s, e) => API.UpdateSlots();
             extraUtilitySlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             foodSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             miscSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             ammoSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+
+            adventureBackpacksSlotEnabled = config("Extra slots - Adventure Backpacks", "Enable custom slot", defaultValue: false, "Enable custom slot for backpack [Synced with Server]", synchronizedSetting: true);
+            adventureBackpacksSlotName = config("Extra slots - Adventure Backpacks", "Slot name", defaultValue: "Backpack", "Custom slot name");
+            adventureBackpacksSlotIndex = config("Extra slots - Adventure Backpacks", "Slot index", defaultValue: 0, "Custom slot index");
+
+            adventureBackpacksSlotEnabled.SettingChanged += (s, e) => API.UpdateSlots();
 
             vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder, "Comma separated list defining order of vanilla equipment slots");
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalMiddle, "Equipment slots alignment");
