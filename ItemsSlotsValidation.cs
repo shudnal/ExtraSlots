@@ -59,7 +59,41 @@ namespace ExtraSlots
                         continue;
                 
                     LogInfo($"Item {item.m_shared.m_name} unfits slot {slot}");
-                
+                    
+                    if (slot.IsEquipmentSlot && (item.m_equipped || Player.m_localPlayer.IsItemEquiped(item)))
+                    {
+                        slot.ClearItemCache();
+                        if (TryFindFreeEquipmentSlotForItem(item, out Slot freeEquipmentSlot))
+                        {
+                            LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into first free equipment slot {freeEquipmentSlot}");
+                            item.m_gridPos = freeEquipmentSlot.GridPosition;
+                            freeEquipmentSlot.ClearItemCache();
+                            continue;
+                        }
+                        else if (TryFindFirstUnequippedSlotForItem(item, out Slot slotToSwap))
+                        {
+                            if (slotToSwap.IsFree)
+                            {
+                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into unequipped slot {slotToSwap} {slotToSwap.GridPosition}");
+                                item.m_gridPos = slotToSwap.GridPosition;
+                                slotToSwap.ClearItemCache();
+                                continue;
+                            }
+                            else
+                            {
+                                ItemDrop.ItemData itemToSwap = slotToSwap.Item;
+                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was swapped with unequipped {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos} into slot {slotToSwap} {slotToSwap.GridPosition}");
+                                itemToSwap.m_gridPos = item.m_gridPos;
+                                item.m_gridPos = slotToSwap.GridPosition;
+                                LogInfo($"{item.m_shared.m_name} {item.m_gridPos} {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos}");
+
+                                slotToSwap.ClearItemCache();
+                                if (slot.ItemFit(item = slot.Item))
+                                    continue;
+                            }
+                        }
+                    }
+
                     PutIntoFirstEmptySlot(item);
                 }
             }

@@ -84,7 +84,7 @@ namespace ExtraSlots
         private static class Inventory_GetEmptySlots_CheckRegularInventoryAndQuickSlots
         {
             [HarmonyPriority(Priority.First)]
-            private static void Postfix(Inventory __instance, ref int __result, bool __state)
+            private static void Postfix(Inventory __instance, ref int __result)
             {
                 if (__instance != PlayerInventory)
                     return;
@@ -385,20 +385,21 @@ namespace ExtraSlots
 
                 if (equipped)
                 {
-                    if (TryFindFreeEquipmentSlotForItem(item, out Slot slot1))
+                    if (TryFindFreeEquipmentSlotForItem(item, out Slot equipmentSlot))
                     {
-                        pos = slot1.GridPosition;
+                        pos = equipmentSlot.GridPosition;
                         return;
                     }
-                    else if (TryFindFirstUnequippedSlotForItem(item, out Slot slot))
+                    else if (TryFindFirstUnequippedSlotForItem(item, out Slot unequippedSlot))
                     {
-                        pos = slot.GridPosition;
+                        // Item at slot will find its place in Inventory_AddItem_ItemData_amount_x_y_TargetPositionRerouting
+                        pos = unequippedSlot.GridPosition;
                         return;
                     }
                 }
                 
-                if (TryFindFreeSlotForItem(item, out Slot slot3))
-                    pos = slot3.GridPosition;
+                if (TryFindFreeSlotForItem(item, out Slot freeSlot))
+                    pos = freeSlot.GridPosition;
                 else
                     pos = FindEmptyQuickSlot();
 
@@ -413,7 +414,7 @@ namespace ExtraSlots
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.MoveInventoryToGrave))]
         private static class Inventory_MoveInventoryToGrave_UpdateGraveInventory
         {
-            private static void Prefix(Inventory __instance, Inventory original)
+            private static void Prefix(Inventory original)
             {
                 if (original != PlayerInventory)
                     return;

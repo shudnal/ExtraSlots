@@ -26,6 +26,7 @@ namespace ExtraSlots
         public static readonly Vector2i emptyPosition = new Vector2i(-1, -1);
 
         public static readonly string VanillaOrder = $"{helmetSlotID},{chestSlotID},{legsSlotID},{shoulderSlotID},{utilitySlotID}";
+        public static readonly HashSet<string> vanillaSlots = new HashSet<string>() { helmetSlotID, chestSlotID, legsSlotID, shoulderSlotID, utilitySlotID };
 
         private const string customKeyPlayerID = "ExtraSlotsEquippedBy";
         private const string customKeySlotID = "ExtraSlotsEquippedSlot";
@@ -52,6 +53,8 @@ namespace ExtraSlots
             public Vector2 Position => _position;
 
             public Vector2i GridPosition => _gridPos;
+            
+            public int Index => _index;
 
             public bool IsHotkeySlot => _getShortcut != null;
             public bool IsEquipmentSlot => _index > 13;
@@ -60,6 +63,7 @@ namespace ExtraSlots
             public bool IsAmmoSlot => 8 <= _index && _index <= 10;
             public bool IsFoodSlot => 11 <= _index && _index <= 13;
             public bool IsCustomSlot => _index > 20;
+            public bool IsEmptySlot => _id == emptySlotID;
 
             internal void SetPosition(Vector2 newPosition)
             {
@@ -77,16 +81,20 @@ namespace ExtraSlots
 
             internal void SwapIndexWith(Slot slot)
             {
+                // Cache slot item to be grid position independent when getting slot item
+                CacheItem(); slot.CacheItem();
+
                 (_index, slot._index) = (slot._index, _index);
                 UpdateGridPosition();
                 slot.UpdateGridPosition();
             }
 
-            public bool IsVanillaEquipment() => _id == helmetSlotID
-                                        || _id == legsSlotID
-                                        || _id == utilitySlotID
-                                        || _id == chestSlotID
-                                        || _id == shoulderSlotID;
+            internal void SetSlotIndex(int index)
+            {
+                _index = index;
+            }
+
+            public bool IsVanillaEquipment() => vanillaSlots.Contains(_id);
 
             public bool IsShortcutDown() => IsActive && _getShortcut != null && Player.m_localPlayer != null && Player.m_localPlayer.TakeInput() && IsShortcutDown(_getShortcut());
 
@@ -103,11 +111,19 @@ namespace ExtraSlots
                     if (cachedItems.TryGetValue(_gridPos, out ItemDrop.ItemData item))
                         return item;
 
-                    // Cache will be clear on inventory change
-                    item = PlayerInventory.GetItemAt(_gridPos.x, _gridPos.y);
-                    cachedItems[_gridPos] = item;
-                    return item;
+                    return CacheItem();
                 }
+            }
+
+            internal ItemDrop.ItemData CacheItem()
+            {
+                if (PlayerInventory == null)
+                    return null;
+
+                // Cache will be clear on inventory change
+                ItemDrop.ItemData item = PlayerInventory.GetItemAt(_gridPos.x, _gridPos.y);
+                cachedItems[_gridPos] = item;
+                return item;
             }
 
             public bool IsFree => Item == null;
@@ -115,6 +131,11 @@ namespace ExtraSlots
             public bool ItemFit(ItemDrop.ItemData item) => item != null && IsActive && (_itemIsValid == null || _itemIsValid(item));
 
             public bool IsFreeQuickSlot() => IsQuickSlot && IsActive && IsFree;
+
+            public void ClearItemCache()
+            {
+                cachedItems.Remove(_gridPos);
+            }
 
             public Slot(string slotID, int slotIndex, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive)
             {
@@ -143,28 +164,124 @@ namespace ExtraSlots
 
         public class CustomSlot
         {
-            public static bool TryAddNewSlot(string slotID, int slotIndex = -1, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
+            public static bool TryAddNewSlotBefore(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
+            {
+                if (slotIDs.Length > 0)
+                {
+                    Slot slotToAdd = slots.FirstOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(GetSlotID(slotID)));
+                    if (slotToAdd != null)
+                        TryAddNewSlotWithIndex(slotID, slotToAdd.Index, getName, itemIsValid, isActive);
+                }
+
+                return TryAddNewSlotWithIndex(slotID, -1, getName, itemIsValid, isActive);
+            }
+
+            public static bool TryAddNewSlotAfter(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
+            {
+                if (slotIDs.Length > 0)
+                {
+                    Slot slotToAdd = slots.LastOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(GetSlotID(slotID)));
+                    if (slotToAdd != null)
+                        TryAddNewSlotWithIndex(slotID, slotToAdd.Index, getName, itemIsValid, isActive);
+                }
+
+                return TryAddNewSlotWithIndex(slotID, -1, getName, itemIsValid, isActive);
+            }
+
+            public static bool TryAddNewSlotWithIndex(string slotID, int slotIndex = -1, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
                 if (slots.Any(slot => slot.ID == GetSlotID(slotID)))
                     return true;
-                
-                if (slotIndex < 0)
-                    slotIndex = Array.FindIndex(slots, slot => slot.IsCustomSlot && !slot.IsActive);
-                else 
-                    slotIndex += 20;
 
-                return new Slot(GetSlotID(slotID), slotIndex, getName, itemIsValid, isActive) != null;
+                // index < 0 - first available slot
+                // index > 0 - clamp between 20 and max slots count then insert with shifting other slots right
+                int index = slotIndex < 0 ? Array.FindIndex(slots, slot => slot.IsCustomSlot && slot.IsEmptySlot) : Mathf.Clamp(slotIndex + 20, 20, slots.Length - 1);
+                if (index < 0)
+                {
+                    LogWarning($"Error adding new slot {slotID}. Too many custom slots.");
+                    return false;
+                }
+                else if (index == slots.Length - 1 && !slots[index].IsEmptySlot)
+                {
+                    LogWarning($"Error adding new slot {slotID} with index {index}. Last available custom slot is taken.");
+                    return false;
+                }
+                else if (!slots.Any(slot => slot.Index >= index && slot.IsEmptySlot))
+                {
+                    LogWarning($"Error adding new slot {slotID} with index {index}. All following slots are taken.");
+                    return false;
+                }
+
+                if (slots[index].IsEmptySlot)
+                    slots[index] = new Slot(GetSlotID(slotID), index, getName, itemIsValid, isActive);
+                else
+                    InsertSlot(index, GetSlotID(slotID), getName, itemIsValid, isActive);
+
+                API.UpdateSlots();
+
+                return slots[index] != null && !slots[index].IsEmptySlot;
             }
 
             public static bool TryRemoveSlot(string slotID)
             {
-                int index = Array.FindIndex(slots, slot => slot.IsCustomSlot && slot.IsActive && slot.ID == GetSlotID(slotID));
+                int index = Array.FindIndex(slots, slot => slot.IsCustomSlot && slot.ID == GetSlotID(slotID));
                 if (index == -1)
                     return false;
 
-                slots[index] = new Slot($"{emptySlotID}{index}", index, null, (item) => false, () => false);
+                // Cache slot item to move them afterwards
+                for (int i = index; i < slots.Length; i++)
+                    slots[i].CacheItem();
+
+                ItemDrop.ItemData item = slots[index].Item;
+
+                // Shift slots left
+                for (int i = index + 1; i < slots.Length; i++)
+                {
+                    slots[i - 1] = slots[i];
+                    slots[i - 1].SetSlotIndex(i - 1);
+                }
+
+                slots[slots.Length - 1] = new Slot(emptySlotID, slots.Length - 1, null, (item) => false, () => false);
+
+                for (int i = index; i < slots.Length; i++)
+                    slots[i].UpdateGridPosition();
+
+                if (item != null && TryFindFreeSlotForItem(slots[index].Item, out Slot newSlot))
+                {
+                    LogInfo($"While removing slot {slotID} item {item.m_shared.m_name} from {item.m_gridPos} was moved into first empty slot {newSlot} {newSlot.GridPosition}");
+                    item.m_gridPos = newSlot.GridPosition;
+                }
+
+                API.UpdateSlots();
 
                 return true;
+            }
+
+            public static void InsertSlot(int startIndex, string slotID, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive)
+            {
+                int endIndex = Array.FindIndex(slots, slot => slot.Index > startIndex && slot.IsEmptySlot); // find first empty slot to stop shifting
+                if (endIndex == -1)
+                {
+                    // It should not be the case but to prevent potential errors
+                    LogWarning("Error trying to find empty slot to stop slots shifting after " + startIndex);
+                    return;
+                }
+
+                // Cache slot item to move them afterwards
+                for (int i = startIndex; i < endIndex; i++)
+                    slots[i].CacheItem();
+
+                // Shift slots right
+                for (int i = endIndex; i > startIndex; i++)
+                {
+                    slots[i] = slots[i - 1];
+                    slots[i].SetSlotIndex(i);
+                }
+
+                slots[startIndex] = new Slot(GetSlotID(slotID), startIndex, getName, itemIsValid, isActive);
+
+                for (int i = endIndex; i >= startIndex; i--)
+                    slots[i].UpdateGridPosition();
             }
 
             private static string GetSlotID(string slotID) => $"{customSlotID}{slotID}";
@@ -403,7 +520,7 @@ namespace ExtraSlots
             AddSlot(utilitySlotID, () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, null);
 
             for (int i = index; i < slots.Length; i++)
-                AddSlot($"{emptySlotID}{i}", null, (item) => false, () => false);
+                AddSlot(emptySlotID, null, (item) => false, () => false);
 
             UpdateSlotsGridPosition();
 
@@ -447,8 +564,26 @@ namespace ExtraSlots
                    (item.m_shared.m_food > 0 || item.m_shared.m_foodStamina > 0 || item.m_shared.m_foodEitr > 0);
         }
 
+        public static bool IsGridPositionASlot(Vector2i gridPos)
+        {
+            return gridPos.y >= InventoryHeightPlayer;
+        }
+
+        public static bool IsItemInSlot(ItemDrop.ItemData item)
+        {
+            return item != null && IsGridPositionASlot(item.m_gridPos);
+        }
+
+        public static bool IsItemInEquipmentSlot(ItemDrop.ItemData item)
+        {
+            return (GetItemSlot(item) is Slot slot) && slot.IsEquipmentSlot;
+        }
+
         public static Slot GetSlotInGrid(Vector2i pos)
         {
+            if (!IsGridPositionASlot(pos))
+                return null;
+
             foreach (Slot slot in slots)
                 if (slot.GridPosition == pos)
                     return slot;
@@ -458,7 +593,10 @@ namespace ExtraSlots
 
         public static Slot GetItemSlot(ItemDrop.ItemData item)
         {
-            if (!PlayerInventory.ContainsItem(item))
+            if (!IsItemInSlot(item))
+                return null;
+
+            if (PlayerInventory == null || !PlayerInventory.ContainsItem(item))
                 return null;
 
             foreach (Slot slot in slots)

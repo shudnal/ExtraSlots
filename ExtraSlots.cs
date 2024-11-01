@@ -178,7 +178,7 @@ namespace ExtraSlots
                                                                          "\nIf both Food and Ammo slots are disabled there will be no Misc slots [Synced with Server]", synchronizedSetting: true);
             ammoSlotsEnabled = config("Extra slots", "Ammo slots", true, "Enable 3 slots for ammo [Synced with Server]", synchronizedSetting: true);
 
-            extraRows.SettingChanged += (s, e) => { Slots.UpdateSlotsGridPosition(); EquipmentPanel.UpdatePanel(); };
+            extraRows.SettingChanged += (s, e) => { API.UpdateSlots(); };
             extraUtilitySlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             foodSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
