@@ -13,21 +13,21 @@ namespace ExtraSlots
             Vector2i gridPos = PlayerInventory.FindEmptySlot(true);
             if (gridPos.x > -1 && gridPos.y > -1)
             {
-                LogInfo($"Item {item.m_shared.m_name} {item.m_gridPos} was put into first free slot {gridPos}");
+                LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into first free slot {gridPos}");
                 item.m_gridPos = gridPos;
                 return true;
             }
 
             if (TryFindFreeSlotForItem(item, out Slot slot))
             {
-                LogInfo($"Item {item.m_shared.m_name} {item.m_gridPos} was put into first free valid equipment slot {slot.GridPosition}");
+                LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into first free valid equipment slot {slot.GridPosition}");
                 item.m_gridPos = slot.GridPosition;
                 return true;
             }
 
-            if (TryMakeFreeSpaceInPlayerInventory(out Vector2i gridPosEmptied))
+            if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPosEmptied))
             {
-                LogInfo($"Item {item.m_shared.m_name} {item.m_gridPos} was put into created free space {gridPosEmptied}");
+                LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into created free space {gridPosEmptied}");
                 item.m_gridPos = gridPosEmptied;
                 return true;
             }
@@ -58,14 +58,14 @@ namespace ExtraSlots
                     if (item == null || slot.ItemFits(item))
                         continue;
                 
-                    LogInfo($"Item {item.m_shared.m_name} unfits slot {slot}");
+                    LogInfo($"SlotValidation: Item {item.m_shared.m_name} unfits slot {slot}");
                     
                     if (slot.IsEquipmentSlot && (item.m_equipped || Player.m_localPlayer.IsItemEquiped(item)))
                     {
                         slot.ClearItemCache();
                         if (TryFindFreeEquipmentSlotForItem(item, out Slot freeEquipmentSlot))
                         {
-                            LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into first free equipment slot {freeEquipmentSlot}");
+                            LogDebug($"SlotValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into first free equipment slot {freeEquipmentSlot}");
                             item.m_gridPos = freeEquipmentSlot.GridPosition;
                             freeEquipmentSlot.ClearItemCache();
                             continue;
@@ -74,7 +74,7 @@ namespace ExtraSlots
                         {
                             if (slotToSwap.IsFree)
                             {
-                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into unequipped slot {slotToSwap} {slotToSwap.GridPosition}");
+                                LogDebug($"SlotValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into unequipped slot {slotToSwap} {slotToSwap.GridPosition}");
                                 item.m_gridPos = slotToSwap.GridPosition;
                                 slotToSwap.ClearItemCache();
                                 continue;
@@ -82,10 +82,10 @@ namespace ExtraSlots
                             else
                             {
                                 ItemDrop.ItemData itemToSwap = slotToSwap.Item;
-                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was swapped with unequipped {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos} into slot {slotToSwap} {slotToSwap.GridPosition}");
+                                LogDebug($"SlotValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was swapped with unequipped {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos} into slot {slotToSwap} {slotToSwap.GridPosition}");
                                 itemToSwap.m_gridPos = item.m_gridPos;
                                 item.m_gridPos = slotToSwap.GridPosition;
-                                LogInfo($"{item.m_shared.m_name} {item.m_gridPos} {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos}");
+                                LogDebug($"SlotValidation: swap result {item.m_shared.m_name} {item.m_gridPos} {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos}");
 
                                 slotToSwap.ClearItemCache();
                                 if (slot.ItemFits(item = slot.Item))
@@ -113,11 +113,11 @@ namespace ExtraSlots
             {
                 private static void Postfix(Player __instance)
                 {
+                    ClearCachedItems();
+                    
                     if (!IsValidPlayer(__instance) || __instance.m_isLoading)
                         return;
 
-                    ClearCachedItems();
-                    
                     MarkDirty();
                 }
             }
@@ -146,12 +146,13 @@ namespace ExtraSlots
                     if (item == null) 
                         continue;
 
-                    if (Player.m_localPlayer.IsItemEquiped(item) && (GetItemSlot(item) is not Slot slotItem || !slotItem.IsEquipmentSlot))
+                    if (Player.m_localPlayer.IsItemEquiped(item) && !IsAmmoSlotItem(item) && (GetItemSlot(item) is not Slot slotItem || !slotItem.IsEquipmentSlot))
                     {
+                        LogInfo($"ItemsValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} is not in equipment slot");
                         // Try putting equipped item in slot
                         if (TryFindFreeEquipmentSlotForItem(item, out Slot slot))
                         {
-                            LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into free equipment slot {slot} {slot.GridPosition}");
+                            LogDebug($"ItemsValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into free equipment slot {slot} {slot.GridPosition}");
                             item.m_gridPos = slot.GridPosition;
                             PlayerInventory.Changed();
                         }
@@ -159,16 +160,16 @@ namespace ExtraSlots
                         {
                             if (slotToSwap.IsFree)
                             {
-                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into unequipped slot {slotToSwap} {slotToSwap.GridPosition}");
+                                LogDebug($"ItemsValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into unequipped slot {slotToSwap} {slotToSwap.GridPosition}");
                                 item.m_gridPos = slotToSwap.GridPosition;
                             }
                             else
                             {
                                 ItemDrop.ItemData itemToSwap = slotToSwap.Item;
-                                LogInfo($"Equipped item {item.m_shared.m_name} {item.m_gridPos} was swapped with unequipped {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos} into slot {slotToSwap} {slotToSwap.GridPosition}");
+                                LogDebug($"ItemsValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was swapped with unequipped {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos} into slot {slotToSwap} {slotToSwap.GridPosition}");
                                 itemToSwap.m_gridPos = item.m_gridPos;
                                 item.m_gridPos = slotToSwap.GridPosition;
-                                LogInfo($"{item.m_shared.m_name} {item.m_gridPos} {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos}");
+                                LogDebug($"ItemsValidation: swap result {item.m_shared.m_name} {item.m_gridPos} {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos}");
                             }
                             PlayerInventory.Changed();
                         }
@@ -176,12 +177,12 @@ namespace ExtraSlots
 
                     if (ItemIsOverlapping(item) && PlayerInventory.GetOtherItemAt(item.m_gridPos.x, item.m_gridPos.y, item) is ItemDrop.ItemData otherItem)
                     {
-                        LogWarning($"Item {item.m_shared.m_name} {item.m_gridPos} is overlapping other item {otherItem.m_shared.m_name} {otherItem.m_gridPos}");
+                        LogWarning($"ItemsValidation: Item {item.m_shared.m_name} {item.m_gridPos} is overlapping other item {otherItem.m_shared.m_name} {otherItem.m_gridPos}");
                         tempItems.Add(item);
                     }
                     else if (ItemIsOutOfGrid(item))
                     {
-                        LogWarning($"Item {item.m_shared.m_name} {item.m_gridPos} is out of inventory grid");
+                        LogWarning($"ItemsValidation: Item {item.m_shared.m_name} {item.m_gridPos} is out of inventory grid");
                         tempItems.Add(item);
                     }
 

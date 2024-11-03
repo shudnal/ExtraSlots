@@ -36,7 +36,7 @@ namespace ExtraSlots
                 // Let it be if height is sufficient
                 if (targetHeight > __instance.m_height)
                 {
-                    LogInfo($"TombStone Container Awake height {__instance.m_height} -> {targetHeight}");
+                    LogDebug($"TombStone Container Awake height {__instance.m_height} -> {targetHeight}");
                     __instance.m_height = targetHeight;
                 }
             }
@@ -54,7 +54,7 @@ namespace ExtraSlots
 
                 if (targetHeight > __instance.m_container.m_height)
                 {
-                    LogInfo($"TombStone Interact height {__instance.m_container.m_height} -> {targetHeight}. Inventory reloaded.");
+                    LogDebug($"TombStone Interact height {__instance.m_container.m_height} -> {targetHeight}. Inventory reloaded.");
                     __instance.m_container.m_height = targetHeight;
                     __instance.m_container.m_inventory.m_height = targetHeight;
 

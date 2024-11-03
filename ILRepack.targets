@@ -5,7 +5,7 @@
 			<InputAssemblies Include="$(TargetPath)" />
 			<InputAssemblies Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' " Include="$(OutputPath)ServerSync.dll" />
 			<InputAssemblies Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' " Include="$(OutputPath)LocalizationManager.dll" />
-			<InputAssemblies Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' " Include="$(OutputPath)AdventureBackpacksAPI.dll" />
+			<!-->InputAssemblies Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' " Include="$(OutputPath)AdventureBackpacksAPI.dll" /-->
 		</ItemGroup>
 		<ILRepack Parallel="true" DebugInfo="true" Internalize="true" InputAssemblies="@(InputAssemblies)" OutputFile="$(TargetPath)" TargetKind="SameAsPrimaryAssembly" LibraryPath="$(OutputPath)" />
 	</Target>

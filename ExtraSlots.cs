@@ -34,6 +34,7 @@ namespace ExtraSlots
 
         internal static ConfigEntry<bool> configLocked;
         internal static ConfigEntry<bool> loggingEnabled;
+        internal static ConfigEntry<bool> loggingDebugEnabled;
 
         public static ConfigEntry<int> extraRows;
         public static ConfigEntry<int> quickSlotsAmount;
@@ -41,10 +42,6 @@ namespace ExtraSlots
         public static ConfigEntry<bool> foodSlotsEnabled;
         public static ConfigEntry<bool> miscSlotsEnabled;
         public static ConfigEntry<bool> ammoSlotsEnabled;
-
-        public static ConfigEntry<bool> adventureBackpacksSlotEnabled;
-        public static ConfigEntry<string> adventureBackpacksSlotName;
-        public static ConfigEntry<int> adventureBackpacksSlotIndex;
 
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
@@ -147,8 +144,8 @@ namespace ExtraSlots
 
             Localizer.Load();
 
-            if (AdventureBackpacks.API.ABAPI.IsLoaded())
-                API.AddSlotWithIndex("AdventureBackpacks", adventureBackpacksSlotIndex.Value, () => adventureBackpacksSlotName.Value, item => AdventureBackpacks.API.ABAPI.IsBackpack(item), () => adventureBackpacksSlotEnabled.Value);
+            if (loggingDebugEnabled.Value || loggingEnabled.Value)
+                LogCurrentLogLevel();
         }
 
         private void LateUpdate()
@@ -173,8 +170,12 @@ namespace ExtraSlots
 
             configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only. [Synced with Server]", synchronizedSetting: true);
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.");
+            loggingDebugEnabled = config("General", "Logging debug enabled", defaultValue: false, "Enable debug logging.");
             fixContainerPosition = config("General", "Fix container position for extra rows", defaultValue: true, "Moves container lower if there are extra inventory rows." +
                                                                                                                 "\nDisable this if you have other mods repositioning the container grid element");
+
+            loggingEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
+            loggingDebugEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
 
             quickSlotsAmount = config("Extra slots", "Quick slots", defaultValue: 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
             extraUtilitySlotsAmount = config("Extra slots", "Extra utility slots", defaultValue: 1, new ConfigDescription("How much utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
@@ -191,12 +192,6 @@ namespace ExtraSlots
             foodSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             miscSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             ammoSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-
-            adventureBackpacksSlotEnabled = config("Extra slots - Adventure Backpacks", "Enable custom slot", defaultValue: false, "Enable custom slot for backpack [Synced with Server]", synchronizedSetting: true);
-            adventureBackpacksSlotName = config("Extra slots - Adventure Backpacks", "Slot name", defaultValue: "Backpack", "Custom slot name");
-            adventureBackpacksSlotIndex = config("Extra slots - Adventure Backpacks", "Slot index", defaultValue: 0, "Custom slot index");
-
-            adventureBackpacksSlotEnabled.SettingChanged += (s, e) => API.UpdateSlots();
 
             vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder, "Comma separated list defining order of vanilla equipment slots");
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalMiddle, "Equipment slots alignment");
@@ -304,16 +299,29 @@ namespace ExtraSlots
             ammoSlotLabelFontColor.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
         }
 
+        public static void LogDebug(object data)
+        {
+            if (loggingDebugEnabled.Value)
+                instance.Logger.LogInfo(data);
+        }
+
         public static void LogInfo(object data)
         {
             if (loggingEnabled.Value)
                 instance.Logger.LogInfo(data);
         }
 
+        public static void LogMessage(object data)
+        {
+           instance.Logger.LogMessage(data);
+        }
+
         public static void LogWarning(object data)
         {
             instance.Logger.LogWarning(data);
         }
+
+        public static void LogCurrentLogLevel() => LogInfo($"Logging: Info {loggingEnabled.Value}, Debug {loggingDebugEnabled.Value}");
 
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = false)
         {

@@ -55,7 +55,7 @@ namespace ExtraSlots
                 {
                     if (!(TryFindFreeSlotForItem(item, out Slot slot) ? PlayerInventory.AddItem(item, slot.GridPosition) : PlayerInventory.AddItem(item)))
                     {
-                        if (TryMakeFreeSpaceInPlayerInventory(out Vector2i gridPos))
+                        if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
                         {
                             LogInfo($"Item {item.m_shared.m_name} from EaQS was put to created free space {gridPos}");
                             item.m_gridPos = gridPos;
@@ -68,7 +68,7 @@ namespace ExtraSlots
                         }
 
                         PlayerInventory.m_inventory.Add(item);
-                        LogInfo($"Item {item.m_shared.m_name} from EquipmentAndQuickSlots was moved into regular inventory");
+                        LogMessage($"Item {item.m_shared.m_name} from EquipmentAndQuickSlots was moved into regular inventory");
                     }
 
                     if (equipItem)
@@ -112,14 +112,11 @@ namespace ExtraSlots
         {
             static void Postfix(Player __instance)
             {
-                if (!BepInEx.Bootstrap.Chainloader.PluginInfos.TryGetValue("randyknapp.mods.equipmentandquickslots", out _))
+                if (__instance.m_customData.ContainsKey(nameof(EquipmentSlotInventory)) && (FejdStartup.instance || IsValidPlayer(__instance)))
                 {
-                    if (FejdStartup.instance || IsValidPlayer(__instance))
-                    {
-                        playerToLoad = __instance;
-                        Load();
-                        playerToLoad = null;
-                    }
+                    playerToLoad = __instance;
+                    Load();
+                    playerToLoad = null;
                 }
             }
         }

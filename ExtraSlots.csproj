@@ -67,10 +67,6 @@
     <Reference Include="0Harmony">
       <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\0Harmony.dll</HintPath>
     </Reference>
-    <Reference Include="AdventureBackpacksAPI, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Assemblies\API\AdventureBackpacksAPI.dll</HintPath>
-    </Reference>
     <Reference Include="assembly_guiutils_publicized">
       <HintPath>..\Assemblies\stable\publicized_assemblies\assembly_guiutils_publicized.dll</HintPath>
     </Reference>

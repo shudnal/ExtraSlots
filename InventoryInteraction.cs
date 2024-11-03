@@ -13,6 +13,9 @@ namespace ExtraSlots
             if (Player.m_localPlayer == null)
                 return;
 
+            if (Player.m_localPlayer.m_inventory.m_height != InventoryHeightFull)
+                LogInfo($"Player inventory height changed {Player.m_localPlayer.m_inventory.m_height} -> {InventoryHeightFull}");
+
             Player.m_localPlayer.m_inventory.m_height = InventoryHeightFull;
             Player.m_localPlayer.m_tombstone.GetComponent<Container>().m_height = InventoryHeightFull;
             Player.m_localPlayer.m_inventory.Changed();
@@ -77,6 +80,7 @@ namespace ExtraSlots
                     return;
 
                 __result = (float)__instance.m_inventory.Count / InventorySizeActive * 100f;
+                LogDebug($"Inventory.SlotsUsedPercentage: {__result}");
             }
         }
 
@@ -90,6 +94,7 @@ namespace ExtraSlots
                     return;
 
                 __result = InventoryHeightPlayer * __instance.m_width - __instance.m_inventory.Count(item => !API.IsItemInSlot(item)) + GetEmptyQuickSlots();
+                LogDebug($"Inventory.GetEmptySlots: {__result}");
             }
         }
 
@@ -120,19 +125,32 @@ namespace ExtraSlots
                     && TryFindFreeSlotForItem(item, out Slot slot))
                 {
                     __result = slot.GridPosition;
+                    LogDebug($"Inventory.FindEmptySlot for upgraded item {item.m_shared.m_name} {__result}");
                 }
 
                 if (__result == emptyPosition && TryFindFreeEquipmentSlotForItem(Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot, out Slot slot1))
+                {
                     __result = slot1.GridPosition;
+                    LogDebug($"Inventory.FindEmptySlot free equipment slot for AddItem_ByName item {Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot.m_shared.m_name} {__result}");
+                }
 
                 if (__result == emptyPosition && TryFindFreeSlotForItem(Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot, out Slot slot2))
+                {
                     __result = slot2.GridPosition;
+                    LogDebug($"Inventory.FindEmptySlot free slot for AddItem_ByName item {Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot.m_shared.m_name} {__result}");
+                }
 
                 if (__result == emptyPosition)
+                {
                     __result = FindEmptyQuickSlot();
+                    LogDebug($"Inventory.FindEmptySlot free quick slot {__result}");
+                }
 
-                if (__result == emptyPosition && Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot != null && TryMakeFreeSpaceInPlayerInventory(out Vector2i gridPos))
+                if (__result == emptyPosition && Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot != null && TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
+                {
                     __result = gridPos;
+                    LogDebug($"Inventory.FindEmptySlot made free space for AddItem_ByName item {Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot.m_shared.m_name} {__result}");
+                }
             }
         }
 
@@ -149,9 +167,30 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.DropItem))]
-        private static class InventoryGrid_DropItem_DropPrevention
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnSelectedItem))]
+        public static class InventoryGui_OnSelectedItem_GetEquippedDragItem
         {
+            public static void Prefix(InventoryGui __instance)
+            {
+                Player localPlayer = Player.m_localPlayer;
+                if (localPlayer.IsTeleporting())
+                    return;
+
+                if ((bool)__instance.m_dragGo && localPlayer.IsItemEquiped(__instance.m_dragItem))
+                {
+                    InventoryGrid_DropItem_DropPrevention.equippedDragItem = __instance.m_dragItem;
+                }
+            }
+
+            public static void Postfix() => InventoryGrid_DropItem_DropPrevention.equippedDragItem = null;
+        }
+
+        [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.DropItem))]
+        public static class InventoryGrid_DropItem_DropPrevention
+        {
+            public static ItemDrop.ItemData equippedDragItem;
+
             public static bool Prefix(InventoryGrid __instance, Inventory fromInventory, ItemDrop.ItemData item, Vector2i pos)
             {
                 if (item == null)
@@ -161,17 +200,24 @@ namespace ExtraSlots
                 if (itemAt == item)
                     return true;
 
+                // If the equipped item from slot is dropped at player inventory into other slot type
+                if (__instance.m_inventory == PlayerInventory && item == equippedDragItem && GetItemSlot(item) is Slot itemSlot && (GetSlotInGrid(pos) is not Slot posSlot || !IsSameSlotType(itemSlot, posSlot)))
+                {
+                    LogDebug($"InventoryGrid.DropItem Prevented dropping equipped item {item.m_shared.m_name} {item.m_gridPos} into slot with other type");
+                    return false;
+                }
+
                 // If the dropped item is unfit for target slot
                 if (__instance.m_inventory == PlayerInventory && GetSlotInGrid(pos) is Slot slot && !slot.ItemFits(item))
                 {
-                    LogInfo($"DropItem Prevented dropping {item.m_shared.m_name} {item.m_gridPos} into unfit slot {slot}");
+                    LogDebug($"InventoryGrid.DropItem Prevented dropping {item.m_shared.m_name} {item.m_gridPos} into unfit slot {slot}");
                     return false;
                 }
 
                 // If dropped item is in slot and interchanged item is unfit for dragged item slot
                 if (itemAt != null && fromInventory == PlayerInventory && GetSlotInGrid(item.m_gridPos) is Slot slot1 && !slot1.ItemFits(itemAt))
                 {
-                    LogInfo($"DropItem Prevented swapping {item.m_shared.m_name} {slot1} with unfit item {itemAt.m_shared.m_name} {pos}");
+                    LogDebug($"InventoryGrid.DropItem Prevented swapping {item.m_shared.m_name} {slot1} with unfit item {itemAt.m_shared.m_name} {pos}");
                     return false;
                 }
 
@@ -182,7 +228,7 @@ namespace ExtraSlots
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(ItemDrop.ItemData), typeof(int), typeof(int), typeof(int))]
         private static class Inventory_AddItem_ItemData_amount_x_y_TargetPositionRerouting
         {
-            [HarmonyPriority(Priority.First)]
+            [HarmonyPriority(Priority.Last)]
             private static void Prefix(Inventory __instance, ItemDrop.ItemData item, ref int x, ref int y)
             {
                 if (__instance != PlayerInventory)
@@ -192,30 +238,35 @@ namespace ExtraSlots
                     return;
 
                 // If another item is at grind - let stack logic go
-                if (__instance.GetItemAt(x, y) != null)
+                if (__instance.GetItemAt(x, y) is ItemDrop.ItemData gridTakenItem)
+                {
+                    LogDebug($"Inventory.AddItem X Y item {item.m_shared.m_name} adding at {x},{y} position is taken {gridTakenItem.m_shared.m_name}");
                     return;
+                }
 
                 // If the dropped item fits for target slot
                 if (GetSlotInGrid(new Vector2i(x, y)) is not Slot slot || slot.ItemFits(item))
                     return;
 
+                LogDebug($"Inventory.AddItem X Y item {item.m_shared.m_name} adding at {x},{y} unfits slot {slot} {slot.GridPosition}");
+
                 if (TryFindFreeSlotForItem(item, out Slot freeSlot))
                 {
-                    LogInfo($"AddItem X Y Rerouted {item.m_shared.m_name} from {x},{y} to slot {freeSlot} {freeSlot.GridPosition}");
+                    LogDebug($"Inventory.AddItem X Y Rerouted {item.m_shared.m_name} from {x},{y} to free slot {freeSlot} {freeSlot.GridPosition}");
                     x = freeSlot.GridPosition.x;
                     y = freeSlot.GridPosition.y;
                 }
 
-                if (TryMakeFreeSpaceInPlayerInventory(out Vector2i gridPos))
+                if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
                 {
-                    LogInfo($"AddItem X Y Rerouted {item.m_shared.m_name} from {x},{y} to created free space {gridPos}");
+                    LogDebug($"Inventory.AddItem X Y Rerouted {item.m_shared.m_name} from {x},{y} to created free space {gridPos}");
                     x = gridPos.x;
                     y = gridPos.y;
                 }
             }
 
-            [HarmonyPriority(Priority.First)]
-            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, int amount, ref bool __result)
+            [HarmonyPriority(Priority.Last)]
+            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, int x, int y, int amount, ref bool __result)
             {
                 if (__instance == PlayerInventory && Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall && !__result)
                 {
@@ -223,14 +274,28 @@ namespace ExtraSlots
                     ItemDrop.ItemData itemData = item.Clone();
                     itemData.m_stack = amount;
 
+                    LogMessage($"Item dissappearing prevention at Inventory.AddItem_OnLoad -> Inventory.AddItem_ItemData_amount_x_y: item {item.m_shared.m_name} at {x},{y} amount {amount}");
+
                     if (TryFindFreeEquipmentSlotForItem(itemData, out Slot equipmentSlot))
+                    {
                         itemData.m_gridPos = equipmentSlot.GridPosition;
+                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y found free equipment slot for item {itemData.m_shared.m_name}. Position rerouted {x},{y} -> {itemData.m_gridPos}");
+                    }
                     else if (TryFindFreeSlotForItem(itemData, out Slot slot))
+                    {
                         itemData.m_gridPos = slot.GridPosition;
-                    else if (TryMakeFreeSpaceInPlayerInventory(out Vector2i gridPos))
+                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y found free slot for item {itemData.m_shared.m_name}. Position rerouted {x},{y} -> {itemData.m_gridPos}");
+                    }
+                    else if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
+                    {
                         itemData.m_gridPos = gridPos;
+                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y made free space for item {itemData.m_shared.m_name}. Position rerouted {x},{y} -> {itemData.m_gridPos}");
+                    }
                     else
+                    {
                         itemData.m_gridPos = new Vector2i(0, InventoryHeightFull); // Put out of grid and item will find its place sooner or later
+                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y item {itemData.m_shared.m_name} put out of grid to find place later. Position rerouted {x},{y} -> {itemData.m_gridPos}");
+                    }
 
                     __instance.m_inventory.Add(itemData);
                     item.m_stack -= amount;
@@ -262,7 +327,16 @@ namespace ExtraSlots
                 if (__result)
                     return;
 
-                __result = __instance.FindFreeStackSpace(item.m_shared.m_name, item.m_worldLevel) + __instance.GetEmptySlots() * item.m_shared.m_maxStackSize >= stack || stack <= item.m_shared.m_maxStackSize && TryFindFreeSlotForItem(item, out _);
+                int freeStackSpace = __instance.FindFreeStackSpace(item.m_shared.m_name, item.m_worldLevel);
+                int freeQuickSlotStackSpace = __instance.GetEmptySlots() * item.m_shared.m_maxStackSize;
+
+                if (__result = freeStackSpace + freeQuickSlotStackSpace >= stack)
+                    LogDebug($"Inventory.CanAddItem_ItemData_int item {item.m_shared.m_name} result {__result}, free stack space: {freeStackSpace}, free quick slot stack space: {freeQuickSlotStackSpace}, have free stack space");
+                else if (stack <= item.m_shared.m_maxStackSize)
+                {
+                    if (__result = TryFindFreeSlotForItem(item, out Slot slot))
+                        LogDebug($"Inventory.CanAddItem_ItemData_int item {item.m_shared.m_name} result {__result}, free stack space: {freeStackSpace}, free quick slot stack space: {freeQuickSlotStackSpace}, no free stack space, free single slot found {slot} {slot.GridPosition}");
+                }
             }
         }
 
@@ -280,6 +354,8 @@ namespace ExtraSlots
 
                 if (!TryFindFreeSlotForItem(item, out Slot slot))
                     return;
+
+                LogDebug($"Inventory.AddItem_Item item {item.m_shared.m_name} found free slot {slot} {slot.GridPosition}");
 
                 item.m_gridPos = slot.GridPosition;
                 __instance.m_inventory.Add(item);
@@ -314,18 +390,20 @@ namespace ExtraSlots
 
                     if (freeStacks > item.m_stack)
                         return;
+
+                    LogDebug($"Inventory.AddItem_Item_Vector2i item {item.m_shared.m_name}x{item.m_stack} adding at {pos} not enough free stack space {freeStacks}");
                 }
 
                 if (TryFindFreeSlotForItem(item, out Slot freeSlot))
                 {
-                    LogInfo($"AddItem Pos Rerouted {item.m_shared.m_name} from {pos} to slot {freeSlot} {freeSlot.GridPosition}");
+                    LogDebug($"Inventory.AddItem_Item_Vector2i Rerouted {item.m_shared.m_name} from {pos} to free slot {freeSlot} {freeSlot.GridPosition}");
                     pos = freeSlot.GridPosition;
                     return;
                 }
 
-                if (TryMakeFreeSpaceInPlayerInventory(out Vector2i gridPos))
+                if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
                 {
-                    LogInfo($"AddItem Pos Rerouted {item.m_shared.m_name} from {pos} to created free space {gridPos}");
+                    LogDebug($"Inventory.AddItem_Item_Vector2i Rerouted {item.m_shared.m_name} from {pos} to created free space {gridPos}");
                     pos = gridPos;
                     return;
                 }
@@ -366,45 +444,6 @@ namespace ExtraSlots
             private static void Prefix(Inventory __instance, string name, ref Vector2i pos, bool equipped)
             {
                 inCall = true;
-
-                if (__instance != PlayerInventory)
-                    return;
-
-                bool extraInventory = pos.y >= InventoryHeightPlayer;
-                if (!extraInventory && !equipped)
-                    return;
-
-                if (__instance.GetItemAt(pos.x, pos.y) == null)
-                    return;
-
-                ItemDrop component = ObjectDB.instance?.GetItemPrefab(name)?.GetComponent<ItemDrop>();
-                if (component == null)
-                    return;
-
-                ItemDrop.ItemData item = component.m_itemData;
-
-                if (equipped)
-                {
-                    if (TryFindFreeEquipmentSlotForItem(item, out Slot equipmentSlot))
-                    {
-                        pos = equipmentSlot.GridPosition;
-                        return;
-                    }
-                    else if (TryFindFirstUnequippedSlotForItem(item, out Slot unequippedSlot))
-                    {
-                        // Item at slot will find its place in Inventory_AddItem_ItemData_amount_x_y_TargetPositionRerouting
-                        pos = unequippedSlot.GridPosition;
-                        return;
-                    }
-                }
-                
-                if (TryFindFreeSlotForItem(item, out Slot freeSlot))
-                    pos = freeSlot.GridPosition;
-                else
-                    pos = FindEmptyQuickSlot();
-
-                if (pos == emptyPosition && TryMakeFreeSpaceInPlayerInventory(out Vector2i gridPos))
-                    pos = gridPos;
             }
 
             [HarmonyPriority(Priority.First)]

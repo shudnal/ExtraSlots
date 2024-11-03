@@ -57,12 +57,12 @@ namespace ExtraSlots
             public int Index => _index;
 
             public bool IsHotkeySlot => _getShortcut != null;
-            public bool IsEquipmentSlot => _index > 13;
             public bool IsQuickSlot => _index < 6;
             public bool IsMiscSlot => 6 <= _index && _index <= 7;
             public bool IsAmmoSlot => 8 <= _index && _index <= 10;
             public bool IsFoodSlot => 11 <= _index && _index <= 13;
-            public bool IsCustomSlot => _index > 20;
+            public bool IsEquipmentSlot => _index > 13;
+            public bool IsCustomSlot => _index >= CustomSlot.customSlotStartingIndex;
             public bool IsEmptySlot => _id == emptySlotID;
 
             internal void SetPosition(Vector2 newPosition)
@@ -186,6 +186,8 @@ namespace ExtraSlots
 
         public class CustomSlot
         {
+            public const int customSlotStartingIndex = 21;
+
             public static bool TryAddNewSlotBefore(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
                 if (slotIDs.Length > 0)
@@ -216,8 +218,8 @@ namespace ExtraSlots
                     return true;
 
                 // index < 0 - first available slot
-                // index > 0 - clamp between 20 and max slots count then insert with shifting other slots right
-                int index = slotIndex < 0 ? Array.FindIndex(slots, slot => slot.IsCustomSlot && slot.IsEmptySlot) : Mathf.Clamp(slotIndex + 20, 20, slots.Length - 1);
+                // index > 0 - clamp between custom slot starting index and max slots count then insert with shifting other slots right
+                int index = slotIndex < 0 ? Array.FindIndex(slots, slot => slot.IsCustomSlot && slot.IsEmptySlot) : Mathf.Clamp(slotIndex + customSlotStartingIndex, customSlotStartingIndex, slots.Length - 1);
                 if (index < 0)
                 {
                     LogWarning($"Error adding new slot {slotID}. Too many custom slots.");
@@ -281,7 +283,8 @@ namespace ExtraSlots
 
             public static void InsertSlot(int startIndex, string slotID, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive)
             {
-                int endIndex = Array.FindIndex(slots, slot => slot.Index > startIndex && slot.IsEmptySlot); // find first empty slot to stop shifting
+                int endIndex = Array.FindIndex(slots, slot => slot.Index >= startIndex && slot.IsEmptySlot); // find first empty slot to stop shifting
+                LogInfo($"InsertSlot {slotID} at {startIndex} empty slot found {endIndex}");
                 if (endIndex == -1)
                 {
                     // It should not be the case but to prevent potential errors
@@ -294,7 +297,7 @@ namespace ExtraSlots
                     slots[i].CacheItem();
 
                 // Shift slots right
-                for (int i = endIndex; i > startIndex; i++)
+                for (int i = endIndex; i > startIndex; i--)
                 {
                     slots[i] = slots[i - 1];
                     slots[i].SetSlotIndex(i);
@@ -417,15 +420,30 @@ namespace ExtraSlots
             return slot != null;
         }
 
-        public static bool TryMakeFreeSpaceInPlayerInventory(out Vector2i gridPos)
+        public static bool TryMakeFreeSpaceInPlayerInventory(bool tryFindRegularInventorySlot, out Vector2i gridPos)
         {
             gridPos = emptyPosition;
 
-            foreach (ItemDrop.ItemData item in PlayerInventory.GetAllItemsInGridOrder().Where(item => item.m_gridPos.y < InventoryHeightPlayer).Union(QuickSlotsHotBar.GetItems()))
+            List<ItemDrop.ItemData> itemsInGridOrder = new List<ItemDrop.ItemData>();
+            if (tryFindRegularInventorySlot)
+                for (int i = InventoryHeightPlayer - 1; i >= 0; i--)
+                    for (int j = InventoryWidth - 1; j >= 0; j--)
+                        if (PlayerInventory.GetItemAt(j, i) is not ItemDrop.ItemData item)
+                            return (gridPos = new Vector2i(j, i)) != emptyPosition;
+                        else
+                            itemsInGridOrder.Add(item);
+            
+            if (!tryFindRegularInventorySlot)
+                itemsInGridOrder.AddRange(PlayerInventory.GetAllItemsInGridOrder().Where(item => item.m_gridPos.y < InventoryHeightPlayer).Reverse());
+
+            // To be clear there is no cached items overlap
+            ClearCachedItems();
+
+            foreach (ItemDrop.ItemData item in itemsInGridOrder)
             {
                 if (TryFindFreeEquipmentSlotForItem(item, out Slot equipmentSlot))
                 {
-                    LogInfo($"In attempt to create free space {item.m_shared.m_name} from {item.m_gridPos} was moved into equipment slot {equipmentSlot} {equipmentSlot.GridPosition}");
+                    LogDebug($"In attempt to create free space {item.m_shared.m_name} from {item.m_gridPos} was moved into equipment slot {equipmentSlot} {equipmentSlot.GridPosition}");
                     gridPos = item.m_gridPos;
                     item.m_gridPos = equipmentSlot.GridPosition;
                     return true;
@@ -433,7 +451,7 @@ namespace ExtraSlots
 
                 if (TryFindFreeSlotForItem(item, out Slot slot))
                 {
-                    LogInfo($"In attempt to create free space {item.m_shared.m_name} from {item.m_gridPos} was moved into free slot {slot} {slot.GridPosition}");
+                    LogDebug($"In attempt to create free space {item.m_shared.m_name} from {item.m_gridPos} was moved into free slot {slot} {slot.GridPosition}");
                     gridPos = item.m_gridPos;
                     item.m_gridPos = slot.GridPosition;
                     return true;
@@ -468,6 +486,8 @@ namespace ExtraSlots
                     item.m_customData[customKeySlotID] = slot.ID;
                 }
             }
+
+            LogInfo($"Last equpped slot was saved for each item at extra slots. Player ID: {playerID}");
         }
 
         internal static void PruneLastEquippedSlotFromItem(ItemDrop.ItemData item)
@@ -506,26 +526,9 @@ namespace ExtraSlots
             AddSlot($"{miscSlotID}2", () => miscSlotsShowLabel.Value ? "$exsl_slot_misc_label" : "", IsMiscSlotItem, () => miscSlotsEnabled.Value && foodSlotsEnabled.Value && ammoSlotsEnabled.Value);
 
             // Second row
-            AddHotkeySlot($"{ammoSlotID}1", 
-                          () => ammoSlotsShowLabel.Value ? GetAmmoSlot1Text() : "", 
-                          (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo, 
-                          () => ammoSlotsEnabled.Value, 
-                          () => ammoSlotHotKey1.Value,
-                          () => GetAmmoSlot1Text());
-
-            AddHotkeySlot($"{ammoSlotID}2",
-                          () => ammoSlotsShowLabel.Value ? GetAmmoSlot2Text() : "",
-                          (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo,
-                          () => ammoSlotsEnabled.Value,
-                          () => ammoSlotHotKey2.Value,
-                          () => GetAmmoSlot2Text());
-
-            AddHotkeySlot($"{ammoSlotID}3",
-                          () => ammoSlotsShowLabel.Value ? GetAmmoSlot3Text() : "",
-                          (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo,
-                          () => ammoSlotsEnabled.Value,
-                          () => ammoSlotHotKey3.Value,
-                          () => GetAmmoSlot3Text());
+            AddHotkeySlot($"{ammoSlotID}1", () => ammoSlotsShowLabel.Value ? GetAmmoSlot1Text() : "", IsAmmoSlotItem, () => ammoSlotsEnabled.Value, () => ammoSlotHotKey1.Value, () => GetAmmoSlot1Text());
+            AddHotkeySlot($"{ammoSlotID}2", () => ammoSlotsShowLabel.Value ? GetAmmoSlot2Text() : "", IsAmmoSlotItem, () => ammoSlotsEnabled.Value, () => ammoSlotHotKey2.Value, () => GetAmmoSlot2Text());
+            AddHotkeySlot($"{ammoSlotID}3", () => ammoSlotsShowLabel.Value ? GetAmmoSlot3Text() : "", IsAmmoSlotItem, () => ammoSlotsEnabled.Value, () => ammoSlotHotKey3.Value, () => GetAmmoSlot3Text());
 
             AddSlot($"{foodSlotID}1", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => foodSlotsEnabled.Value);
             AddSlot($"{foodSlotID}2", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => foodSlotsEnabled.Value);
@@ -569,6 +572,11 @@ namespace ExtraSlots
         {
             (slots[index], slots[indexToExchange]) = (slots[indexToExchange], slots[index]);
             slots[index].SwapIndexWith(slots[indexToExchange]);
+        }
+
+        public static bool IsAmmoSlotItem(ItemDrop.ItemData item)
+        {
+            return item != null && item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo;
         }
 
         public static bool IsMiscSlotItem(ItemDrop.ItemData item)
@@ -626,6 +634,15 @@ namespace ExtraSlots
                     return slot;
 
             return null;
+        }
+
+        public static bool IsSameSlotType(Slot a, Slot b)
+        {
+            return a.IsEquipmentSlot == b.IsEquipmentSlot
+                && a.IsFoodSlot == b.IsFoodSlot
+                && a.IsQuickSlot == b.IsQuickSlot
+                && a.IsAmmoSlot == b.IsAmmoSlot
+                && a.IsMiscSlot == b.IsMiscSlot;
         }
 
         internal static void ClearCachedItems() => cachedItems.Clear();
