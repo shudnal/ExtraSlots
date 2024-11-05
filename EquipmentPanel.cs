@@ -390,7 +390,7 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]
-        static class InventoryGuiShowPatch
+        static class InventoryGui_Show_UpdatePanel
         {
             static void Postfix()
             {

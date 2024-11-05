@@ -59,12 +59,12 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(Inventory), nameof(Inventory.Save))]
-        private static class Inventory_Save_SaveLastEquippedSlots
+        [HarmonyPatch(typeof(Player), nameof(Player.Save))]
+        private static class Player_Save_SaveLastEquippedSlots
         {
-            private static void Prefix(Inventory __instance)
+            private static void Prefix(Player __instance)
             {
-                if (__instance != PlayerInventory)
+                if (__instance.GetInventory() != PlayerInventory)
                     return;
 
                 SaveLastEquippedSlotsToItems();
@@ -166,7 +166,6 @@ namespace ExtraSlots
                 __result = __instance.GetEmptySlots() > 0;
             }
         }
-
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnSelectedItem))]
         public static class InventoryGui_OnSelectedItem_GetEquippedDragItem

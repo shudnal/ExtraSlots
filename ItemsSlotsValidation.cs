@@ -38,6 +38,12 @@ namespace ExtraSlots
         public static void ValidateSlots() => SlotsValidation.MarkDirty();
         public static void ValidateItems() => ItemsValidation.MarkDirty();
 
+        public static void Validate()
+        {
+            ItemsValidation.Validate();
+            SlotsValidation.Validate();
+        }
+
         internal static class SlotsValidation
         {
             private static bool isDirty = false;
@@ -130,7 +136,7 @@ namespace ExtraSlots
 
             private static bool isDirty = false;
 
-            public static void Validate()
+            internal static void Validate()
             {
                 if (!isDirty || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
                     return;
@@ -146,7 +152,7 @@ namespace ExtraSlots
                     if (item == null) 
                         continue;
 
-                    if (Player.m_localPlayer.IsItemEquiped(item) && !IsAmmoSlotItem(item) && (GetItemSlot(item) is not Slot slotItem || !slotItem.IsEquipmentSlot))
+                    if (Player.m_localPlayer.IsItemEquiped(item) && (GetItemSlot(item) is not Slot slotItem || !slotItem.IsEquipmentSlot) && IsEquipmentSlotItem(item))
                     {
                         LogInfo($"ItemsValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} is not in equipment slot");
                         // Try putting equipped item in slot
@@ -224,7 +230,7 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]
-        public static class InventoryGuiShowPatch
+        public static class InventoryGui_Show_ValidateItems
         {
             static void Postfix()
             {

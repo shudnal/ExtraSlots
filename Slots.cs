@@ -574,6 +574,11 @@ namespace ExtraSlots
             slots[index].SwapIndexWith(slots[indexToExchange]);
         }
 
+        public static bool IsEquipmentSlotItem(ItemDrop.ItemData item)
+        {
+            return slots.Any(slot => slot.IsEquipmentSlot && slot.IsActive && slot.ItemFits(item));
+        }
+
         public static bool IsAmmoSlotItem(ItemDrop.ItemData item)
         {
             return item != null && item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo;

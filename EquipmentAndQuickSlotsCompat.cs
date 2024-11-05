@@ -53,7 +53,7 @@ namespace ExtraSlots
             {
                 foreach (ItemDrop.ItemData item in fromInventory.GetAllItemsInGridOrder().Where(item => item != null))
                 {
-                    if (!(TryFindFreeSlotForItem(item, out Slot slot) ? PlayerInventory.AddItem(item, slot.GridPosition) : PlayerInventory.AddItem(item)))
+                    if (!(TryFindSlotForItem(item, out Slot slot) ? PlayerInventory.AddItem(item, slot.GridPosition) : PlayerInventory.AddItem(item)))
                     {
                         if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
                         {
@@ -75,6 +75,8 @@ namespace ExtraSlots
                         playerToLoad.UseItem(playerToLoad.GetInventory(), item, false);
                 }
             }
+
+            static bool TryFindSlotForItem(ItemDrop.ItemData item, out Slot slot) => TryFindFreeEquipmentSlotForItem(item, out slot) || TryFindFreeSlotForItem(item, out slot);
         }
 
         private static bool LoadValue(Player player, string key, out string value)

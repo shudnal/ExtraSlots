@@ -42,6 +42,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> foodSlotsEnabled;
         public static ConfigEntry<bool> miscSlotsEnabled;
         public static ConfigEntry<bool> ammoSlotsEnabled;
+        public static ConfigEntry<bool> backupEnabled;
 
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
@@ -151,10 +152,7 @@ namespace ExtraSlots
         private void LateUpdate()
         {
             if (InventoryGui.instance)
-            {
-                ItemsSlotsValidation.ItemsValidation.Validate();
-                ItemsSlotsValidation.SlotsValidation.Validate();
-            }
+                ItemsSlotsValidation.Validate();
         }
 
         private void OnDestroy()
@@ -185,6 +183,9 @@ namespace ExtraSlots
                                                                          "\n1 slot comes with Food slots, 1 slot comes with Ammo slots." +
                                                                          "\nIf both Food and Ammo slots are disabled there will be no Misc slots [Synced with Server]", synchronizedSetting: true);
             ammoSlotsEnabled = config("Extra slots", "Ammo slots", defaultValue: true, "Enable 3 slots for ammo [Synced with Server]", synchronizedSetting: true);
+            backupEnabled = config("Extra slots", "Backup enabled", defaultValue: true, "Backup extra slots item on save. [Synced with Server]" +
+                                                                                        "\nIt could be restored in case of loading character without mod installed leading to extra slots item loss." +
+                                                                                        "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.", synchronizedSetting: true);
 
             extraRows.SettingChanged += (s, e) => API.UpdateSlots();
             extraUtilitySlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
