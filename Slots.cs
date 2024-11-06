@@ -16,7 +16,7 @@ namespace ExtraSlots
         public const string chestSlotID = "Chest";
         public const string shoulderSlotID = "Shoulder";
         public const string extraUtilitySlotID = "ExtraUtility";
-        public const string quickSlotID = "HotBar";
+        public const string quickSlotID = "Quick";
         public const string foodSlotID = "Food";
         public const string ammoSlotID = "Ammo";
         public const string miscSlotID = "Misc";
@@ -337,16 +337,16 @@ namespace ExtraSlots
         public static Slot[] GetEquipmentSlots()
         {
             List<Slot> equipment = new List<Slot>();
-            equipment.AddRange(Array.FindAll(slots, slot => slot.IsActive && slot.IsVanillaEquipment()));
-            equipment.AddRange(Array.FindAll(slots, slot => slot.IsActive && slot.ID.StartsWith(extraUtilitySlotID)));
-            equipment.AddRange(Array.FindAll(slots, slot => slot.IsActive && slot.IsCustomSlot));
+            equipment.AddRange(Array.FindAll(slots, slot => slot.IsActive && slot.IsVanillaEquipment()).OrderBy(slot => slot.Index));
+            equipment.AddRange(Array.FindAll(slots, slot => slot.IsActive && slot.ID.StartsWith(extraUtilitySlotID)).OrderBy(slot => slot.Index));
+            equipment.AddRange(Array.FindAll(slots, slot => slot.IsActive && slot.IsCustomSlot).OrderBy(slot => slot.Index));
 
             return equipment.ToArray();
         }
-        public static Slot[] GetQuickSlots() => Array.FindAll(slots, slot => slot.IsQuickSlot);
-        public static Slot[] GetFoodSlots() => Array.FindAll(slots, slot => slot.IsFoodSlot);
-        public static Slot[] GetAmmoSlots() => Array.FindAll(slots, slot => slot.IsAmmoSlot);
-        public static Slot[] GetMiscSlots() => Array.FindAll(slots, slot => slot.IsMiscSlot);
+        public static Slot[] GetQuickSlots() => Array.FindAll(slots, slot => slot.IsQuickSlot).OrderBy(slot => slot.Index).ToArray();
+        public static Slot[] GetFoodSlots() => Array.FindAll(slots, slot => slot.IsFoodSlot).OrderBy(slot => slot.Index).ToArray();
+        public static Slot[] GetAmmoSlots() => Array.FindAll(slots, slot => slot.IsAmmoSlot).OrderBy(slot => slot.Index).ToArray();
+        public static Slot[] GetMiscSlots() => Array.FindAll(slots, slot => slot.IsMiscSlot).OrderBy(slot => slot.Index).ToArray();
 
         public static bool TryGetSavedPlayerSlot(ItemDrop.ItemData item, out Slot slot)
         {

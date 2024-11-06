@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
@@ -393,7 +394,7 @@ namespace ExtraSlots
                 }
             }
 
-            inventoryBackground.anchorMin = new Vector2(0.0f, -ExtraRowsPlayer / vanillaInventoryHeight);
+            inventoryBackground.anchorMin = new Vector2(0.0f, -1f * ExtraRowsPlayer / vanillaInventoryHeight);
             inventorySelectedFrame.anchorMin = inventoryBackground.anchorMin;
 
             if (fixContainerPosition.Value)
@@ -480,6 +481,359 @@ namespace ExtraSlots
         private static class InventoryGui_SetupDragItem_UpdateSlotsOnItemDrag
         {
             private static void Postfix() => MarkDirty();
+        }
+
+        [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGamepad))]
+        public static class InventoryGrid_UpdateGamepad_GamepadSupport
+        {
+            public static Vector2i FindEquipmentSlot(int row = -1, Slot slotRow = null, int col = -1, Slot slotCol = null, bool right = false, Slot before = null, Slot after = null)
+            {
+                Slot[] equipmentSlots = GetEquipmentSlots();
+
+                if (row == -1 && slotRow != null)
+                    row = Array.IndexOf(equipmentSlots, slotRow) % 3;
+
+                if (col == -1 && slotCol != null)
+                    col = Array.IndexOf(equipmentSlots, slotCol) / 3;
+
+                int beforeIndex = before == null ? -1 : Array.IndexOf(equipmentSlots, before);
+                int afterIndex  = after  == null ? -1 : Array.IndexOf(equipmentSlots, after);
+
+                int i = right ? equipmentSlots.Length : -1;
+
+                while (true)
+                {
+                    if (right) i--; else i++;
+
+                    if (i < 0 || i == equipmentSlots.Length)
+                        break;
+
+                    if (beforeIndex > -1 && i >= beforeIndex || afterIndex > -1 && i <= afterIndex)
+                        continue;
+
+                    if ((row != -1) && (row == i % 3) || (col != -1) && (col == i / 3))
+                        return equipmentSlots[i].GridPosition;
+                }
+
+                return emptyPosition;
+            }
+
+            private static bool Prefix(InventoryGrid __instance)
+            {
+                if (__instance != InventoryGui.instance.m_playerGrid || !__instance.m_uiGroup.IsActive || Console.IsVisible())
+                    return true;
+
+                /* Extra slots inventory grid looks like this
+
+                QQQQQQMM
+                AAAFFFUU
+                VVVVVCCC
+                CCCCCCCC
+
+                Extra slots equipment layout (maxed slots variant)
+
+                VVUCCC FA
+                VVCCCC FA
+                VUCCCC FA
+                QQQQQQ MM
+
+                Q - quickslot, M - misc slot
+                A - ammo slot, F - food slot, U - extra utility slot
+                V - vanilla equipment slot, C - custom slot added via API
+
+                Misc slot depends on both ammo or food AND quick slot. 
+                No quick slots == No misc slots
+                No ammo slots  == No misc slot under ammo slots
+                No food slots  == No misc slot under food slots */
+
+                Slot slot = GetSlotInGrid(__instance.m_selected);
+
+                if (ZInput.GetButtonDown("JoyDPadLeft") || ZInput.GetButtonDown("JoyLStickLeft"))
+                {
+                    LogDebug($"From {__instance.m_selected} {slot} left");
+
+                    if (slot != null)
+                    {
+                        if (slot.IsAmmoSlot)
+                        {
+                            // Food slots is next 3 slots to ammo slots in grid
+                            __instance.m_selected.x += 3;
+                            if (GetSlotInGrid(__instance.m_selected) is not Slot leftSlot || !leftSlot.IsActive)
+                            {
+                                int slotRow = __instance.m_selected.x % 3;
+                                __instance.m_selected = FindEquipmentSlot(row: slotRow, right: true);
+                                if (__instance.m_selected == emptyPosition)
+                                    __instance.m_selected = new Vector2i(InventoryWidth - 1, slotRow);
+                            }
+                        }
+                        else if (slot.IsFoodSlot)
+                        {
+                            int slotRow = __instance.m_selected.x % 3;
+
+                            __instance.m_selected = FindEquipmentSlot(row: slotRow, right: true);
+
+                            if (__instance.m_selected == emptyPosition)
+                                __instance.m_selected = new Vector2i(InventoryWidth - 1, slotRow);
+                        }
+                        else if (slot.IsQuickSlot)
+                        {
+                            __instance.m_selected.x--;
+                            if (__instance.m_selected.x < 0)
+                                __instance.m_selected = new Vector2i(InventoryWidth - 1, 3);
+                        }
+                        else if (slot.IsMiscSlot)
+                        {
+                            __instance.m_selected.x--;
+                            if (GetSlotInGrid(__instance.m_selected) is not Slot leftToMiscSlot)
+                                __instance.m_selected = new Vector2i(InventoryWidth - 1, 3);
+                            else
+                            {
+                                if (!leftToMiscSlot.IsActive)
+                                {
+                                    if (leftToMiscSlot.IsQuickSlot)
+                                    {
+                                        IEnumerable<Slot> quickSlots = GetQuickSlots().Where(slot => slot.IsActive);
+                                        if (quickSlots.Any())
+                                            __instance.m_selected = quickSlots.Last().GridPosition;
+                                        else
+                                            __instance.m_selected = new Vector2i(InventoryWidth - 1, 3);
+                                    }
+                                    else if (leftToMiscSlot.IsMiscSlot && quickSlotsCount == 0)
+                                    {
+                                        __instance.m_selected = new Vector2i(InventoryWidth - 1, 3);
+                                    }
+                                    else
+                                    {
+                                        __instance.m_selected = new Vector2i(InventoryWidth - 1, 3);
+                                    }
+                                }
+                            }
+                        }
+                        else // Equipment slot
+                        {
+                            __instance.m_selected = FindEquipmentSlot(slotRow: slot, right: true, before: slot);
+                            if (__instance.m_selected.x < 0)
+                                __instance.m_selected = new Vector2i(InventoryWidth - 1, Array.IndexOf(GetEquipmentSlots(), slot) % 3);
+                        }
+                           
+                        return false;
+                    }
+                }
+
+                if (ZInput.GetButtonDown("JoyDPadRight") || ZInput.GetButtonDown("JoyLStickRight"))
+                {
+                    LogDebug($"From {__instance.m_selected} {slot} right");
+
+                    if (slot == null)
+                    {
+                        if (__instance.m_selected.x >= InventoryWidth - 1)
+                        {
+                            if (__instance.m_selected.y > 2)
+                            {
+                                IEnumerable<Slot> quickSlots = GetQuickSlots().Where(slot => slot.IsActive);
+                                if (quickSlots.Any())
+                                {
+                                    __instance.m_selected = quickSlots.First().GridPosition;
+                                    return false;
+                                }
+                                else
+                                {
+                                    IEnumerable<Slot> miscSlots = GetMiscSlots().Where(slot => slot.IsActive);
+                                    if (miscSlots.Any())
+                                    {
+                                        __instance.m_selected = miscSlots.First().GridPosition;
+                                        return false;
+                                    }
+                                }
+                                __instance.m_selected = new Vector2i(0, InventoryHeightPlayer);
+                            }
+                            else
+                            {
+                                Vector2i newPos = FindEquipmentSlot(row: __instance.m_selected.y);
+                                if (newPos != emptyPosition)
+                                    __instance.m_selected = newPos;
+                            }
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        if (slot.IsFoodSlot)
+                        {
+                            if (GetSlotInGrid(new Vector2i(__instance.m_selected.x - 3, __instance.m_selected.y)) is Slot rightSlot && rightSlot.IsActive)
+                                __instance.m_selected = rightSlot.GridPosition;
+                        }
+                        else if (slot.IsAmmoSlot)
+                        {
+                            return false;
+                        }
+                        else if (slot.IsMiscSlot)
+                        {
+                            if (GetSlotInGrid(new Vector2i(__instance.m_selected.x + 1, __instance.m_selected.y)) is Slot rightSlot && rightSlot.IsActive)
+                                __instance.m_selected = rightSlot.GridPosition;
+                        }
+                        else if (slot.IsQuickSlot)
+                        {
+                            if (__instance.m_selected.x < quickSlotsCount - 1)
+                            {
+                                if (GetSlotInGrid(new Vector2i(__instance.m_selected.x + 1, __instance.m_selected.y)) is Slot rightSlot && rightSlot.IsActive)
+                                    __instance.m_selected = rightSlot.GridPosition;
+                            }
+                            else
+                            {
+                                IEnumerable<Slot> miscSlots = GetMiscSlots().Where(slot => slot.IsActive);
+                                if (miscSlots.Any())
+                                    __instance.m_selected = miscSlots.First().GridPosition;
+                            }
+                        }
+                        else // Equipment slot
+                        {
+                            __instance.m_selected = FindEquipmentSlot(slotRow: slot, after: slot);
+                            if (__instance.m_selected.x < 0)
+                            {
+                                Slot[] foodSlots = GetFoodSlots().Where(slot => slot.IsActive).ToArray();
+                                if (foodSlots.Length == 3)
+                                {
+                                    __instance.m_selected = foodSlots[Array.IndexOf(GetEquipmentSlots(), slot) % 3].GridPosition;
+                                    return false;
+                                }
+                                else
+                                {
+                                    Slot[] ammoSlots = GetAmmoSlots().Where(slot => slot.IsActive).ToArray();
+                                    if (ammoSlots.Length == 3)
+                                    {
+                                        __instance.m_selected = ammoSlots[Array.IndexOf(GetEquipmentSlots(), slot) % 3].GridPosition;
+                                        return false;
+                                    }
+                                }
+                            }
+
+                            if (__instance.m_selected.x < 0)
+                                __instance.m_selected = slot.GridPosition;
+                        }
+
+                        return false;
+                    }
+                }
+
+                if (ZInput.GetButtonDown("JoyDPadUp") || ZInput.GetButtonDown("JoyLStickUp"))
+                {
+                    LogDebug($"From {__instance.m_selected} {slot} up");
+
+                    if (slot != null)
+                    {
+                        if (slot.IsFoodSlot)
+                        {
+                            __instance.m_selected.x--;
+                            if (__instance.m_selected.x < 3)
+                                __instance.m_selected = slot.GridPosition;
+                        }
+                        else if (slot.IsAmmoSlot)
+                        {
+                            __instance.m_selected.x--;
+                            if (__instance.m_selected.x < 0)
+                                __instance.m_selected = slot.GridPosition;
+                        }
+                        else if (slot.IsMiscSlot)
+                        {
+                            if (slot.Index == 6)
+                                __instance.m_selected = GetFoodSlots().Last().GridPosition;
+                            else if (slot.Index == 7)
+                                __instance.m_selected = GetAmmoSlots().Last().GridPosition;
+
+                            if (GetSlotInGrid(__instance.m_selected) is not Slot upSlot || !upSlot.IsActive)
+                                __instance.m_selected = slot.GridPosition;
+                        }
+                        else if (slot.IsQuickSlot)
+                        {
+                            __instance.m_selected = FindEquipmentSlot(col: __instance.m_selected.x, right: true);
+                            if (__instance.m_selected.x < 0)
+                                __instance.m_selected = FindEquipmentSlot(right: true);
+
+                            if (__instance.m_selected.x < 0)
+                                __instance.m_selected = slot.GridPosition;
+                        }
+                        else // Equipment slot
+                        {
+                            __instance.m_selected = FindEquipmentSlot(col: Array.IndexOf(GetEquipmentSlots(), slot) / 3, right: true, before: slot);
+                            if (__instance.m_selected.x < 0)
+                                __instance.m_selected = slot.GridPosition;
+                        }
+                        return false;
+                    }
+                }
+
+                if (ZInput.GetButtonDown("JoyDPadDown") || ZInput.GetButtonDown("JoyLStickDown"))
+                {
+                    LogDebug($"From {__instance.m_selected} {slot} down");
+
+                    if (slot != null)
+                    {
+                        if (slot.IsQuickSlot || slot.IsMiscSlot)
+                        {
+                            if (!__instance.jumpToNextContainer)
+                                return false;
+
+                            __instance.OnMoveToLowerInventoryGrid?.Invoke(__instance.m_selected);
+                            return false;
+                        }
+                        else if (slot.IsAmmoSlot)
+                        {
+                            __instance.m_selected.x++;
+                            if (__instance.m_selected.x > 2)
+                                __instance.m_selected = GetMiscSlots()[1].GridPosition;
+                        }
+                        else if (slot.IsFoodSlot)
+                        {
+                            __instance.m_selected.x++;
+                            if (__instance.m_selected.x > 5)
+                                __instance.m_selected = GetMiscSlots()[0].GridPosition;
+                        }
+                        else if (slot.IsEquipmentSlot)
+                        {
+                            int col = Array.IndexOf(GetEquipmentSlots(), slot) / 3;
+                            __instance.m_selected = FindEquipmentSlot(col: col, after: slot);
+                            if (__instance.m_selected.x < 0)
+                                __instance.m_selected = GetQuickSlots()[col].GridPosition;
+                        }
+
+                        if (GetSlotInGrid(__instance.m_selected) is not Slot downSlot || !downSlot.IsActive)
+                        {
+                            if (!__instance.jumpToNextContainer)
+                                return false;
+
+                            __instance.OnMoveToLowerInventoryGrid?.Invoke(__instance.m_selected);
+                        }
+                        return false;
+                    }
+                    else
+                    {
+                        if (__instance.m_selected.y >= InventoryHeightPlayer - 1)
+                        {
+                            __instance.OnMoveToLowerInventoryGrid?.Invoke(__instance.m_selected);
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+            private static void Postfix(InventoryGrid __instance, bool __runOriginal)
+            {
+                if (!__runOriginal)
+                    LogDebug($"Selected {__instance.m_selected}");
+            }
+        }
+
+        [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.SetSelection))]
+        public static class InventoryGrid_SetSelection_GamepadSupport
+        {
+            private static void Postfix(Vector2i pos)
+            {
+                pos.y = Math.Min(pos.y, InventoryHeightPlayer - 1);
+                LogDebug($"SetSelection {pos}");
+            }
         }
     }
 }
