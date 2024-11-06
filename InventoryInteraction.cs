@@ -440,7 +440,7 @@ namespace ExtraSlots
             public static bool inCall = false;
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory __instance, string name, ref Vector2i pos, bool equipped)
+            private static void Prefix()
             {
                 inCall = true;
             }

@@ -47,6 +47,7 @@ namespace ExtraSlots
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
         public static ConfigEntry<Vector2> equipmentPanelOffset;
+        public static ConfigEntry<Vector2> equipmentPanelTooltipOffset;
         public static ConfigEntry<bool> quickSlotsAlignmentCenter;
         public static ConfigEntry<bool> equipmentSlotsShowTooltip;
         public static ConfigEntry<bool> fixContainerPosition;
@@ -199,10 +200,12 @@ namespace ExtraSlots
             equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
             quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle of the panel");
             equipmentSlotsShowTooltip = config("Panels - Equipment slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
+            equipmentPanelTooltipOffset = config("Panels - Equipment slots", "Gamepad Tooltip Offset", Vector2.zero, "Offset relative to original position of tooltip at upper right corner of the inventory (side elements included)");
 
             vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
             equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            equipmentPanelTooltipOffset.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
 
             foodSlotsShowLabel = config("Panels - Food slots", "Show label", defaultValue: false, "Show slot label");
             foodSlotsShowHintImage = config("Panels - Food slots", "Show hint image", defaultValue: true, "Show slot background hint image");

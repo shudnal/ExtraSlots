@@ -42,6 +42,8 @@ namespace ExtraSlots
         private static Material iconMaterial;
         private static Vector3 originalScale = Vector3.zero;
 
+        private static Vector2 originalTooltipPosition = Vector2.zero;
+
         internal static Sprite ammoSlot;
         internal static Sprite miscSlot;
         internal static Sprite quickSlot;
@@ -110,6 +112,14 @@ namespace ExtraSlots
 
             for (int i = startIndex + slots.Length; i < InventoryGui.instance.m_playerGrid.m_elements.Count; i++)
                 InventoryGui.instance.m_playerGrid.m_elements[i]?.m_go?.SetActive(false);
+
+            if (originalTooltipPosition == Vector2.zero)
+                originalTooltipPosition = InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition;
+
+            if (equipmentPanelTooltipOffset.Value == Vector2.zero)
+                InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition = originalTooltipPosition - new Vector2(0, PanelHeight + 2.5f * tileSpace);
+            else
+                InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition = originalTooltipPosition + new Vector2(equipmentPanelTooltipOffset.Value.x, -equipmentPanelTooltipOffset.Value.y);
 
             isDirty = false;
         }
