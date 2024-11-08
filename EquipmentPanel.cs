@@ -511,6 +511,9 @@ namespace ExtraSlots
                     if (beforeIndex > -1 && i >= beforeIndex || afterIndex > -1 && i <= afterIndex)
                         continue;
 
+                    if (row == -1 && col == -1)
+                        return equipmentSlots[i].GridPosition;
+
                     if ((row != -1) && (row == i % 3) || (col != -1) && (col == i / 3))
                         return equipmentSlots[i].GridPosition;
                 }

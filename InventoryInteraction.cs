@@ -292,8 +292,8 @@ namespace ExtraSlots
                     }
                     else
                     {
-                        itemData.m_gridPos = new Vector2i(0, InventoryHeightFull); // Put out of grid and item will find its place sooner or later
-                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y item {itemData.m_shared.m_name} put out of grid to find place later. Position rerouted {x},{y} -> {itemData.m_gridPos}");
+                        itemData.m_gridPos = new Vector2i(0, InventoryHeightFull - 1); // Put in the last slot and item will find its place sooner or later
+                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y item {itemData.m_shared.m_name} put in the last slot to find place later. Position rerouted {x},{y} -> {itemData.m_gridPos}");
                     }
 
                     __instance.m_inventory.Add(itemData);

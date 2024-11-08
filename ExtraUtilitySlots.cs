@@ -5,6 +5,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using static ExtraSlots.Slots;
+using static ExtraSlots.ExtraSlots;
+using static ExtraSlots.SlotsProgression;
 
 namespace ExtraSlots
 {
@@ -39,7 +41,16 @@ namespace ExtraSlots
 
         public static bool HaveEmptySlot() => GetEmptySlot() != -1;
 
-        public static int GetEmptySlot() => ExtraSlots.extraUtilitySlotsAmount.Value > 0 && Item1 == null ? 0 : (ExtraSlots.extraUtilitySlotsAmount.Value > 1 && Item2 == null ? 1 : -1);
+        public static int GetEmptySlot()
+        {
+            if (!IsUtilitySlotKnown())
+                return -1;
+
+            return IsFirstSlotFree() ? 0 : (IsSecondSlotFree() ? 1 : -1);
+        }
+
+        private static bool IsFirstSlotFree() => extraUtilitySlotsAmount.Value > 0 && Item1 == null && (IsAnyGlobalKeyActive(utilitySlotGlobalKey1.Value) || IsAnyMaterialDiscovered(utilitySlotItemDiscovered1.Value));
+        private static bool IsSecondSlotFree() => extraUtilitySlotsAmount.Value > 1 && Item2 == null && (IsAnyGlobalKeyActive(utilitySlotGlobalKey2.Value) || IsAnyMaterialDiscovered(utilitySlotItemDiscovered2.Value));
 
         public static IEnumerable<ItemDrop.ItemData> GetEquippedItems()
         {

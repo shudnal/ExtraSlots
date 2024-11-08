@@ -114,6 +114,35 @@ namespace ExtraSlots
         public static ConfigEntry<Vector2> ammoSlotLabelFontSize;
         public static ConfigEntry<Color> ammoSlotLabelFontColor;
 
+        public static ConfigEntry<string> quickSlotGlobalKey1;
+        public static ConfigEntry<string> quickSlotGlobalKey2;
+        public static ConfigEntry<string> quickSlotGlobalKey3;
+        public static ConfigEntry<string> quickSlotGlobalKey4;
+        public static ConfigEntry<string> quickSlotGlobalKey5;
+        public static ConfigEntry<string> quickSlotGlobalKey6;
+
+        public static ConfigEntry<string> ammoSlotsGlobalKey;
+        public static ConfigEntry<string> foodSlotsGlobalKey;
+        public static ConfigEntry<string> miscSlotsGlobalKey;
+
+        public static ConfigEntry<string> utilitySlotGlobalKey1;
+        public static ConfigEntry<string> utilitySlotGlobalKey2;
+
+        public static ConfigEntry<string> utilitySlotItemDiscovered1;
+        public static ConfigEntry<string> utilitySlotItemDiscovered2;
+
+        public static ConfigEntry<string> quickSlotItemDiscovered1;
+        public static ConfigEntry<string> quickSlotItemDiscovered2;
+        public static ConfigEntry<string> quickSlotItemDiscovered3;
+        public static ConfigEntry<string> quickSlotItemDiscovered4;
+        public static ConfigEntry<string> quickSlotItemDiscovered5;
+        public static ConfigEntry<string> quickSlotItemDiscovered6;
+
+        public static ConfigEntry<bool> ammoSlotsAvailableAfterDiscovery;
+        public static ConfigEntry<bool> utilitySlotAvailableAfterDiscovery;
+        public static ConfigEntry<bool> foodSlotsAvailableAfterDiscovery;
+        public static ConfigEntry<bool> equipmentSlotsAvailableAfterDiscovery;
+
         public static string configDirectory;
 
         public enum SlotsAlignment
@@ -301,6 +330,64 @@ namespace ExtraSlots
             ammoSlotLabelMargin.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             ammoSlotLabelFontSize.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             ammoSlotLabelFontColor.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
+
+            quickSlotGlobalKey1 = config("Progression - Global keys", "Quickslot 1", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotGlobalKey2 = config("Progression - Global keys", "Quickslot 2", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotGlobalKey3 = config("Progression - Global keys", "Quickslot 3", "defeated_bonemass", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotGlobalKey4 = config("Progression - Global keys", "Quickslot 4", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotGlobalKey5 = config("Progression - Global keys", "Quickslot 5", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotGlobalKey6 = config("Progression - Global keys", "Quickslot 6", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+
+            ammoSlotsGlobalKey = config("Progression - Global keys", "Ammo slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            foodSlotsGlobalKey = config("Progression - Global keys", "Food slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            miscSlotsGlobalKey = config("Progression - Global keys", "Misc slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+
+            utilitySlotGlobalKey1 = config("Progression - Global keys", "Extra utility slot 1", "defeated_bonemass", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotGlobalKey2 = config("Progression - Global keys", "Extra utility slot 2", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+
+            ammoSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Ammo slots", true, "Ammo slots will be active after acquiring first ammo item [Synced with Server]", synchronizedSetting: true);
+            utilitySlotAvailableAfterDiscovery = config("Progression - Discovery", "Utility slots", true, "Utility slots will be active after acquiring first utility item [Synced with Server]", synchronizedSetting: true);
+            foodSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Food slots", true, "Food slots will be active after acquiring first food item [Synced with Server]", synchronizedSetting: true);
+            equipmentSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Equipment slots", true, "Corresponding equipment slot will be active after acquiring first item [Synced with Server]", synchronizedSetting: true);
+
+            quickSlotGlobalKey1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotGlobalKey2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotGlobalKey3.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotGlobalKey4.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotGlobalKey5.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotGlobalKey6.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+
+            ammoSlotsGlobalKey.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            foodSlotsGlobalKey.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            miscSlotsGlobalKey.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+
+            utilitySlotGlobalKey1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            utilitySlotGlobalKey2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+
+            ammoSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            utilitySlotAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            foodSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            equipmentSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+
+            utilitySlotItemDiscovered1 = config("Progression - Items", "Extra utility slot 1", "$item_wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotItemDiscovered2 = config("Progression - Items", "Extra utility slot 2", "$mod_epicloot_assets_goldrubyring,$mod_epicloot_assets_silverring", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+
+            utilitySlotItemDiscovered1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            utilitySlotItemDiscovered2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+
+            quickSlotItemDiscovered1 = config("Progression - Items", "Quickslot 1", "$item_cryptkey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotItemDiscovered2 = config("Progression - Items", "Quickslot 2", "$item_cryptkey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotItemDiscovered3 = config("Progression - Items", "Quickslot 3", "$item_wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotItemDiscovered4 = config("Progression - Items", "Quickslot 4", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotItemDiscovered5 = config("Progression - Items", "Quickslot 5", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotItemDiscovered6 = config("Progression - Items", "Quickslot 6", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+
+            quickSlotItemDiscovered1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotItemDiscovered2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotItemDiscovered3.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotItemDiscovered4.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotItemDiscovered5.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotItemDiscovered6.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
         }
 
         public static void LogDebug(object data)
