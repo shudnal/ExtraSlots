@@ -31,9 +31,9 @@ namespace ExtraSlots
                 HotkeyBars ??= __instance.transform.parent.GetComponentsInChildren<HotkeyBar>().ToList();
 
                 if (-1 < SelectedHotkeyBarIndex && SelectedHotkeyBarIndex < HotkeyBars.Count)
-                    UpdateHotkeyBarInput(HotkeyBars[SelectedHotkeyBarIndex]);
+                    UpdateHotkeyBar(HotkeyBars[SelectedHotkeyBarIndex]);
                 else
-                    UpdateInitialHotkeyBarInput();
+                    UpdateInitializeHotkeyBar();
 
                 foreach (HotkeyBar bar in HotkeyBars)
                 {
@@ -42,13 +42,13 @@ namespace ExtraSlots
                 }
             }
 
-            private static void UpdateInitialHotkeyBarInput()
+            private static void UpdateInitializeHotkeyBar()
             {
                 if (ZInput.GetButtonDown("JoyDPadLeft") || ZInput.GetButtonDown("JoyDPadRight") || ZInput.GetButtonDown("JoyDPadUp"))
                     SelectHotkeyBar(0);
             }
 
-            public static void UpdateHotkeyBarInput(HotkeyBar hotkeyBar)
+            public static void UpdateHotkeyBar(HotkeyBar hotkeyBar)
             {
                 var player = Player.m_localPlayer;
                 if (hotkeyBar.m_selected >= 0 && (bool)player && IsHotkeyBarOperational())
