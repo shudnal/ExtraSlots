@@ -30,7 +30,7 @@ namespace ExtraSlots
             return ammoSlots.Where(slot => slot.IsActive).Select(slot => slot.Item).Where(item => item != null).ToList();
         }
 
-        public static ItemDrop.ItemData GetItemInSlot(int slotIndex) => slots[slotIndex].Item;
+        public static ItemDrop.ItemData GetItemInSlot(int slotIndex) => slots[slotIndex + 8].Item;
 
         internal static void MarkDirty() => isDirty = true;
 
@@ -41,6 +41,7 @@ namespace ExtraSlots
             hotBarRect.localPosition = Vector3.zero;
 
             hotBar = hotBarRect.GetComponent<HotkeyBar>();
+            hotBar.m_selected = -1;
         }
 
         internal static void UpdateBar()
