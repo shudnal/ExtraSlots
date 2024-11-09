@@ -45,7 +45,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="API\API.cs" />
-    <Compile Include="SlotsProgression.cs" />
+  </ItemGroup>  
+  <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'API|AnyCPU' ">
+    <Compile Include="Properties\AssemblyInfoAPI.cs" />
   </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
     <Compile Include="APIManager.cs" />
@@ -64,6 +66,7 @@
     <Compile Include="Slots.cs" />
     <Compile Include="ItemsSlotsValidation.cs" />
     <Compile Include="InventoryBackup.cs" />
+    <Compile Include="SlotsProgression.cs" />
   </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
     <Reference Include="0Harmony">
@@ -117,6 +120,10 @@
     <Reference Include="UnityEngine.UI">
       <HintPath>..\Assemblies\stable\UnityEngine.UI.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\stable\UnityEngine.JSONSerializeModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="assembly_utils_publicized">
@@ -127,10 +134,6 @@
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\Assemblies\stable\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.JSONSerializeModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Assemblies\stable\UnityEngine.JSONSerializeModule.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
