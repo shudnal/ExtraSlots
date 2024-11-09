@@ -1,5 +1,6 @@
 ﻿using APIManager;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
 using LocalizationManager;
@@ -182,7 +183,11 @@ namespace ExtraSlots
             if (loggingDebugEnabled.Value || loggingEnabled.Value)
                 LogCurrentLogLevel();
 
-            isEpicLootEnabled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("randyknapp.mods.epicloot");
+            isEpicLootEnabled = Chainloader.PluginInfos.ContainsKey("randyknapp.mods.epicloot");
+
+            // Make BetterArchery quiver unenableable since it will mess the inventory grid
+            if (Chainloader.PluginInfos.TryGetValue("ishid4.mods.betterarchery", out PluginInfo ba) && ba.Instance.Config.TryGetEntry("Quiver", "Enable Quiver", out ConfigEntry<bool> entry))
+                entry.SettingChanged += (s, e) => DisableQuiver();
         }
 
         private void LateUpdate()
@@ -483,6 +488,22 @@ namespace ExtraSlots
             resourceStream.Read(data, 0, data.Length);
 
             return data;
+        }
+
+        private static void DisableQuiver()
+        {
+            if (Chainloader.PluginInfos.TryGetValue("ishid4.mods.betterarchery", out PluginInfo ba) && ba.Instance.Config.TryGetEntry("Quiver", "Enable Quiver", out ConfigEntry<bool> entry) && entry.Value)
+            {
+                entry.Value = false;
+                LogWarning("BetterArchery's Quiver was disabled to prevent issues with inventory grid. You will not lose arrows if you had Quiver enabled in your previous session." +
+                    $"\nThis logic is designed for BetterArchery version 1.9.8, current version is {ba.Metadata.Version}. If quiver implementation was changed pls contact me at any platform.");
+            }
+        }
+
+        [HarmonyPatch(typeof(FejdStartup), nameof(FejdStartup.Start))]
+        private static class FejdStartup_Start_DisableBetterArcheryQuiver
+        {
+            private static void Postfix() => DisableQuiver();
         }
     }
 }
