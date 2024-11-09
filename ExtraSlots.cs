@@ -365,6 +365,8 @@ namespace ExtraSlots
             foodSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Food slots", true, "Food slots will be active after acquiring first food item [Synced with Server]", synchronizedSetting: true);
             equipmentSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Equipment slots", true, "Corresponding equipment slot will be active after acquiring first item [Synced with Server]", synchronizedSetting: true);
 
+            slotsProgressionEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+
             quickSlotGlobalKey1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotGlobalKey2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotGlobalKey3.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
