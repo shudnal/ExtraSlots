@@ -115,6 +115,8 @@ namespace ExtraSlots
         public static ConfigEntry<Vector2> ammoSlotLabelFontSize;
         public static ConfigEntry<Color> ammoSlotLabelFontColor;
 
+        public static ConfigEntry<bool> slotsProgressionEnabled;
+
         public static ConfigEntry<string> quickSlotGlobalKey1;
         public static ConfigEntry<string> quickSlotGlobalKey2;
         public static ConfigEntry<string> quickSlotGlobalKey3;
@@ -341,6 +343,8 @@ namespace ExtraSlots
             ammoSlotLabelMargin.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             ammoSlotLabelFontSize.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             ammoSlotLabelFontColor.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
+
+            slotsProgressionEnabled = config("Progression", "Enabled", true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]", synchronizedSetting: true);
 
             quickSlotGlobalKey1 = config("Progression - Global keys", "Quickslot 1", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
             quickSlotGlobalKey2 = config("Progression - Global keys", "Quickslot 2", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);

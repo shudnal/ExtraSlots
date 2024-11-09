@@ -13,7 +13,7 @@ namespace ExtraSlots
 
         public static bool IsAnyGlobalKeyActive(string requiredKeys)
         {
-            if (string.IsNullOrEmpty(requiredKeys) || !ZoneSystem.instance || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
+            if (!slotsProgressionEnabled.Value || string.IsNullOrEmpty(requiredKeys) || !ZoneSystem.instance || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
                 return true;
 
             IEnumerable<string> keys = requiredKeys.Split(',').Select(s => s.Trim()).Where(s => !s.IsNullOrWhiteSpace());
@@ -23,7 +23,7 @@ namespace ExtraSlots
 
         public static bool IsItemTypeKnown(ItemDrop.ItemData.ItemType itemType)
         {
-            if (!Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
+            if (!slotsProgressionEnabled.Value || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
                 return true;
 
             return itemTypes.Contains(itemType);
@@ -31,7 +31,7 @@ namespace ExtraSlots
 
         public static bool IsAnyMaterialDiscovered(string itemNames)
         {
-            if (string.IsNullOrEmpty(itemNames) || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
+            if (!slotsProgressionEnabled.Value || string.IsNullOrEmpty(itemNames) || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
                 return true;
 
             IEnumerable<string> items = itemNames.Split(',').Select(s => s.Trim()).Where(s => !s.IsNullOrWhiteSpace());
