@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -30,9 +31,7 @@ namespace ExtraSlots
 
                 HotkeyBars ??= __instance.transform.parent.GetComponentsInChildren<HotkeyBar>().ToList();
 
-                if (-1 < SelectedHotkeyBarIndex && SelectedHotkeyBarIndex < HotkeyBars.Count)
-                    UpdateHotkeyBar(HotkeyBars[SelectedHotkeyBarIndex]);
-                else
+                if (SelectedHotkeyBarIndex < 0 || SelectedHotkeyBarIndex > HotkeyBars.Count - 1 || !UpdateHotkeyBar(HotkeyBars[SelectedHotkeyBarIndex]))
                     UpdateInitializeHotkeyBar();
 
                 foreach (HotkeyBar bar in HotkeyBars)
@@ -45,40 +44,58 @@ namespace ExtraSlots
             private static void UpdateInitializeHotkeyBar()
             {
                 if (ZInput.GetButtonDown("JoyDPadLeft") || ZInput.GetButtonDown("JoyDPadRight") || ZInput.GetButtonDown("JoyDPadUp"))
-                    SelectHotkeyBar(0);
+                    SelectHotkeyBar();
             }
 
-            public static void UpdateHotkeyBar(HotkeyBar hotkeyBar)
+            public static bool UpdateHotkeyBar(HotkeyBar hotkeyBar)
             {
-                var player = Player.m_localPlayer;
-                if (hotkeyBar.m_selected >= 0 && (bool)player && IsHotkeyBarOperational())
+                bool isOperational = IsHotkeyBarOperational();
+                if (hotkeyBar.m_selected >= 0 && isOperational)
                 {
                     if (ZInput.GetButtonDown("JoyDPadLeft"))
                         if (hotkeyBar.m_selected == 0)
-                            SelectHotkeyBar(SelectedHotkeyBarIndex - 1);
+                            SelectHotkeyBar(right: false);
                         else
                             hotkeyBar.m_selected = Mathf.Max(0, hotkeyBar.m_selected - 1);
                     else if (ZInput.GetButtonDown("JoyDPadRight"))
                         if (hotkeyBar.m_selected == hotkeyBar.m_elements.Count - 1)
-                            SelectHotkeyBar(SelectedHotkeyBarIndex + 1);
+                            SelectHotkeyBar(right: true);
                         else
                             hotkeyBar.m_selected = Mathf.Min(hotkeyBar.m_elements.Count - 1, hotkeyBar.m_selected + 1);
 
                     if (ZInput.GetButtonDown("JoyDPadUp"))
                         if (hotkeyBar.name == QuickSlotsHotBar.barName)
-                            player.UseItem(null, QuickSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), false);
+                            Player.m_localPlayer.UseItem(null, QuickSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), false);
                         else if (hotkeyBar.name == AmmoSlotsHotBar.barName)
-                            player.UseItem(null, AmmoSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), false);
+                            Player.m_localPlayer.UseItem(null, AmmoSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), false);
                         else
-                            player.UseHotbarItem(hotkeyBar.m_selected + 1);
+                            Player.m_localPlayer.UseHotbarItem(hotkeyBar.m_selected + 1);
+
+                    return true;
                 }
+
+                return !isOperational;
             }
 
-            public static void SelectHotkeyBar(int index)
+            public static void SelectHotkeyBar(bool right = true)
             {
-                bool fromRight = index < SelectedHotkeyBarIndex;
-                SelectedHotkeyBarIndex = (index + HotkeyBars.Count) % HotkeyBars.Count;
-                HotkeyBars.Do(bar => bar.m_selected = HotkeyBars.IndexOf(bar) == SelectedHotkeyBarIndex ? (fromRight ? bar.m_elements.Count - 1 : 0) : -1);
+                int[] activeBars = HotkeyBars.Where(bar => bar.m_elements.Count > 0).Select(bar => HotkeyBars.IndexOf(bar)).ToArray();
+                if (activeBars.Length == 0)
+                {
+                    SelectedHotkeyBarIndex = -1;
+                    return;
+                }
+
+                int index = Array.IndexOf(activeBars, SelectedHotkeyBarIndex);
+                if (index == -1)
+                    index = 0;
+                else if (right)
+                    index++;
+                else
+                    index--;
+
+                SelectedHotkeyBarIndex = activeBars[(index + activeBars.Length) % activeBars.Length];
+                HotkeyBars.Do(bar => bar.m_selected = HotkeyBars.IndexOf(bar) == SelectedHotkeyBarIndex ? (right ? 0 : bar.m_elements.Count - 1) : -1);
             }
 
             public static bool IsHotkeyBarOperational() => !InventoryGui.IsVisible() && !Menu.IsVisible() && !GameCamera.InFreeFly() 
