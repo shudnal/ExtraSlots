@@ -17,7 +17,7 @@ namespace ExtraSlots
     [BepInIncompatibility("randyknapp.mods.equipmentandquickslots")]
     [BepInIncompatibility("moreslots")]
     [BepInIncompatibility("randyknapp.mods.auga")]
-    [BepInDependency("vapok.mods.adventurebackpacks", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("randyknapp.mods.epicloot", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("ishid4.mods.betterarchery", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     public class ExtraSlots : BaseUnityPlugin
@@ -143,7 +143,11 @@ namespace ExtraSlots
         public static ConfigEntry<bool> foodSlotsAvailableAfterDiscovery;
         public static ConfigEntry<bool> equipmentSlotsAvailableAfterDiscovery;
 
+        public static ConfigEntry<float> epicLootMagicItemUnequippedAlpha;
+
         public static string configDirectory;
+
+        public static bool isEpicLootEnabled;
 
         public enum SlotsAlignment
         {
@@ -177,6 +181,8 @@ namespace ExtraSlots
 
             if (loggingDebugEnabled.Value || loggingEnabled.Value)
                 LogCurrentLogLevel();
+
+            isEpicLootEnabled = BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("randyknapp.mods.epicloot");
         }
 
         private void LateUpdate()
@@ -206,7 +212,7 @@ namespace ExtraSlots
             loggingDebugEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
 
             quickSlotsAmount = config("Extra slots", "Quick slots", defaultValue: 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
-            extraUtilitySlotsAmount = config("Extra slots", "Extra utility slots", defaultValue: 1, new ConfigDescription("How much utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
+            extraUtilitySlotsAmount = config("Extra slots", "Extra utility slots", defaultValue: 2, new ConfigDescription("How much utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
             extraRows = config("Extra slots", "Extra inventory rows", defaultValue: 0, new ConfigDescription("How much rows to add in regular inventory [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
             foodSlotsEnabled = config("Extra slots", "Food slots", defaultValue: true, "Enable 3 slots for food [Synced with Server]", synchronizedSetting: true);
             miscSlotsEnabled = config("Extra slots", "Misc slots", defaultValue: true, "Enable up to 2 slots for trophies, miscellaneous, keys and quest items." +
@@ -343,7 +349,7 @@ namespace ExtraSlots
             miscSlotsGlobalKey = config("Progression - Global keys", "Misc slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
 
             utilitySlotGlobalKey1 = config("Progression - Global keys", "Extra utility slot 1", "defeated_bonemass", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            utilitySlotGlobalKey2 = config("Progression - Global keys", "Extra utility slot 2", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotGlobalKey2 = config("Progression - Global keys", "Extra utility slot 2", "defeated_goblinking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
 
             ammoSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Ammo slots", true, "Ammo slots will be active after acquiring first ammo item [Synced with Server]", synchronizedSetting: true);
             utilitySlotAvailableAfterDiscovery = config("Progression - Discovery", "Utility slots", true, "Utility slots will be active after acquiring first utility item [Synced with Server]", synchronizedSetting: true);
@@ -370,7 +376,7 @@ namespace ExtraSlots
             equipmentSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
             utilitySlotItemDiscovered1 = config("Progression - Items", "Extra utility slot 1", "$item_wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            utilitySlotItemDiscovered2 = config("Progression - Items", "Extra utility slot 2", "$mod_epicloot_assets_goldrubyring,$mod_epicloot_assets_silverring", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotItemDiscovered2 = config("Progression - Items", "Extra utility slot 2", "$item_demister,$mod_epicloot_assets_goldrubyring,$mod_epicloot_assets_silverring", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
 
             utilitySlotItemDiscovered1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             utilitySlotItemDiscovered2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
@@ -388,6 +394,8 @@ namespace ExtraSlots
             quickSlotItemDiscovered4.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotItemDiscovered5.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotItemDiscovered6.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+
+            epicLootMagicItemUnequippedAlpha = config("Mods compatibility", "EpicLoot unequipped item alpha", 0.2f, "Make unequipped enchanted item more visible in equipment panel by making its background image more transparent.");
         }
 
         public static void LogDebug(object data)

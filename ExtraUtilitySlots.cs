@@ -5,8 +5,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using static ExtraSlots.Slots;
-using static ExtraSlots.ExtraSlots;
-using static ExtraSlots.SlotsProgression;
 
 namespace ExtraSlots
 {
@@ -41,16 +39,10 @@ namespace ExtraSlots
 
         public static bool HaveEmptySlot() => GetEmptySlot() != -1;
 
-        public static int GetEmptySlot()
-        {
-            if (!IsUtilitySlotKnown())
-                return -1;
+        public static int GetEmptySlot() => IsFirstSlotFree() ? 0 : (IsSecondSlotFree() ? 1 : -1);
 
-            return IsFirstSlotFree() ? 0 : (IsSecondSlotFree() ? 1 : -1);
-        }
-
-        private static bool IsFirstSlotFree() => extraUtilitySlotsAmount.Value > 0 && Item1 == null && (IsAnyGlobalKeyActive(utilitySlotGlobalKey1.Value) || IsAnyMaterialDiscovered(utilitySlotItemDiscovered1.Value));
-        private static bool IsSecondSlotFree() => extraUtilitySlotsAmount.Value > 1 && Item2 == null && (IsAnyGlobalKeyActive(utilitySlotGlobalKey2.Value) || IsAnyMaterialDiscovered(utilitySlotItemDiscovered2.Value));
+        private static bool IsFirstSlotFree() => IsFirstExtraUtilitySlotAvailable() && Item1 == null;
+        private static bool IsSecondSlotFree() => IsSecondExtraUtilitySlotAvailable() && Item2 == null;
 
         public static IEnumerable<ItemDrop.ItemData> GetEquippedItems()
         {
@@ -155,6 +147,7 @@ namespace ExtraSlots
                     }
                 }
 
+                [HarmonyPriority(Priority.First)]
                 private static void Postfix(Humanoid __instance, ItemDrop.ItemData item, bool triggerEquipEffects, int __state, ref bool __result)
                 {
                     if (!IsValidPlayer(__instance))
@@ -177,12 +170,15 @@ namespace ExtraSlots
                     }
 
                     __instance.SetupEquipment();
+
+                    ExtraSlots.LogDebug($"Item {item} equipped {item.m_equipped} IsItemEquiped {__instance.IsItemEquiped(item)}");
                 }
             }
 
             [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.UnequipItem))]
             public static class Humanoid_UnequipItem_ExtraUtility
             {
+                [HarmonyPriority(Priority.First)]
                 private static void Postfix(Humanoid __instance, ItemDrop.ItemData item)
                 {
                     if (item == null)
@@ -205,6 +201,7 @@ namespace ExtraSlots
             [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.UnequipAllItems))]
             public static class Humanoid_UnequipAllItems_ExtraUtility
             {
+                [HarmonyPriority(Priority.First)]
                 private static void Postfix(Humanoid __instance)
                 {
                     if (!IsValidPlayer(__instance))

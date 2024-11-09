@@ -523,20 +523,20 @@ namespace ExtraSlots
             AddHotkeySlot($"{quickSlotID}5", () => quickSlotsShowLabel.Value ? GetQuickSlot5Text() : "", null, () => quickSlotsAmount.Value > 4 && (IsAnyGlobalKeyActive(quickSlotGlobalKey5.Value) || IsAnyMaterialDiscovered(quickSlotItemDiscovered5.Value)), () => quickSlotHotKey5.Value, () => GetQuickSlot5Text());
             AddHotkeySlot($"{quickSlotID}6", () => quickSlotsShowLabel.Value ? GetQuickSlot6Text() : "", null, () => quickSlotsAmount.Value > 5 && (IsAnyGlobalKeyActive(quickSlotGlobalKey6.Value) || IsAnyMaterialDiscovered(quickSlotItemDiscovered6.Value)), () => quickSlotHotKey6.Value, () => GetQuickSlot6Text());
 
-            AddSlot($"{miscSlotID}1", () => miscSlotsShowLabel.Value ? "$exsl_slot_misc_label" : "", IsMiscSlotItem, () => miscSlotsEnabled.Value && (foodSlotsEnabled.Value || ammoSlotsEnabled.Value) && IsAnyGlobalKeyActive(miscSlotsGlobalKey.Value));
-            AddSlot($"{miscSlotID}2", () => miscSlotsShowLabel.Value ? "$exsl_slot_misc_label" : "", IsMiscSlotItem, () => miscSlotsEnabled.Value && foodSlotsEnabled.Value && ammoSlotsEnabled.Value && IsAnyGlobalKeyActive(miscSlotsGlobalKey.Value));
+            AddSlot($"{miscSlotID}1", () => miscSlotsShowLabel.Value ? "$exsl_slot_misc_label" : "", IsMiscSlotItem, () => IsFirstMiscSlotAvailable());
+            AddSlot($"{miscSlotID}2", () => miscSlotsShowLabel.Value ? "$exsl_slot_misc_label" : "", IsMiscSlotItem, () => IsSecondMiscSlotAvailable());
 
             // Second row
-            AddHotkeySlot($"{ammoSlotID}1", () => ammoSlotsShowLabel.Value ? GetAmmoSlot1Text() : "", IsAmmoSlotItem, () => ammoSlotsEnabled.Value && IsAnyGlobalKeyActive(ammoSlotsGlobalKey.Value) && IsAmmoSlotKnown(), () => ammoSlotHotKey1.Value, () => GetAmmoSlot1Text());
-            AddHotkeySlot($"{ammoSlotID}2", () => ammoSlotsShowLabel.Value ? GetAmmoSlot2Text() : "", IsAmmoSlotItem, () => ammoSlotsEnabled.Value && IsAnyGlobalKeyActive(ammoSlotsGlobalKey.Value) && IsAmmoSlotKnown(), () => ammoSlotHotKey2.Value, () => GetAmmoSlot2Text());
-            AddHotkeySlot($"{ammoSlotID}3", () => ammoSlotsShowLabel.Value ? GetAmmoSlot3Text() : "", IsAmmoSlotItem, () => ammoSlotsEnabled.Value && IsAnyGlobalKeyActive(ammoSlotsGlobalKey.Value) && IsAmmoSlotKnown(), () => ammoSlotHotKey3.Value, () => GetAmmoSlot3Text());
+            AddHotkeySlot($"{ammoSlotID}1", () => ammoSlotsShowLabel.Value ? GetAmmoSlot1Text() : "", IsAmmoSlotItem, () => IsAmmoSlotAvailable(), () => ammoSlotHotKey1.Value, () => GetAmmoSlot1Text());
+            AddHotkeySlot($"{ammoSlotID}2", () => ammoSlotsShowLabel.Value ? GetAmmoSlot2Text() : "", IsAmmoSlotItem, () => IsAmmoSlotAvailable(), () => ammoSlotHotKey2.Value, () => GetAmmoSlot2Text());
+            AddHotkeySlot($"{ammoSlotID}3", () => ammoSlotsShowLabel.Value ? GetAmmoSlot3Text() : "", IsAmmoSlotItem, () => IsAmmoSlotAvailable(), () => ammoSlotHotKey3.Value, () => GetAmmoSlot3Text());
 
-            AddSlot($"{foodSlotID}1", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => foodSlotsEnabled.Value && IsAnyGlobalKeyActive(foodSlotsGlobalKey.Value) && IsFoodSlotKnown());
-            AddSlot($"{foodSlotID}2", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => foodSlotsEnabled.Value && IsAnyGlobalKeyActive(foodSlotsGlobalKey.Value) && IsFoodSlotKnown());
-            AddSlot($"{foodSlotID}3", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => foodSlotsEnabled.Value && IsAnyGlobalKeyActive(foodSlotsGlobalKey.Value) && IsFoodSlotKnown());
+            AddSlot($"{foodSlotID}1", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => IsFoodSlotAvailable());
+            AddSlot($"{foodSlotID}2", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => IsFoodSlotAvailable());
+            AddSlot($"{foodSlotID}3", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => IsFoodSlotAvailable());
 
-            AddSlot($"{extraUtilitySlotID}1", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => extraUtilitySlotsAmount.Value > 0 && IsUtilitySlotKnown() && (IsAnyGlobalKeyActive(utilitySlotGlobalKey1.Value) || IsAnyMaterialDiscovered(utilitySlotItemDiscovered1.Value)));
-            AddSlot($"{extraUtilitySlotID}2", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => extraUtilitySlotsAmount.Value > 1 && IsUtilitySlotKnown() && (IsAnyGlobalKeyActive(utilitySlotGlobalKey2.Value) || IsAnyMaterialDiscovered(utilitySlotItemDiscovered2.Value)));
+            AddSlot($"{extraUtilitySlotID}1", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsFirstExtraUtilitySlotAvailable());
+            AddSlot($"{extraUtilitySlotID}2", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsSecondExtraUtilitySlotAvailable());
 
             // Third row
             AddSlot(helmetSlotID, () => "$exsl_slot_equipment_helmet_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet, () => IsHelmetSlotKnown());
@@ -566,6 +566,18 @@ namespace ExtraSlots
                 index++;
             }
         }
+
+        internal static bool IsFirstExtraUtilitySlotAvailable() => extraUtilitySlotsAmount.Value > 0 && IsUtilitySlotKnown() && (IsAnyGlobalKeyActive(utilitySlotGlobalKey1.Value) || IsAnyMaterialDiscovered(utilitySlotItemDiscovered1.Value));
+
+        internal static bool IsSecondExtraUtilitySlotAvailable() => extraUtilitySlotsAmount.Value > 1 && IsUtilitySlotKnown() && (IsAnyGlobalKeyActive(utilitySlotGlobalKey2.Value) || IsAnyMaterialDiscovered(utilitySlotItemDiscovered2.Value));
+
+        internal static bool IsFirstMiscSlotAvailable() => EquipmentPanel.quickSlotsCount > 0 && miscSlotsEnabled.Value && (IsFoodSlotAvailable() || IsAmmoSlotAvailable()) && IsAnyGlobalKeyActive(miscSlotsGlobalKey.Value);
+
+        internal static bool IsSecondMiscSlotAvailable() => EquipmentPanel.quickSlotsCount > 0 && miscSlotsEnabled.Value && IsFoodSlotAvailable() && IsAmmoSlotAvailable() && IsAnyGlobalKeyActive(miscSlotsGlobalKey.Value);
+
+        internal static bool IsFoodSlotAvailable() => foodSlotsEnabled.Value && IsAnyGlobalKeyActive(foodSlotsGlobalKey.Value) && IsFoodSlotKnown();
+
+        internal static bool IsAmmoSlotAvailable() => ammoSlotsEnabled.Value && IsAnyGlobalKeyActive(ammoSlotsGlobalKey.Value) && IsAmmoSlotKnown();
 
         internal static void UpdateSlotsGridPosition() => slots.Do(slot => slot.UpdateGridPosition());
 

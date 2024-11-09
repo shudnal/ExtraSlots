@@ -18,14 +18,15 @@ namespace ExtraSlots
         private const float tileSize = 64f + tileSpace;
         private const float interslotSpaceInTiles = 0.25f;
         private static int equipmentSlotsCount = 0;
-        private static int quickSlotsCount = 0;
+        internal static int quickSlotsCount = 0;    
 
         private static float InventoryPanelWidth => InventoryGui.instance ? InventoryGui.instance.m_player.rect.width : 0;
         private static float PanelWidth => (Math.Max(quickSlotsCount, SlotPositions.LastEquipmentColumn() + 1) + FoodAmmoSlotsWidthInTiles) * tileSize + tileSpace / 2;
-        private static float PanelHeight => (quickSlotsCount > 0 || miscSlotsEnabled.Value && (foodSlotsEnabled.Value || ammoSlotsEnabled.Value) ? 4f + interslotSpaceInTiles : 3f) * tileSize + tileSpace / 2;
+        private static float PanelHeight => (((quickSlotsCount > 0 || IsFirstMiscSlotAvailable()) ? 1f + interslotSpaceInTiles : 0f) + EquipmentHeight) * tileSize + tileSpace / 2;
         private static Vector2 PanelOffset => new Vector2(equipmentPanelOffset.Value.x, -equipmentPanelOffset.Value.y);
         private static Vector2 PanelPosition => new Vector2(InventoryPanelWidth + 100f, 0f) + PanelOffset;
-        private static float FoodAmmoSlotsWidthInTiles => (foodSlotsEnabled.Value || ammoSlotsEnabled.Value ? interslotSpaceInTiles : 0) + (foodSlotsEnabled.Value ? 1f : 0) + (ammoSlotsEnabled.Value ? 1f : 0);
+        private static float FoodAmmoSlotsWidthInTiles => (IsFoodSlotAvailable() || IsAmmoSlotAvailable() ? interslotSpaceInTiles : 0) + (IsFoodSlotAvailable() ? 1f : 0) + (IsAmmoSlotAvailable() ? 1f : 0);
+        private static int EquipmentHeight => equipmentSlotsCount > 3 || IsFoodSlotAvailable() || IsAmmoSlotAvailable() ? 3 : equipmentSlotsCount;
 
         public static RectTransform inventoryDarken = null;
         public static RectTransform inventoryBackground = null;
@@ -216,6 +217,9 @@ namespace ExtraSlots
                 ItemDrop.ItemData item = slot.Item;
                 element.m_tooltip.Set(item.m_shared.m_name, item.GetTooltip(), InventoryGui.instance.m_playerGrid.m_tooltipAnchor); // Fix possible tooltip lose
                 element.m_icon.transform.localScale = originalScale == Vector3.zero ? Vector3.one: originalScale;
+
+                if (isEpicLootEnabled && epicLootMagicItemUnequippedAlpha.Value != 1f && !item.m_equipped && element.m_go.transform.Find("magicItem") is Transform magicItem && magicItem.GetComponent<Image>() is Image magicItemImage)
+                    magicItemImage.color = new Color(magicItemImage.color.r, magicItemImage.color.g, magicItemImage.color.b, epicLootMagicItemUnequippedAlpha.Value);
                 return;
             }
 
@@ -304,7 +308,7 @@ namespace ExtraSlots
                 int x = i * 4
                     // Offset for quickslots positioning in the middle if equipment columns is more than quickslots
                     + Math.Max(quickSlotsAlignmentCenter.Value ? LastEquipmentColumn() + 1 - quickSlotsCount : 0, 0);
-                int y = 3 * 4 + 1;
+                int y = EquipmentHeight * 4 + 1;
                 return GetSlotPosition(x, y);
             }
             internal static Vector2 GetFoodSlotTileOffset(int i)
@@ -315,14 +319,14 @@ namespace ExtraSlots
             }
             internal static Vector2 GetAmmoSlotTileOffset(int i)
             {
-                int x = Math.Max(LastEquipmentColumn() + 1, quickSlotsCount) * 4 + 1 + (foodSlotsEnabled.Value ? 4 : 0);
+                int x = Math.Max(LastEquipmentColumn() + 1, quickSlotsCount) * 4 + 1 + (IsFoodSlotAvailable() ? 4 : 0);
                 int y = i * 4;
                 return GetSlotPosition(x, y);
             }
             internal static Vector2 GetMiscSlotTileOffset(int i)
             {
                 int x = Math.Max(LastEquipmentColumn() + 1, quickSlotsCount) * 4 + i * 4 + 1;
-                int y = 3 * 4 + 1;
+                int y = EquipmentHeight * 4 + 1;
                 return GetSlotPosition(x, y);
             }
             private static Vector2 GetSlotPosition(int x, int y) => PanelPosition + new Vector2(x * tileSize / 4, -y * tileSize / 4);
@@ -652,7 +656,7 @@ namespace ExtraSlots
                             }
                             else
                             {
-                                Vector2i newPos = FindEquipmentSlot(row: __instance.m_selected.y);
+                                Vector2i newPos = FindEquipmentSlot(row: Math.Min(__instance.m_selected.y, equipmentSlotsCount - 1));
                                 if (newPos != emptyPosition)
                                     __instance.m_selected = newPos;
                             }
@@ -740,7 +744,7 @@ namespace ExtraSlots
                         else if (slot.IsMiscSlot)
                         {
                             if (slot.Index == 6)
-                                __instance.m_selected = GetFoodSlots().Last().GridPosition;
+                                __instance.m_selected = (GetFoodSlots().Last() is Slot upMiscSlot && upMiscSlot.IsActive ? upMiscSlot : GetAmmoSlots().Last()).GridPosition;
                             else if (slot.Index == 7)
                                 __instance.m_selected = GetAmmoSlots().Last().GridPosition;
 
@@ -749,7 +753,7 @@ namespace ExtraSlots
                         }
                         else if (slot.IsQuickSlot)
                         {
-                            __instance.m_selected = FindEquipmentSlot(col: __instance.m_selected.x, right: true);
+                            __instance.m_selected = FindEquipmentSlot(col: Math.Min(__instance.m_selected.x, equipmentSlotsCount / 3), right: true);
                             if (__instance.m_selected.x < 0)
                                 __instance.m_selected = FindEquipmentSlot(right: true);
 
@@ -784,7 +788,7 @@ namespace ExtraSlots
                         {
                             __instance.m_selected.x++;
                             if (__instance.m_selected.x > 2)
-                                __instance.m_selected = GetMiscSlots()[1].GridPosition;
+                                __instance.m_selected = (GetMiscSlots()[1] is Slot downAmmoSlot && downAmmoSlot.IsActive ? downAmmoSlot : GetMiscSlots()[0]).GridPosition;
                         }
                         else if (slot.IsFoodSlot)
                         {
