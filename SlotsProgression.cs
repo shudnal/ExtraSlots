@@ -2,6 +2,7 @@
 using HarmonyLib;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using static ExtraSlots.ExtraSlots;
 
@@ -89,9 +90,17 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(Player), nameof(Player.OnDestroy))]
-        private static class Player_OnDestroy_ClearKnownItemTypes
+        [HarmonyPatch]
+        public static class Player_ClearKnownItemTypes
         {
+            private static IEnumerable<MethodBase> TargetMethods()
+            {
+                yield return AccessTools.Method(typeof(Player), nameof(Player.OnDestroy));
+                yield return AccessTools.Method(typeof(Player), nameof(Player.ResetCharacter));
+                yield return AccessTools.Method(typeof(Player), nameof(Player.ResetCharacterKnownItems));
+                yield return AccessTools.Method(typeof(Player), nameof(Player.Load));
+            }
+
             private static void Prefix(Player __instance)
             {
                 if (__instance == Player.m_localPlayer)
