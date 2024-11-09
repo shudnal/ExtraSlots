@@ -170,8 +170,6 @@ namespace ExtraSlots
                     }
 
                     __instance.SetupEquipment();
-
-                    ExtraSlots.LogDebug($"Item {item} equipped {item.m_equipped} IsItemEquiped {__instance.IsItemEquiped(item)}");
                 }
             }
 

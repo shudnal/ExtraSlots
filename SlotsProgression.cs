@@ -79,13 +79,23 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(Player), nameof(Player.OnSpawned))]
-        private static class Player_OnSpawned_UpdateKnownItemTypes
+        [HarmonyPatch(typeof(Player), nameof(Player.EquipInventoryItems))]
+        private static class Player_EquipInventoryItems_UpdateKnownItemTypes
         {
-            private static void Postfix(Player __instance)
+            private static void Prefix(Player __instance)
             {
                 if (__instance == Player.m_localPlayer)
                     UpdateItemTypes();
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.OnDestroy))]
+        private static class Player_OnDestroy_ClearKnownItemTypes
+        {
+            private static void Prefix(Player __instance)
+            {
+                if (__instance == Player.m_localPlayer)
+                    itemTypes.Clear();
             }
         }
     }
