@@ -202,12 +202,24 @@ public class API
     /// <summary>
     /// Returns full height of inventory
     /// </summary>
-    public static int GetInventoryHeight()
+    public static int GetInventoryHeightFull()
     {
 #if !API
         return InventoryHeightFull;
 #else
-        return 0;
+        return Player.m_localPlayer ? Player.m_localPlayer.GetInventory().GetHeight() : 4;
+#endif
+    }
+
+    /// <summary>
+    /// Returns full height of inventory
+    /// </summary>
+    public static int GetInventoryHeightPlayer()
+    {
+#if !API
+        return InventoryHeightPlayer;
+#else
+        return Player.m_localPlayer ? Player.m_localPlayer.GetInventory().GetHeight() : 4;
 #endif
     }
 

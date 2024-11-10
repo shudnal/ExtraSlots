@@ -602,7 +602,8 @@ namespace ExtraSlots
             return item != null && (item.m_shared.m_questItem || 
                                     item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trophy ||
                                     item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Misc ||
-                                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Fish);
+                                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Fish ||
+                                    item.m_shared.m_name == "$item_coins");
         }
 
         public static bool IsFoodSlotItem(ItemDrop.ItemData item)
