@@ -34,7 +34,7 @@ namespace ExtraSlots
                 var pkg = new ZPackage(data);
                 inventory.Load(pkg);
 
-                TransferItemsToPlayerInventory(inventory, equipItem: true);
+                TransferItemsToPlayerInventory(inventory, equipItem);
 
                 if (!loadOnly)
                 {
