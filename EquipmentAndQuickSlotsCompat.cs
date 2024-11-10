@@ -20,64 +20,62 @@ namespace ExtraSlots
         public static void Load()
         {
             if (playerToLoad == null)
-            {
-                LogWarning("Tried to load an ExtendedPlayerData with a null player!");
                 return;
-            }
 
-            if (LoadValue(playerToLoad, nameof(QuickSlotInventory), out string quickSlotData))
+            LoadInventory(EquipmentSlotInventory, equipItem: true, loadOnly: Player.m_localPlayer == null);
+            
+            LoadInventory(QuickSlotInventory, equipItem: false, loadOnly: Player.m_localPlayer == null);
+        }
+
+        private static void LoadInventory(Inventory inventory, bool equipItem, bool loadOnly)
+        {
+            if (LoadValue(playerToLoad, inventory.m_name, out string data))
             {
-                var pkg = new ZPackage(quickSlotData);
-                QuickSlotInventory.Load(pkg);
+                var pkg = new ZPackage(data);
+                inventory.Load(pkg);
 
-                TransferItemsToPlayerInventory(QuickSlotInventory, equipItem: false);
+                TransferItemsToPlayerInventory(inventory, equipItem: true);
 
-                pkg = new ZPackage();
-                QuickSlotInventory.Save(pkg);
-                SaveValue(playerToLoad, nameof(QuickSlotInventory), pkg.GetBase64());
-            }
-
-            if (LoadValue(playerToLoad, nameof(EquipmentSlotInventory), out string equipSlotData))
-            {
-                var pkg = new ZPackage(equipSlotData);
-                EquipmentSlotInventory.Load(pkg);
-
-                TransferItemsToPlayerInventory(EquipmentSlotInventory, equipItem: true);
-
-                pkg = new ZPackage();
-                EquipmentSlotInventory.Save(pkg);
-                SaveValue(playerToLoad, nameof(EquipmentSlotInventory), pkg.GetBase64());
-            }
-
-            static void TransferItemsToPlayerInventory(Inventory fromInventory, bool equipItem)
-            {
-                foreach (ItemDrop.ItemData item in fromInventory.GetAllItemsInGridOrder().Where(item => item != null))
+                if (!loadOnly)
                 {
-                    if (!(TryFindSlotForItem(item, out Slot slot) ? PlayerInventory.AddItem(item, slot.GridPosition) : PlayerInventory.AddItem(item)))
-                    {
-                        if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
-                        {
-                            LogInfo($"Item {item.m_shared.m_name} from EaQS was put to created free space {gridPos}");
-                            item.m_gridPos = gridPos;
-                        }
-                        else
-                        {
-                            // Put item out of grid. Eventually it will be put into first free slot.
-                            LogWarning($"Item {item.m_shared.m_name} was temporary put out of grid. It will return to inventory first free slot.");
-                            item.m_gridPos = new Vector2i(0, InventoryHeightFull);
-                        }
-
-                        PlayerInventory.m_inventory.Add(item);
-                        LogMessage($"Item {item.m_shared.m_name} from EquipmentAndQuickSlots was moved into regular inventory");
-                    }
-
-                    if (equipItem)
-                        playerToLoad.UseItem(playerToLoad.GetInventory(), item, false);
+                    pkg = new ZPackage();
+                    inventory.Save(pkg);
+                    SaveValue(playerToLoad, inventory.m_name, pkg.GetBase64());
                 }
             }
-
-            static bool TryFindSlotForItem(ItemDrop.ItemData item, out Slot slot) => TryFindFreeEquipmentSlotForItem(item, out slot) || TryFindFreeSlotForItem(item, out slot);
         }
+
+        private static void TransferItemsToPlayerInventory(Inventory fromInventory, bool equipItem)
+        {
+            foreach (ItemDrop.ItemData item in fromInventory.GetAllItemsInGridOrder().Where(item => item != null))
+            {
+                if (!(TryFindSlotForItem(item, out Slot slot) ? PlayerInventory.AddItem(item, slot.GridPosition) : PlayerInventory.AddItem(item)))
+                {
+                    if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
+                    {
+                        LogInfo($"Item {item.m_shared.m_name} from EaQS was put to created free space {gridPos}");
+                        item.m_gridPos = gridPos;
+                    }
+                    else
+                    {
+                        // Put item out of grid. Eventually it will be put into first free slot.
+                        LogWarning($"Item {item.m_shared.m_name} was temporary put out of grid. It will return to inventory first free slot.");
+                        item.m_gridPos = new Vector2i(0, InventoryHeightFull);
+                    }
+
+                    PlayerInventory.m_inventory.Add(item);
+                }
+
+                LogMessage($"Item {item.m_shared.m_name} was loaded from EquipmentAndQuickSlots {fromInventory.m_name}");
+
+                if (equipItem)
+                    playerToLoad.UseItem(playerToLoad.GetInventory(), item, false);
+            }
+
+            fromInventory.m_inventory.Clear();
+        }
+
+        private static bool TryFindSlotForItem(ItemDrop.ItemData item, out Slot slot) => TryFindFreeEquipmentSlotForItem(item, out slot) || TryFindFreeSlotForItem(item, out slot);
 
         private static bool LoadValue(Player player, string key, out string value)
         {
@@ -110,9 +108,10 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(Player), nameof(Player.Load))]
-        private static class Player_Load_TryLoadEaQSInventories
+        public static class Player_Load_TryLoadEaQSData
         {
-            static void Postfix(Player __instance)
+            [HarmonyPriority(Priority.LowerThanNormal)]
+            public static void Postfix(Player __instance)
             {
                 if (__instance.m_customData.ContainsKey(nameof(EquipmentSlotInventory)) && (FejdStartup.instance || IsValidPlayer(__instance)))
                 {

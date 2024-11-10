@@ -218,14 +218,14 @@ namespace ExtraSlots
             loggingEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
             loggingDebugEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
 
-            quickSlotsAmount = config("Extra slots", "Quick slots", defaultValue: 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
-            extraUtilitySlotsAmount = config("Extra slots", "Extra utility slots", defaultValue: 2, new ConfigDescription("How much utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
-            extraRows = config("Extra slots", "Extra inventory rows", defaultValue: 0, new ConfigDescription("How much rows to add in regular inventory [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
-            foodSlotsEnabled = config("Extra slots", "Food slots", defaultValue: true, "Enable 3 slots for food [Synced with Server]", synchronizedSetting: true);
-            miscSlotsEnabled = config("Extra slots", "Misc slots", defaultValue: true, "Enable up to 2 slots for trophies, miscellaneous, keys and quest items." +
+            quickSlotsAmount = config("Extra slots", "Amount of quick slots", defaultValue: 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
+            extraUtilitySlotsAmount = config("Extra slots", "Amount of extra utility slots", defaultValue: 2, new ConfigDescription("How much utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
+            extraRows = config("Extra slots", "Amount of extra inventory rows", defaultValue: 0, new ConfigDescription("How much rows to add in regular inventory [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
+            foodSlotsEnabled = config("Extra slots", "Enable food slots", defaultValue: true, "Enable 3 slots for food [Synced with Server]", synchronizedSetting: true);
+            miscSlotsEnabled = config("Extra slots", "Enable misc slots", defaultValue: true, "Enable up to 2 slots for trophies, miscellaneous, keys and quest items." +
                                                                          "\n1 slot comes with Food slots, 1 slot comes with Ammo slots." +
                                                                          "\nIf both Food and Ammo slots are disabled there will be no Misc slots [Synced with Server]", synchronizedSetting: true);
-            ammoSlotsEnabled = config("Extra slots", "Ammo slots", defaultValue: true, "Enable 3 slots for ammo [Synced with Server]", synchronizedSetting: true);
+            ammoSlotsEnabled = config("Extra slots", "Enable ammo slots", defaultValue: true, "Enable 3 slots for ammo [Synced with Server]", synchronizedSetting: true);
             backupEnabled = config("Extra slots", "Backup enabled", defaultValue: true, "Backup extra slots item on save. [Synced with Server]" +
                                                                                         "\nIt could be restored in case of loading character without mod installed leading to extra slots item loss." +
                                                                                         "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.", synchronizedSetting: true);

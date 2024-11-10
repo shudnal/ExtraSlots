@@ -139,8 +139,9 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(Player), nameof(Player.Load))]
-        public static class Player_Load_TryLoadEaQSInventories
+        public static class Player_Load_TryLoadBackup
         {
+            [HarmonyPriority(Priority.HigherThanNormal)]
             public static void Postfix(Player __instance)
             {
                 if (!backupEnabled.Value)

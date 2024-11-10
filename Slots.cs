@@ -313,7 +313,7 @@ namespace ExtraSlots
             internal static string GetSlotID(string slotID) => $"{customSlotID}{slotID}";
         }
 
-        public static readonly Slot[] slots = new Slot[36];
+        public static readonly Slot[] slots = new Slot[32];
         public static readonly Dictionary<Vector2i, ItemDrop.ItemData> cachedItems = new Dictionary<Vector2i, ItemDrop.ItemData>();
         public const int vanillaInventoryHeight = 4;
 
