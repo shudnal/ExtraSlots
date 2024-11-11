@@ -30,6 +30,7 @@ namespace ExtraSlots
     {
         private static readonly List<ItemDrop.ItemData> tempItems = new List<ItemDrop.ItemData>();
         private static readonly HashSet<StatusEffect> tempEffects = new HashSet<StatusEffect>();
+        private static readonly List<HashSet<string>> uniqueEquipped = new List<HashSet<string>>();
 
         public static ItemDrop.ItemData Item1 => Player.m_localPlayer?.GetExtraUtility(0);
 
@@ -37,9 +38,27 @@ namespace ExtraSlots
 
         public static bool IsItemEquipped(ItemDrop.ItemData item) => GetUtilityItemIndex(item) != -1;
 
-        public static bool HaveEmptySlot() => GetEmptySlot() != -1;
-
         public static int GetEmptySlot() => IsFirstSlotFree() ? 0 : (IsSecondSlotFree() ? 1 : -1);
+
+        public static int GetSlotForItem(ItemDrop.ItemData item)
+        {
+            foreach (HashSet<string> uniqueItems in uniqueEquipped)
+            {
+                if (uniqueItems.Contains(item.m_shared.m_name))
+                {
+                    if (Player.m_localPlayer.m_utilityItem != null && uniqueItems.Contains(Player.m_localPlayer.m_utilityItem.m_shared.m_name))
+                        return -1;
+
+                    if (Item1 != null && uniqueItems.Contains(Item1.m_shared.m_name))
+                        return 0;
+
+                    if (Item2 != null && uniqueItems.Contains(Item2.m_shared.m_name))
+                        return 1;
+                }
+            }
+
+            return GetEmptySlot();
+        }
 
         private static bool IsFirstSlotFree() => IsFirstExtraUtilitySlotAvailable() && Item1 == null;
         private static bool IsSecondSlotFree() => IsSecondExtraUtilitySlotAvailable() && Item2 == null;
@@ -69,6 +88,18 @@ namespace ExtraSlots
                 return 1;
 
             return -1;
+        }
+
+        public static void UpdateUniqueEquipped()
+        {
+            uniqueEquipped.Clear();
+
+            foreach (string itemsTuple in ExtraSlots.preventUniqueUtilityItemsEquip.Value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string[] items = itemsTuple.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
+                if (items.Length > 0)
+                    uniqueEquipped.Add(new HashSet<string>(items));
+            };
         }
 
         public static class ExtraUtilityPatches
@@ -139,7 +170,7 @@ namespace ExtraSlots
                     if (item == null)
                         return;
 
-                    if (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility && __instance.m_utilityItem != null && !IsItemEquipped(item) && (__state = GetEmptySlot()) != -1)
+                    if (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility && __instance.m_utilityItem != null && !IsItemEquipped(item) && (__state = GetSlotForItem(item)) != -1)
                     {
                         item.m_shared.m_itemType = tempType;
                         if (__instance.m_visEquipment && __instance.m_visEquipment.m_isPlayer)
@@ -362,6 +393,12 @@ namespace ExtraSlots
                         __result++;
                     }
                 }
+            }
+
+            [HarmonyPatch(typeof(Player), nameof(Player.OnSpawned))]
+            private static class Player_OnSpawned_UpdateUniqueEquippedItems
+            {
+                private static void Postfix() => UpdateUniqueEquipped();
             }
         }
     }
