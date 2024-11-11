@@ -18,6 +18,8 @@ namespace ExtraSlots
     [BepInIncompatibility("randyknapp.mods.equipmentandquickslots")]
     [BepInIncompatibility("moreslots")]
     [BepInIncompatibility("randyknapp.mods.auga")]
+    [BepInIncompatibility("toombe.EquipMultipleUtilityItemsUpdate")] // https://thunderstore.io/c/valheim/p/JackFrostCC/ToombeEquipMultipleUtilityItemsUnofficialUpdate/
+    [BepInIncompatibility("aedenthorn.EquipMultipleUtilityItems")] // https://www.nexusmods.com/valheim/mods/1348
     [BepInDependency("randyknapp.mods.epicloot", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("ishid4.mods.betterarchery", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
@@ -219,17 +221,19 @@ namespace ExtraSlots
             loggingDebugEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
 
             quickSlotsAmount = config("Extra slots", "Amount of quick slots", defaultValue: 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
-            extraUtilitySlotsAmount = config("Extra slots", "Amount of extra utility slots", defaultValue: 2, new ConfigDescription("How much utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
+            extraUtilitySlotsAmount = config("Extra slots", "Amount of extra utility slots", defaultValue: 2, new ConfigDescription("How much extra utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
             extraRows = config("Extra slots", "Amount of extra inventory rows", defaultValue: 0, new ConfigDescription("How much rows to add in regular inventory [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
             ammoSlotsEnabled = config("Extra slots", "Enable ammo slots", defaultValue: true, "Enable 3 slots for ammo [Synced with Server]", synchronizedSetting: true);
             foodSlotsEnabled = config("Extra slots", "Enable food slots", defaultValue: true, "Enable 3 slots for food [Synced with Server]", synchronizedSetting: true);
-            miscSlotsEnabled = config("Extra slots", "Enable misc slots", defaultValue: true, "Enable up to 2 slots for trophies, coins, fish, miscellaneous, keys and quest items." +
+            miscSlotsEnabled = config("Extra slots", "Enable misc slots", defaultValue: true, "Enable up to 2 slots for trophies, coins, fish, miscellaneous, keys and quest items. [Synced with Server]" +
                                                                          "\n1 slot comes with Food slots, 1 slot comes with Ammo slots." +
-                                                                         "\nIf both Food and Ammo slots are disabled there will be no Misc slots" + 
-                                                                         "\nIf there are no Quick slots there will be no Misc slots [Synced with Server]", synchronizedSetting: true);
-            backupEnabled = config("Extra slots", "Backup enabled", defaultValue: true, "Backup extra slots item on save. [Synced with Server]" +
+                                                                         "\nIf both Food and Ammo slots are disabled there will be no Misc slots." + 
+                                                                         "\nIf there are no Quick slots there will be no Misc slots.", synchronizedSetting: true);
+            backupEnabled = config("Extra slots", "Slots backup enabled", defaultValue: true, "Backup extra slots item on save. [Synced with Server]" +
                                                                                         "\nIt could be restored in case of loading character without mod installed leading to extra slots item loss." +
                                                                                         "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.", synchronizedSetting: true);
+            slotsProgressionEnabled = config("Extra slots", "Slots progression enabled", defaultValue: true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]", synchronizedSetting: true);
+
 
             extraRows.SettingChanged += (s, e) => API.UpdateSlots();
             extraUtilitySlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
@@ -237,11 +241,12 @@ namespace ExtraSlots
             foodSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             miscSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             ammoSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            slotsProgressionEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
             vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder, "Comma separated list defining order of vanilla equipment slots");
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalLeft, "Equipment slots alignment");
             equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
-            quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle of the panel");
+            quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle under equipment slots");
             equipmentSlotsShowTooltip = config("Panels - Equipment slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             equipmentPanelTooltipOffset = config("Panels - Equipment slots", "Gamepad Tooltip Offset", Vector2.zero, "Offset relative to original position of tooltip at upper right corner of the inventory (side elements included)");
 
@@ -258,7 +263,7 @@ namespace ExtraSlots
             miscSlotsShowHintImage = config("Panels - Misc slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             miscSlotsShowTooltip = config("Panels - Misc slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
 
-            ammoSlotsHotBarEnabled = config("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots");
+            ammoSlotsHotBarEnabled = config("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots. Change this only in main menu.");
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 850f), "On screen position of ammo slots hotbar panel");
             ammoSlotsHotBarScale = config("Panels - Ammo slots", "Scale", defaultValue: 1f, "Relative size");
             ammoSlotsShowLabel = config("Panels - Ammo slots", "Show label", defaultValue: false, "Show slot label");
@@ -279,7 +284,7 @@ namespace ExtraSlots
             ammoSlotHotKey2.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
             ammoSlotHotKey3.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
 
-            quickSlotsHotBarEnabled = config("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots");
+            quickSlotsHotBarEnabled = config("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots. Change this only in main menu.");
             quickSlotsHotBarOffset = config("Panels - Quick slots", "Offset", defaultValue: new Vector2(230f, 923f), "On screen position of quick slots hotbar panel");
             quickSlotsHotBarScale = config("Panels - Quick slots", "Scale", defaultValue: 1f, "Relative size");
             quickSlotsShowLabel = config("Panels - Quick slots", "Show label", defaultValue: false, "Show slot label");
@@ -345,8 +350,6 @@ namespace ExtraSlots
             ammoSlotLabelFontSize.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             ammoSlotLabelFontColor.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
 
-            slotsProgressionEnabled = config("Progression", "Enabled", true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]", synchronizedSetting: true);
-
             quickSlotGlobalKey1 = config("Progression - Global keys", "Quickslot 1", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
             quickSlotGlobalKey2 = config("Progression - Global keys", "Quickslot 2", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
             quickSlotGlobalKey3 = config("Progression - Global keys", "Quickslot 3", "defeated_bonemass", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
@@ -365,8 +368,6 @@ namespace ExtraSlots
             utilitySlotAvailableAfterDiscovery = config("Progression - Discovery", "Utility slots", true, "Utility slots will be active after acquiring first utility item [Synced with Server]", synchronizedSetting: true);
             foodSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Food slots", true, "Food slots will be active after acquiring first food item [Synced with Server]", synchronizedSetting: true);
             equipmentSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Equipment slots", true, "Corresponding equipment slot will be active after acquiring first item [Synced with Server]", synchronizedSetting: true);
-
-            slotsProgressionEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
             quickSlotGlobalKey1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotGlobalKey2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
