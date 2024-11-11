@@ -109,6 +109,8 @@ if (ExtraSlots.API.IsLoaded())
     else
         ExtraSlots.API.AddSlotWithIndex("CircletExtended", itemSlotIndexExtraSlots.Value, () => itemSlotNameExtraSlots.Value, item => IsCircletItem(item), () => IsCircletSlotAvailable());
 ```
+First argument `"CircletExtended"` is slot ID which should be unique and can be used later to get if slot in grid is that slot.
+
 This defines slot name as a function and if you change `itemSlotNameExtraSlots` config value it will be automatically updated.
 
 `IsCircletItem` is the function to check if item type is correct. It should return if item fits the slot.
@@ -117,7 +119,7 @@ This defines slot name as a function and if you change `itemSlotNameExtraSlots` 
 
 Used functions (example):
 ```c#
-internal static bool IsCircletItem(ItemDrop item) => item != null && item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet; // There could be more intricate logic
+internal static bool IsCircletItem(ItemDrop.ItemData item) => item != null && item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet; // There could be more intricate logic
 
 internal static bool IsCircletSlotAvailable() => itemSlotExtraSlots.Value && (!itemSlotExtraSlotsDiscovery.Value || IsCircletKnown());
 
@@ -134,4 +136,4 @@ This is the basic example.
 
 If you have questions feel free to reach me at [discord](https://discord.com/users/shudnal), Nexus or just open github issue.
 
-There are similar API by [AzuEPI](https://github.com/AzumattDev/AzuEPI/wiki/API-Home) that works exactly the same. Maybe you will find your answer there.
+There are also API by [AzuEPI](https://github.com/AzumattDev/AzuEPI/wiki/API-Home) that works in a similar way. Maybe you will find your answer there.
