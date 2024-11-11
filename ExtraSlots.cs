@@ -28,7 +28,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.1";
+        public const string pluginVersion = "1.0.2";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -169,8 +169,6 @@ namespace ExtraSlots
 
             Patcher.Patch();
 
-            harmony.PatchAll();
-
             ConfigInit();
             _ = configSync.AddLockingConfigEntry(configLocked);
 
@@ -194,6 +192,8 @@ namespace ExtraSlots
             // Make BetterArchery quiver unenableable since it will mess the inventory grid
             if (Chainloader.PluginInfos.TryGetValue("ishid4.mods.betterarchery", out PluginInfo ba) && ba.Instance.Config.TryGetEntry("Quiver", "Enable Quiver", out ConfigEntry<bool> entry))
                 entry.SettingChanged += (s, e) => DisableQuiver();
+            
+            harmony.PatchAll();
         }
 
         private void LateUpdate()

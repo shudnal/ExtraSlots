@@ -43,13 +43,6 @@
     <LangVersion>10.0</LangVersion>
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="API\API.cs" />
-    <Compile Include="ValheimPlusCompat.cs" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'API|AnyCPU' ">
-    <Compile Include="Properties\AssemblyInfoAPI.cs" />
-  </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
     <Compile Include="APIManager.cs" />
     <Compile Include="EquipmentAndQuickSlotsCompat.cs" />
@@ -68,6 +61,14 @@
     <Compile Include="ItemsSlotsValidation.cs" />
     <Compile Include="InventoryBackup.cs" />
     <Compile Include="SlotsProgression.cs" />
+    <Compile Include="EpicLootCompat.cs" />
+    <Compile Include="ValheimPlusCompat.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="API\API.cs" />
+  </ItemGroup>
+  <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'API|AnyCPU' ">
+    <Compile Include="Properties\AssemblyInfoAPI.cs" />
   </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
     <Reference Include="0Harmony">
