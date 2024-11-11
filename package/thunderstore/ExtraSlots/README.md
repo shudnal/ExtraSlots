@@ -25,7 +25,7 @@ Slots obtaining progression is enabled by default. It means not every slot could
 
 There is public API to access some mod's functions and to dynamically add up to 11 custom equipment slots which can be enabled/disabled on the fly for it to be part of progression.
 
-This mod is incompatible with other similar purpose mods which singular purpose is inventory management. Valheim Plus is supported. BetterArchery's quiver will be disabled. You will not lose your arrows.
+This mod is incompatible with other similar purpose mods which singular purpose is inventory management. Valheim Plus is supported yet inventory part is better be disabled. BetterArchery's quiver will be disabled. You will not lose your arrows.
 
 If you had items in slots and then run the game without this mod installed the items will be lost. But you will be able to restore it from automatic backup. Remove incompatible mods, run the game with ExtraSlots installed and your items will be back.
 
@@ -102,6 +102,8 @@ If you want your items back:
 Default position of equipment panel is next to inventory. You can change `Offset` config value to adjust its position.
 
 Gamepad tooltip will be moved under the panel and in case you have huge tooltips there is `Gamepad Tooltip Offset` config option to change its position too.
+
+You can change panel background image. Put `background.png` file into `...\BepInEx\config\shudnal.ExtraSlots\background.png`. Vanilla resolution is 922x966.
 
 You can change the order of vanilla slots. You can not disable vanilla slots.
 

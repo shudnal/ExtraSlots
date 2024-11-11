@@ -45,7 +45,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="API\API.cs" />
-  </ItemGroup>  
+    <Compile Include="ValheimPlusCompat.cs" />
+  </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'API|AnyCPU' ">
     <Compile Include="Properties\AssemblyInfoAPI.cs" />
   </ItemGroup>
