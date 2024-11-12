@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -12,10 +13,10 @@ namespace ExtraSlots
         public const string barName = "ExtraSlotsAmmoHotBar";
         public static bool isDirty = true;
         private static HotkeyBar hotBar = null;
-        private static RectTransform hotBarRect = null; 
-        private static Slot[] ammoSlots = new Slot[0];
+        private static RectTransform hotBarRect = null;
+        private static Slot[] hotBarSlots = Array.Empty<Slot>();
 
-        internal static void UpdateAmmoSlots() => ammoSlots = GetAmmoSlots();
+        internal static void UpdateSlots() => hotBarSlots = GetAmmoSlots();
 
         public static void GetItems(List<ItemDrop.ItemData> bound)
         {
@@ -27,7 +28,7 @@ namespace ExtraSlots
 
         public static List<ItemDrop.ItemData> GetItems()
         {
-            return ammoSlots.Where(slot => slot.IsActive).Select(slot => slot.Item).Where(item => item != null).ToList();
+            return hotBarSlots.Where(slot => slot.IsActive).Select(slot => slot.Item).Where(item => item != null).ToList();
         }
 
         public static ItemDrop.ItemData GetItemInSlot(int slotIndex) => slots[slotIndex + 8].Item;
@@ -40,37 +41,40 @@ namespace ExtraSlots
             hotBarRect.name = barName;
             hotBarRect.localPosition = Vector3.zero;
 
-            hotBar = hotBarRect.GetComponent<HotkeyBar>();
-            hotBar.m_selected = -1;
+            if (hotBar = hotBarRect.GetComponent<HotkeyBar>())
+            {
+                hotBar.m_selected = -1;
+
+                foreach (HotkeyBar.ElementData element in hotBar.m_elements)
+                    UnityEngine.Object.Destroy(element.m_go);
+
+                for (int i = hotBarRect.childCount - 1; i >= 0; i--)
+                    UnityEngine.Object.Destroy(hotBarRect.GetChild(i).gameObject);
+
+                hotBar.m_elements.Clear();
+                hotBar.m_items.Clear();
+            }
         }
 
-        internal static void UpdateBar()
+        internal static bool Refresh()
         {
             if (!isDirty)
-                return;
+                return false;
 
             if (ammoSlotsHotBarEnabled.Value && hotBarRect == null)
                 CreateBar();
             else if (!ammoSlotsHotBarEnabled.Value && hotBarRect != null)
                 ClearBar();
 
-            if (hotBar)
-            {
-                foreach (HotkeyBar.ElementData element in hotBar.m_elements)
-                    UnityEngine.Object.Destroy(element.m_go);
-
-                hotBar.m_elements.Clear();
-            }
-
-            HotkeyBarController.ClearBars();
-
             isDirty = false;
+
+            return true;
         }
 
         internal static void ClearBar()
         {
             if (hotBarRect != null)
-                UnityEngine.Object.Destroy(hotBarRect);
+                UnityEngine.Object.DestroyImmediate(hotBarRect.gameObject);
 
             hotBar = null;
             hotBarRect = null;
@@ -82,15 +86,10 @@ namespace ExtraSlots
             if (!Player.m_localPlayer.TakeInput())
                 return;
 
-            if (ammoSlots.Length == 0)
+            if (hotBarSlots.Length == 0)
                 return;
 
-            int hotkey = 0;
-            while (!ammoSlots[hotkey].IsShortcutDown())
-                if (++hotkey == ammoSlots.Length)
-                    return;
-
-            Player.m_localPlayer.UseItem(PlayerInventory, ammoSlots[hotkey].Item, fromInventoryGui: false);
+            hotBarSlots.DoIf(slot => slot.IsShortcutDown(), slot => Player.m_localPlayer.UseItem(PlayerInventory, slot.Item, fromInventoryGui: false));
         }
 
         // Runs every frame Hud.Update
@@ -104,7 +103,7 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(Player), nameof(Player.Update))]
-        private static class Player_Update_UpdateammoSlotsUse
+        private static class Player_Update_SlotsUse
         {
             private static void Postfix(Player __instance)
             {
@@ -116,7 +115,7 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(Hud), nameof(Hud.Update))]
-        private static class Hud_Update_UpdateammoSlotsPosition
+        private static class Hud_Update_SlotsPosition
         {
             private static void Postfix() => UpdatePosition();
         }

@@ -550,8 +550,8 @@ namespace ExtraSlots
 
             UpdateSlotsGridPosition();
 
-            QuickSlotsHotBar.UpdateQuickSlots();
-            AmmoSlotsHotBar.UpdateAmmoSlots();
+            QuickSlotsHotBar.UpdateSlots();
+            AmmoSlotsHotBar.UpdateSlots();
             EquipmentPanel.UpdateSlotsCount();
 
             void AddSlot(string id, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive)

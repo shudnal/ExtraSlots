@@ -54,7 +54,7 @@
     <Compile Include="TombStoneInteraction.cs" />
     <Compile Include="QuickSlotsHotBar.cs" />
     <Compile Include="ExtraUtilitySlots.cs" />
-    <Compile Include="HotkeyBarController.cs" />
+    <Compile Include="QuickBars.cs" />
     <Compile Include="ExtraSlots.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Slots.cs" />
