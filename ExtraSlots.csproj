@@ -2,8 +2,8 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Configuration>Debug</Configuration>
+    <Platform>AnyCPU</Platform>
     <ProjectGuid>{7E559C9A-BA1C-45B5-A260-EC3A1455248B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -32,19 +32,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'API|AnyCPU'">
-    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
-    <AssemblyName>ExtraSlotsAPI</AssemblyName>
-    <OutputPath>bin\API\</OutputPath>
-    <DefineConstants>API;TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <LangVersion>10.0</LangVersion>
-    <ErrorReport>prompt</ErrorReport>
-  </PropertyGroup>
-  <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
-    <Compile Include="APIManager.cs" />
+  <ItemGroup>
     <Compile Include="EquipmentAndQuickSlotsCompat.cs" />
     <Compile Include="EquipmentPanel.cs" />
     <Compile Include="GlobalSuppressions.cs" />
@@ -63,14 +51,9 @@
     <Compile Include="SlotsProgression.cs" />
     <Compile Include="EpicLootCompat.cs" />
     <Compile Include="ValheimPlusCompat.cs" />
+    <Compile Include="API.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="API\API.cs" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'API|AnyCPU' ">
-    <Compile Include="Properties\AssemblyInfoAPI.cs" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
     <Reference Include="0Harmony">
       <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\0Harmony.dll</HintPath>
     </Reference>
@@ -126,8 +109,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\stable\UnityEngine.JSONSerializeModule.dll</HintPath>
     </Reference>
-  </ItemGroup>
-  <ItemGroup>
     <Reference Include="assembly_utils_publicized">
       <HintPath>..\Assemblies\stable\publicized_assemblies\assembly_utils_publicized.dll</HintPath>
     </Reference>
@@ -138,21 +119,20 @@
       <HintPath>..\Assemblies\stable\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
   </ItemGroup>
-  <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
+  <ItemGroup>
     <EmbeddedResource Include="Assets\ammoslot.png" />
     <EmbeddedResource Include="Assets\miscslot.png" />
     <EmbeddedResource Include="Assets\quickslot.png" />
     <Content Include="Libs\LocalizationManager.dll" />
     <Content Include="Libs\ServerSync.dll" />
-    <Content Include="Libs\AdventureBackpacksAPI.dll" />
   </ItemGroup>
-  <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
+  <ItemGroup>
     <None Include=".editorconfig" />
     <None Include="ILRepack.targets" />
     <EmbeddedResource Include="translations\English.json" />
     <EmbeddedResource Include="translations\Russian.json" />
   </ItemGroup>
-  <ItemGroup Condition=" '$(Configuration)|$(Platform)' != 'API|AnyCPU' ">
+  <ItemGroup>
     <PackageReference Include="ILRepack.Lib.MSBuild.Task">
       <Version>2.0.34.2</Version>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

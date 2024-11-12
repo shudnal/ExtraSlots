@@ -1,5 +1,4 @@
-﻿using APIManager;
-using BepInEx;
+﻿using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
@@ -28,7 +27,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.2";
+        public const string pluginVersion = "1.0.3";
 
         private readonly Harmony harmony = new Harmony(pluginID);
 
@@ -166,8 +165,6 @@ namespace ExtraSlots
         private void Awake()
         {
             instance = this;
-
-            Patcher.Patch();
 
             ConfigInit();
             _ = configSync.AddLockingConfigEntry(configLocked);

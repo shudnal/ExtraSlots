@@ -160,36 +160,14 @@ namespace ExtraSlots
 
             public override string ToString() => (Name == "" ? ID : Name) + (IsActive ? "" : " (inactive)");
 
-            private static bool IsShortcutDown(KeyboardShortcut shortcut) => shortcut.MainKey != KeyCode.None && ZInput.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(key => ZInput.GetKey(key));
-
-            internal ExtraSlot ToExtraSlot()
-            {
-                return new ExtraSlot()
-                {
-                    _id = () => ID,
-                    _name = () => Name,
-                    _gridPosition = () => GridPosition,
-                    _item = () => Item,
-                    _itemFits = (item) => ItemFits(item),
-                    _isActive = () => IsActive,
-                    _isFree = () => IsFree,
-                    _isHotkeySlot = () => IsHotkeySlot,
-                    _isEquipmentSlot = () => IsEquipmentSlot,
-                    _isQuickSlot = () => IsQuickSlot,
-                    _isMiscSlot = () => IsMiscSlot,
-                    _isAmmoSlot = () => IsAmmoSlot,
-                    _isFoodSlot = () => IsFoodSlot,
-                    _isCustomSlot = () => IsCustomSlot,
-                    _isEmptySlot = () => IsEmptySlot
-                };
-            }
+            public static bool IsShortcutDown(KeyboardShortcut shortcut) => shortcut.MainKey != KeyCode.None && ZInput.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(key => ZInput.GetKey(key));
         }
 
-        public class CustomSlot
+        internal class CustomSlot
         {
-            public const int customSlotStartingIndex = 21;
+            internal const int customSlotStartingIndex = 21;
 
-            public static bool TryAddNewSlotBefore(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
+            internal static bool TryAddNewSlotBefore(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
                 if (slotIDs.Length > 0)
                 {
@@ -201,7 +179,7 @@ namespace ExtraSlots
                 return TryAddNewSlotWithIndex(slotID, -1, getName, itemIsValid, isActive);
             }
 
-            public static bool TryAddNewSlotAfter(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
+            internal static bool TryAddNewSlotAfter(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
                 if (slotIDs.Length > 0)
                 {
@@ -213,7 +191,7 @@ namespace ExtraSlots
                 return TryAddNewSlotWithIndex(slotID, -1, getName, itemIsValid, isActive);
             }
 
-            public static bool TryAddNewSlotWithIndex(string slotID, int slotIndex = -1, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
+            internal static bool TryAddNewSlotWithIndex(string slotID, int slotIndex = -1, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
                 if (slots.Any(slot => slot.ID == GetSlotID(slotID)))
                     return true;
@@ -247,7 +225,7 @@ namespace ExtraSlots
                 return slots[index] != null && !slots[index].IsEmptySlot;
             }
 
-            public static bool TryRemoveSlot(string slotID)
+            internal static bool TryRemoveSlot(string slotID)
             {
                 int index = Array.FindIndex(slots, slot => slot.IsCustomSlot && slot.ID == GetSlotID(slotID));
                 if (index == -1)
@@ -282,7 +260,7 @@ namespace ExtraSlots
                 return true;
             }
 
-            public static void InsertSlot(int startIndex, string slotID, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive)
+            internal static void InsertSlot(int startIndex, string slotID, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive)
             {
                 int endIndex = Array.FindIndex(slots, slot => slot.Index >= startIndex && slot.IsEmptySlot); // find first empty slot to stop shifting
                 LogInfo($"InsertSlot {slotID} at {startIndex} empty slot found {endIndex}");
@@ -468,7 +446,7 @@ namespace ExtraSlots
 
         public static Vector2i FindEmptyQuickSlot() => TryFindEmptyQuickSlot(out Slot slot) ? slot.GridPosition : emptyPosition;
 
-        private static bool TryFindEmptyQuickSlot(out Slot slot)
+        public static bool TryFindEmptyQuickSlot(out Slot slot)
         {
             slot = slots.FirstOrDefault(slot => slot.IsFreeQuickSlot());
             return slot != null;
@@ -511,7 +489,7 @@ namespace ExtraSlots
         public static string GetAmmoSlot2Text() => ammoSlotHotKey2Text.Value == "" ? (ammoSlotHotKey2.Value.Equals(KeyboardShortcut.Empty) ? "$exsl_slot_ammo_label" : ammoSlotHotKey2.Value.ToString()) : ammoSlotHotKey2Text.Value;
         public static string GetAmmoSlot3Text() => ammoSlotHotKey3Text.Value == "" ? (ammoSlotHotKey3.Value.Equals(KeyboardShortcut.Empty) ? "$exsl_slot_ammo_label" : ammoSlotHotKey3.Value.ToString()) : ammoSlotHotKey3Text.Value;
 
-        public static void InitializeSlots()
+        internal static void InitializeSlots()
         {
             int index = 0;
 
