@@ -69,7 +69,7 @@ Try to build a project and see if you are getting similar lines in build output
 
 Now you can be sure your `ExtraSlotsAPI.API` is always available.
 
-For more info about what API method result see [API methods with summary](https://github.com/shudnal/ExtraSlots/blob/master/API/API.cs).
+For more info about what API method result see [API methods with summary](https://github.com/shudnal/ExtraSlots/blob/master/API.cs).
 
 In short you can add/remove slots and get various slots related info.
 
