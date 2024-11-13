@@ -1,13 +1,11 @@
-﻿using JetBrains.Annotations;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using static ExtraSlots.Slots;
 
 namespace ExtraSlots;
 
-[PublicAPI]
-public class API
+public static class API
 {
     /// <summary>
     /// Returns list of all slots

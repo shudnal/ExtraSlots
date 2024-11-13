@@ -6,11 +6,11 @@ More inventory slots dedicated for equipment, food, ammo and misc items. Extra u
 
 # Extra Slots API
 
-I can add more methods to API if you miss something reasonable. Open a [github issue](https://github.com/shudnal/ExtraSlots/issues).
+I can add more methods to API if you miss something reasonable. Open a [github issue](https://github.com/shudnal/ExtraSlotsAPI/issues).
 
 You can either use this API with ExtraSlots set as BepInEx hard dependency or soft dependency.
 
-[API methods with summary](https://github.com/shudnal/ExtraSlots/blob/master/API/API.cs)
+[API methods with summary](https://github.com/shudnal/ExtraSlots/blob/master/API.cs)
 
 ## Hard dependency
 
@@ -20,13 +20,13 @@ Add attribute
 ```[BepInDependency("shudnal.ExtraSlots", BepInDependency.DependencyFlags.HardDependency)]```
 before your `BaseUnityPlugin` declaration
 
-Add reference to ExtraSlots.dll and use its API methods like `ExtraSlots.API.IsLoaded()`.
+Add reference to ExtraSlots.dll and use its API methods from main mod like `ExtraSlots.API.GetExtraSlots()`.
 
 ## Soft dependency
 
-Soft dependency means you will be able to use `ExtraSlots.API` methods wherever main ExtraSlots mod is installed or not.
+Soft dependency means you will be able to use `ExtraSlotsAPI.API` methods wherever main ExtraSlots mod is installed or not.
 
-Add attribute
+To be sure your mod is always loaded after ExtraSlots add attribute
 ```[BepInDependency("shudnal.ExtraSlots", BepInDependency.DependencyFlags.SoftDependency)]```
 before your `BaseUnityPlugin` declaration
 
@@ -67,7 +67,7 @@ Try to build a project and see if you are getting similar lines in build output
 1>  Merging 2 assembies to '...\bin\Debug\YourModName.dll'
 ```
 
-Now you can be sure your `ExtraSlots.API` is always available.
+Now you can be sure your `ExtraSlotsAPI.API` is always available.
 
 For more info about what API method result see [API methods with summary](https://github.com/shudnal/ExtraSlots/blob/master/API/API.cs).
 
@@ -75,7 +75,7 @@ In short you can add/remove slots and get various slots related info.
 
 Now to API calls:
 * Add a reference to ExtraSlotsAPI.dll to your project
-* Paste line `ExtraSlots.API.IsLoaded()` into your mod Awake function and see if it works as correct method call
+* Paste line `ExtraSlotsAPI.API.IsReady()` into your mod Awake function and see if it works as correct method call
 
 ## Example
 
@@ -99,15 +99,15 @@ itemSlotNameExtraSlots = Config.Bind("Circlet - Custom slot", "ExtraSlots - Slot
 itemSlotIndexExtraSlots = Config.Bind("Circlet - Custom slot", "ExtraSlots - Slot index", -1, "Slot index (position). Game restart is required to apply changes.");
 itemSlotExtraSlotsDiscovery = Config.Bind("Circlet - Custom slot", "ExtraSlots - Available after discovery", true, "If enabled - slot will be active only if you know circlet item.");
 
-itemSlotExtraSlots.SettingChanged += (s, e) => ExtraSlots.API.UpdateSlots(); // After enabling/disabling slot call a method to update slots layout
+itemSlotExtraSlots.SettingChanged += (s, e) => ExtraSlotsAPI.API.UpdateSlots(); // After enabling/disabling slot call a method to update slots layout
 ```
 And then all I need is to call this in Awake function
 ```c#
-if (ExtraSlots.API.IsLoaded())
+if (ExtraSlotsAPI.API.IsReady())
     if (itemSlotIndexExtraSlots.Value < 0)
-        ExtraSlots.API.AddSlotBefore("CircletExtended", () => itemSlotNameExtraSlots.Value, item => IsCircletItem(item), () => IsCircletSlotAvailable(), "HipLantern");
+        ExtraSlotsAPI.API.AddSlotBefore("CircletExtended", () => itemSlotNameExtraSlots.Value, item => IsCircletItem(item), () => IsCircletSlotAvailable(), "HipLantern");
     else
-        ExtraSlots.API.AddSlotWithIndex("CircletExtended", itemSlotIndexExtraSlots.Value, () => itemSlotNameExtraSlots.Value, item => IsCircletItem(item), () => IsCircletSlotAvailable());
+        ExtraSlotsAPI.API.AddSlotWithIndex("CircletExtended", itemSlotIndexExtraSlots.Value, () => itemSlotNameExtraSlots.Value, item => IsCircletItem(item), () => IsCircletSlotAvailable());
 ```
 First argument `"CircletExtended"` is slot ID which should be unique and can be used later to get if slot in grid is that slot.
 
@@ -132,8 +132,6 @@ internal static bool IsCircletKnown()
 }
 ```
 
-This is the basic example.
+This is the basic example. Real logic for CircletExtended is [there](https://github.com/shudnal/CircletExtended/blob/b5c8af365631191ddb9543b2641870ef28c9950a/CircletExtended.cs#L148).
 
 If you have questions feel free to reach me at [discord](https://discord.com/users/shudnal), Nexus or just open github issue.
-
-There are also API by [AzuEPI](https://github.com/AzumattDev/AzuEPI/wiki/API-Home) that works in a similar way. Maybe you will find your answer there.
