@@ -398,7 +398,7 @@ namespace ExtraSlots
                 }
             }
 
-            inventoryBackground.anchorMin = new Vector2(0.0f, -1f * ExtraRowsPlayer / vanillaInventoryHeight);
+            inventoryBackground.anchorMin = new Vector2(0.0f, -1f * ((float)ExtraRowsPlayer / vanillaInventoryHeight - 0.01f * Math.Max(ExtraRowsPlayer - 1, 0)));
             inventorySelectedFrame.anchorMin = inventoryBackground.anchorMin;
 
             if (fixContainerPosition.Value)
