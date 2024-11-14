@@ -117,6 +117,10 @@ namespace ExtraSlots
             for (int i = startIndex + slots.Length; i < InventoryGui.instance.m_playerGrid.m_elements.Count; i++)
                 InventoryGui.instance.m_playerGrid.m_elements[i]?.m_go?.SetActive(false);
 
+            bool regularInventoryUnfitsForDragItem = InventoryGui.instance.m_dragItem != null && CurrentPlayer.IsItemEquiped(InventoryGui.instance.m_dragItem);
+            for (int i = 0; i < Math.Min(InventoryGui.instance.m_playerGrid.m_elements.Count, startIndex); i++)
+                SetSlotColor(InventoryGui.instance.m_playerGrid.m_elements[i]?.m_go?.GetComponent<Button>(), regularInventoryUnfitsForDragItem);
+
             if (originalTooltipPosition == Vector2.zero)
                 originalTooltipPosition = InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition;
 
@@ -149,7 +153,9 @@ namespace ExtraSlots
             currentChild.gameObject.SetActive(slot.IsActive);
             currentChild.GetComponent<RectTransform>().anchoredPosition = slot.Position;
             SetSlotLabel(currentChild.transform.Find("binding"), slot);
-            SetSlotColor(currentChild.GetComponent<Button>(), slot);
+            SetSlotColor(currentChild.GetComponent<Button>(), InventoryGui.instance.m_dragItem != null && 
+                                                              slot.IsActive && 
+                                                              (!slot.ItemFits(InventoryGui.instance.m_dragItem) || !slot.IsEquipmentSlot && CurrentPlayer.IsItemEquiped(InventoryGui.instance.m_dragItem)));
         }
 
         internal static void SetSlotLabel(Transform binding, Slot slot, bool hotbarElement = false)
@@ -180,9 +186,9 @@ namespace ExtraSlots
             textComp.verticalAlignment = VerticalAlignmentOptions.Top;
         }
 
-        internal static void SetSlotColor(Button button, Slot slot)
+        internal static void SetSlotColor(Button button, bool useUnfitColor)
         {
-            if (!button || !slot.IsActive || InventoryGui.instance == null)
+            if (!button)
                 return;
 
             if (normalColor == Color.clear)
@@ -198,8 +204,8 @@ namespace ExtraSlots
                 highlightedColorUnfit = button.colors.highlightedColor + new Color(0.3f, 0f, 0f, 0.1f);
 
             ColorBlock buttonColors = button.colors;
-            buttonColors.normalColor = InventoryGui.instance.m_dragItem != null && !slot.ItemFits(InventoryGui.instance.m_dragItem) ? normalColorUnfit : normalColor;
-            buttonColors.highlightedColor = InventoryGui.instance.m_dragItem != null && !slot.ItemFits(InventoryGui.instance.m_dragItem) ? highlightedColorUnfit : highlightedColor;
+            buttonColors.normalColor = useUnfitColor ? normalColorUnfit : normalColor;
+            buttonColors.highlightedColor = useUnfitColor ? highlightedColorUnfit : highlightedColor;
             button.colors = buttonColors;
         }
 
