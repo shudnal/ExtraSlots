@@ -106,6 +106,9 @@ namespace ExtraSlots
 
                 backup.Load(new ZPackage(extraSlotsBackup.inventoryBase64).ReadCompressedPackage());
 
+                if (backup.NrOfItems() == 0)
+                    return;
+
                 if (inventory.m_height < InventoryHeightPlayer + backup.m_height)
                     inventory.m_height = InventoryHeightPlayer + backup.m_height;
 

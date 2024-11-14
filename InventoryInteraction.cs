@@ -3,6 +3,7 @@ using static ExtraSlots.Slots;
 using static ExtraSlots.ExtraSlots;
 using System.Linq;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace ExtraSlots
 {
@@ -236,7 +237,7 @@ namespace ExtraSlots
                 if (item == null)
                     return;
 
-                // If another item is at grind - let stack logic go
+                // If another item is at grid - let stack logic go
                 if (__instance.GetItemAt(x, y) is ItemDrop.ItemData gridTakenItem)
                 {
                     LogDebug($"Inventory.AddItem X Y item {item.m_shared.m_name} adding at {x},{y} position is taken {gridTakenItem.m_shared.m_name}");
@@ -269,6 +270,8 @@ namespace ExtraSlots
             {
                 if (__instance == PlayerInventory && Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall && !__result)
                 {
+                    amount = Mathf.Min(amount, item.m_stack);
+
                     // Prevent item disappearing
                     ItemDrop.ItemData itemData = item.Clone();
                     itemData.m_stack = amount;
@@ -292,13 +295,14 @@ namespace ExtraSlots
                     }
                     else
                     {
-                        itemData.m_gridPos = new Vector2i(0, InventoryHeightFull - 1); // Put in the last slot and item will find its place sooner or later
+                        itemData.m_gridPos = new Vector2i(InventoryWidth - 1, InventoryHeightFull - 1); // Put in the last slot and item will find its place sooner or later
                         LogDebug($"Inventory.AddItem_ItemData_amount_x_y item {itemData.m_shared.m_name} put in the last slot to find place later. Position rerouted {x},{y} -> {itemData.m_gridPos}");
                     }
 
                     __instance.m_inventory.Add(itemData);
                     item.m_stack -= amount;
                     __result = true;
+                    __instance.Changed();
                 }
             }
         }
@@ -440,10 +444,7 @@ namespace ExtraSlots
             public static bool inCall = false;
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix()
-            {
-                inCall = true;
-            }
+            private static void Prefix() => inCall = true;
 
             [HarmonyPriority(Priority.First)]
             private static void Postfix() => inCall = false;

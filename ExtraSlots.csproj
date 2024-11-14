@@ -33,24 +33,25 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="EquipmentAndQuickSlotsCompat.cs" />
+    <Compile Include="Compatibility\BetterArcheryCompat.cs" />
+    <Compile Include="Compatibility\EquipmentAndQuickSlotsCompat.cs" />
     <Compile Include="EquipmentPanel.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="InventoryInteraction.cs" />
-    <Compile Include="AmmoHotBar.cs" />
-    <Compile Include="PreventSimilarHotkeys.cs" />
+    <Compile Include="HotBars\AmmoHotBar.cs" />
+    <Compile Include="HotBars\PreventSimilarHotkeys.cs" />
     <Compile Include="TombStoneInteraction.cs" />
-    <Compile Include="QuickSlotsHotBar.cs" />
+    <Compile Include="HotBars\QuickSlotsHotBar.cs" />
     <Compile Include="ExtraUtilitySlots.cs" />
-    <Compile Include="QuickBars.cs" />
+    <Compile Include="HotBars\QuickBars.cs" />
     <Compile Include="ExtraSlots.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Slots.cs" />
     <Compile Include="ItemsSlotsValidation.cs" />
     <Compile Include="InventoryBackup.cs" />
     <Compile Include="SlotsProgression.cs" />
-    <Compile Include="EpicLootCompat.cs" />
-    <Compile Include="ValheimPlusCompat.cs" />
+    <Compile Include="Compatibility\EpicLootCompat.cs" />
+    <Compile Include="Compatibility\ValheimPlusCompat.cs" />
     <Compile Include="API.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -101,6 +102,10 @@
     <Reference Include="UnityEngine.ImageConversionModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\stable\UnityEngine.ImageConversionModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\stable\UnityEngine.PhysicsModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>..\Assemblies\stable\UnityEngine.UI.dll</HintPath>

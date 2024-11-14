@@ -163,7 +163,7 @@ namespace ExtraSlots
             public static bool IsShortcutDown(KeyboardShortcut shortcut) => shortcut.MainKey != KeyCode.None && ZInput.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(key => ZInput.GetKey(key));
         }
 
-        internal class CustomSlot
+        internal static class CustomSlot
         {
             internal const int customSlotStartingIndex = 21;
 
@@ -313,12 +313,12 @@ namespace ExtraSlots
         public static int GetEquipmentSlotsCount() => slots.Count(slot => slot.IsEquipmentSlot && slot.IsActive);
         public static int GetQuickSlotsCount() => slots.Count(slot => slot.IsQuickSlot && slot.IsActive);
 
-        public static Slot[] GetEquipmentSlots()
+        public static Slot[] GetEquipmentSlots(bool onlyActive = true)
         {
             List<Slot> equipment = new List<Slot>();
-            equipment.AddRange(Array.FindAll(slots, slot => slot.IsActive && slot.IsVanillaEquipment()).OrderBy(slot => slot.Index));
-            equipment.AddRange(Array.FindAll(slots, slot => slot.IsActive && slot.ID.StartsWith(extraUtilitySlotID)).OrderBy(slot => slot.Index));
-            equipment.AddRange(Array.FindAll(slots, slot => slot.IsActive && slot.IsCustomSlot).OrderBy(slot => slot.Index));
+            equipment.AddRange(Array.FindAll(slots, slot => (!onlyActive || slot.IsActive) && slot.IsVanillaEquipment()).OrderBy(slot => slot.Index));
+            equipment.AddRange(Array.FindAll(slots, slot => (!onlyActive || slot.IsActive) && slot.ID.StartsWith(extraUtilitySlotID)).OrderBy(slot => slot.Index));
+            equipment.AddRange(Array.FindAll(slots, slot => (!onlyActive || slot.IsActive) && slot.IsCustomSlot).OrderBy(slot => slot.Index));
 
             return equipment.ToArray();
         }
@@ -332,14 +332,11 @@ namespace ExtraSlots
             slot = null;
 
             if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == PlayerProfile?.GetPlayerID().ToString())
-            {
-                int prevSlotIndex = Array.FindIndex(slots, slot => slot.ID == slotID);
-                if (prevSlotIndex > -1)
+                if ((slot = API.FindSlot(slotID)) != null)
                 {
-                    slot = slots[prevSlotIndex];
+                    LogDebug($"Previous equipped slot {slot} found for item {item.m_shared.m_name}");
                     return true;
                 }
-            }
 
             return false;
         }
@@ -351,7 +348,7 @@ namespace ExtraSlots
             if (item == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.ItemFits(item) && prevSlot.IsFree)
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
             {
                 slot = prevSlot;
                 return true;
@@ -372,7 +369,7 @@ namespace ExtraSlots
             if (item == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && prevSlot.IsFree)
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
             {
                 slot = prevSlot;
                 return true;
@@ -389,7 +386,7 @@ namespace ExtraSlots
             if (item == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && !CurrentPlayer.IsItemEquiped(prevSlot.Item))
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (!CurrentPlayer.IsItemEquiped(prevSlot.Item) || item == prevSlot.Item))
             {
                 slot = prevSlot;
                 return true;
@@ -456,6 +453,7 @@ namespace ExtraSlots
         {
             long playerID = Game.instance.GetPlayerProfile().GetPlayerID();
 
+            int savedItems = 0;
             foreach (Slot slot in slots)
             {
                 ItemDrop.ItemData item = slot.Item;
@@ -463,19 +461,23 @@ namespace ExtraSlots
                 {
                     item.m_customData[customKeyPlayerID] = playerID.ToString();
                     item.m_customData[customKeySlotID] = slot.ID;
+                    savedItems++;
                 }
             }
 
-            LogInfo($"Last equpped slot was saved for each item at extra slots. Player ID: {playerID}");
+            if (savedItems > 0)
+                LogInfo($"Last equpped slot was saved for {savedItems} items at extra slots. Player ID: {playerID}");
         }
 
         internal static void PruneLastEquippedSlotFromItem(ItemDrop.ItemData item)
         {
-            if (item == null)
+            if (item == null || !item.m_customData.ContainsKey(customKeySlotID))
                 return;
 
             item.m_customData.Remove(customKeyPlayerID);
             item.m_customData.Remove(customKeySlotID);
+
+            LogDebug($"{item.m_shared.m_name} {item.m_gridPos} pruned last equipped");
         }
 
         public static string GetQuickSlot1Text() => quickSlotHotKey1Text.Value == "" ? quickSlotHotKey1.Value.ToString() : quickSlotHotKey1Text.Value;

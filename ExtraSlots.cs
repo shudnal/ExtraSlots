@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using System.Collections;
 
 namespace ExtraSlots
 {
@@ -29,7 +30,7 @@ namespace ExtraSlots
         public const string pluginName = "Extra Slots";
         public const string pluginVersion = "1.0.3";
 
-        private readonly Harmony harmony = new Harmony(pluginID);
+        internal readonly Harmony harmony = new Harmony(pluginID);
 
         internal static readonly ConfigSync configSync = new ConfigSync(pluginID) { DisplayName = pluginName, CurrentVersion = pluginVersion, MinimumRequiredVersion = pluginVersion };
 
@@ -47,6 +48,8 @@ namespace ExtraSlots
         public static ConfigEntry<bool> ammoSlotsEnabled;
         public static ConfigEntry<bool> backupEnabled;
         public static ConfigEntry<string> preventUniqueUtilityItemsEquip;
+        public static ConfigEntry<bool> slotsTombstoneAutoEquipEnabled;
+        public static ConfigEntry<bool> slotsTombstoneAutoEquipCarryWeightItemsEnabled;
 
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
@@ -186,10 +189,8 @@ namespace ExtraSlots
 
             isEpicLootEnabled = Chainloader.PluginInfos.ContainsKey("randyknapp.mods.epicloot");
 
-            // Make BetterArchery quiver unenableable since it will mess the inventory grid
-            if (Chainloader.PluginInfos.TryGetValue("ishid4.mods.betterarchery", out PluginInfo ba) && ba.Instance.Config.TryGetEntry("Quiver", "Enable Quiver", out ConfigEntry<bool> entry))
-                entry.SettingChanged += (s, e) => DisableQuiver();
-            
+            BetterArcheryCompat.CheckForCompatibility();
+
             harmony.PatchAll();
         }
 
@@ -235,6 +236,9 @@ namespace ExtraSlots
             preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "$item_beltstrength:$belt_ymir_TW", "Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
                                                                                            "\nIf you just want one item to be unique-equipped just add its name without \":\"", synchronizedSetting: true);
 
+            slotsTombstoneAutoEquipEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip all equipment slots", defaultValue: false, "Auto equip items in equipment slots if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
+            slotsTombstoneAutoEquipCarryWeightItemsEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip items increasing carry weight", defaultValue: true, "Auto equip items in equipment slots that increase max carry weight (like Megingjord) if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
+
             extraRows.SettingChanged += (s, e) => API.UpdateSlots();
             extraUtilitySlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
@@ -273,9 +277,9 @@ namespace ExtraSlots
 
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => AmmoSlotsHotBar.MarkDirty();
 
-            ammoSlotHotKey1 = config("Hotkeys", "Ammo 1", new KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
-            ammoSlotHotKey2 = config("Hotkeys", "Ammo 2", new KeyboardShortcut(KeyCode.Alpha2, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
-            ammoSlotHotKey3 = config("Hotkeys", "Ammo 3", new KeyboardShortcut(KeyCode.Alpha3, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
+            ammoSlotHotKey1 = config("Hotkeys", "Ammo 1", new KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
+            ammoSlotHotKey2 = config("Hotkeys", "Ammo 2", new KeyboardShortcut(KeyCode.Alpha2, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
+            ammoSlotHotKey3 = config("Hotkeys", "Ammo 3", new KeyboardShortcut(KeyCode.Alpha3, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
 
             ammoSlotHotKey1Text = config("Hotkeys", "Ammo 1 Text", "Alt + 1", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
             ammoSlotHotKey2Text = config("Hotkeys", "Ammo 2 Text", "Alt + 2", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
@@ -294,12 +298,12 @@ namespace ExtraSlots
 
             quickSlotsHotBarEnabled.SettingChanged += (s, e) => QuickSlotsHotBar.MarkDirty();
 
-            quickSlotHotKey1 = config("Hotkeys", "Quickslot 1", new KeyboardShortcut(KeyCode.Z, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
-            quickSlotHotKey2 = config("Hotkeys", "Quickslot 2", new KeyboardShortcut(KeyCode.X, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
-            quickSlotHotKey3 = config("Hotkeys", "Quickslot 3", new KeyboardShortcut(KeyCode.C, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
-            quickSlotHotKey4 = config("Hotkeys", "Quickslot 4", new KeyboardShortcut(KeyCode.V, KeyCode.LeftAlt), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
-            quickSlotHotKey5 = config("Hotkeys", "Quickslot 5", new KeyboardShortcut(KeyCode.B), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
-            quickSlotHotKey6 = config("Hotkeys", "Quickslot 6", new KeyboardShortcut(KeyCode.N), "https://docs.unity3d.com/Manual/ConventionalGameInput.html");
+            quickSlotHotKey1 = config("Hotkeys", "Quickslot 1", new KeyboardShortcut(KeyCode.Z, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
+            quickSlotHotKey2 = config("Hotkeys", "Quickslot 2", new KeyboardShortcut(KeyCode.X, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
+            quickSlotHotKey3 = config("Hotkeys", "Quickslot 3", new KeyboardShortcut(KeyCode.C, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
+            quickSlotHotKey4 = config("Hotkeys", "Quickslot 4", new KeyboardShortcut(KeyCode.V, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
+            quickSlotHotKey5 = config("Hotkeys", "Quickslot 5", new KeyboardShortcut(KeyCode.B), "Use configuration manager to set shortcuts.");
+            quickSlotHotKey6 = config("Hotkeys", "Quickslot 6", new KeyboardShortcut(KeyCode.N), "Use configuration manager to set shortcuts.");
 
             quickSlotHotKey1.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
             quickSlotHotKey2.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
@@ -497,22 +501,6 @@ namespace ExtraSlots
             resourceStream.Read(data, 0, data.Length);
 
             return data;
-        }
-
-        private static void DisableQuiver()
-        {
-            if (Chainloader.PluginInfos.TryGetValue("ishid4.mods.betterarchery", out PluginInfo ba) && ba.Instance.Config.TryGetEntry("Quiver", "Enable Quiver", out ConfigEntry<bool> entry) && entry.Value)
-            {
-                entry.Value = false;
-                LogWarning("BetterArchery's Quiver was disabled to prevent issues with inventory grid. You will not lose arrows if you had Quiver enabled in your previous session." +
-                    $"\nThis logic is designed for BetterArchery version 1.9.8, current version is {ba.Metadata.Version}. If quiver implementation was changed pls contact me at any platform.");
-            }
-        }
-
-        [HarmonyPatch(typeof(FejdStartup), nameof(FejdStartup.Start))]
-        private static class FejdStartup_Start_DisableBetterArcheryQuiver
-        {
-            private static void Postfix() => DisableQuiver();
         }
     }
 }

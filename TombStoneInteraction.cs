@@ -2,24 +2,47 @@
 using static ExtraSlots.Slots;
 using static ExtraSlots.ExtraSlots;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ExtraSlots
 {
-    internal static class TombStoneInteraction
+    public static class TombStoneInteraction
     {
-        private const string megingjordName = "BeltStrength";
-        
-        [HarmonyPatch(typeof(TombStone), nameof(TombStone.OnTakeAllSuccess))]
-        private static class TombStone_OnTakeAllSuccess_CheckMegingjordAutoEquip
+        public static void EquipItemsInSlots()
         {
-            private static void Prefix()
+            ClearCachedItems();
+            GetEquipmentSlots(onlyActive: false).Select(slot => slot.Item).Where(IsItemToEquip).Do(TryEquipItem);
+        }
+
+        private static bool IsItemToEquip(ItemDrop.ItemData item) => slotsTombstoneAutoEquipEnabled.Value ||
+                   slotsTombstoneAutoEquipCarryWeightItemsEnabled.Value && item != null && item.m_shared.m_equipStatusEffect is SE_Stats se && se.m_addMaxCarryWeight > 0;
+
+        private static void TryEquipItem(ItemDrop.ItemData item)
+        {
+            if (item != null && !CurrentPlayer.IsItemEquiped(item))
+                if (CurrentPlayer.EquipItem(item))
+                    LogDebug($"Item {item.m_shared.m_name} was equipped on tombstone interaction");
+        }
+
+        [HarmonyPatch(typeof(TombStone), nameof(TombStone.OnTakeAllSuccess))]
+        private static class TombStone_OnTakeAllSuccess_AutoEquip
+        {
+            private static void Postfix(TombStone __instance)
             {
                 if (PlayerInventory == null)
                     return;
 
-                ItemDrop.ItemData belt = PlayerInventory.GetItem(megingjordName, isPrefabName: true);
-                if (belt != null && !CurrentPlayer.IsItemEquiped(belt))
-                    CurrentPlayer.EquipItem(belt);
+                if (Player.m_enableAutoPickup && __instance.m_body.transform.root.gameObject != __instance.gameObject && __instance.TryGetComponent(out FloatingTerrain floatingTerrain))
+                {
+                    LogDebug($"Destroyed tombstone component {__instance.m_body?.gameObject} to prevent NRE on AutoPickup");
+                    floatingTerrain.m_lastHeightmap = null;
+                    UnityEngine.Object.Destroy(__instance.m_body?.gameObject);
+                }
+
+                if (!slotsTombstoneAutoEquipEnabled.Value && !slotsTombstoneAutoEquipCarryWeightItemsEnabled.Value)
+                    return;
+
+                EquipItemsInSlots();
             }
         }
 
@@ -43,15 +66,15 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(TombStone), nameof(TombStone.Interact))]
-        private static class TombStone_Interact_HeightAdjustment
+        internal static class TombStone_Interact_AdjustHeightAndStopAutoPickup
         {
+            [HarmonyPriority(Priority.First)]
             private static void Prefix(TombStone __instance, bool hold)
             {
                 if (hold)
                     return;
 
                 int targetHeight = GetTargetInventoryHeight(InventorySizeFull, __instance.m_container.m_width);
-
                 if (targetHeight > __instance.m_container.m_height)
                 {
                     LogDebug($"TombStone Interact height {__instance.m_container.m_height} -> {targetHeight}. Inventory reloaded.");
@@ -143,27 +166,6 @@ namespace ExtraSlots
                     return;
 
                 SaveLastEquippedSlotsToItems();
-            }
-        }
-
-        [HarmonyPatch(typeof(Container), nameof(Container.RPC_TakeAllRespons))]
-        private static class Container_RPC_TakeAllRespons_AutoPickupPreventNRE
-        {
-            private static void Prefix(Container __instance, bool granted, ref bool __state)
-            {
-                // Check only tombstone container causing NRE
-                if (!granted || !__instance.GetComponent<TombStone>())
-                    return;
-
-                // Game version 0.219.13 Bog Witch, Player.AutoPickup NullReferenceException prevention
-                if (__state = Player.m_enableAutoPickup)
-                    Player.m_enableAutoPickup = false; 
-            }
-
-            private static void Postfix(bool __state)
-            {
-                if (__state)
-                    Player.m_enableAutoPickup = true;
             }
         }
     }

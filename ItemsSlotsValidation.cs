@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using static ExtraSlots.Slots;
 using static ExtraSlots.ExtraSlots;
+using System.Reflection;
 
 namespace ExtraSlots
 {
@@ -141,6 +142,8 @@ namespace ExtraSlots
                 if (!isDirty || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
                     return;
 
+                isDirty = false;
+
                 if (PlayerInventory == null || PlayerInventory.m_inventory == null)
                     return;
 
@@ -224,6 +227,22 @@ namespace ExtraSlots
                 static void Postfix(Player player)
                 {
                     if (IsValidPlayer(player))
+                        MarkDirty();
+                }
+            }
+
+            [HarmonyPatch]
+            public static class Humanoid_OnEquipUnequip
+            {
+                private static IEnumerable<MethodBase> TargetMethods()
+                {
+                    yield return AccessTools.Method(typeof(Humanoid), nameof(Humanoid.EquipItem));
+                    yield return AccessTools.Method(typeof(Humanoid), nameof(Humanoid.UnequipItem));
+                }
+
+                private static void Prefix(Humanoid __instance)
+                {
+                    if (IsValidPlayer(__instance))
                         MarkDirty();
                 }
             }
