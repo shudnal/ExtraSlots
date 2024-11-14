@@ -168,7 +168,7 @@ namespace ExtraSlots
 
             TMP_Text textComp = binding.GetComponent<TMP_Text>();
             textComp.enableAutoSizing = true;
-            textComp.text = hotbarElement ? slot.GetShortcutText() : slot.Name;
+            textComp.text = hotbarElement ? (ZInput.IsGamepadActive() ? "" : slot.GetShortcutText()) : slot.Name;
             textComp.enabled = true;
             textComp.overflowMode = TextOverflowModes.Overflow;
             textComp.fontSizeMin = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelFontSize.Value.x : quickSlotLabelFontSize.Value.x) : equipmentSlotLabelFontSize.Value.x;

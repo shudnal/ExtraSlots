@@ -135,7 +135,17 @@
     <None Include=".editorconfig" />
     <None Include="ILRepack.targets" />
     <EmbeddedResource Include="translations\English.json" />
-    <EmbeddedResource Include="translations\Russian.json" />
+    <EmbeddedResource Include="translations\Russian.yml" />
+    <EmbeddedResource Include="translations\Chinese.yml" />
+    <EmbeddedResource Include="translations\French.yml" />
+    <EmbeddedResource Include="translations\German.yml" />
+    <EmbeddedResource Include="translations\Japanese.yml" />
+    <EmbeddedResource Include="translations\Portuguese_Brazilian.yml" />
+    <EmbeddedResource Include="translations\Spanish.yml" />
+    <EmbeddedResource Include="translations\Turkish.yml" />
+    <EmbeddedResource Include="translations\Dutch.yml" />
+    <EmbeddedResource Include="translations\Korean.yml" />
+    <EmbeddedResource Include="translations\Polish.yml" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ILRepack.Lib.MSBuild.Task">

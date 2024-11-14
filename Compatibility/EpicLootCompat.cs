@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using static ExtraSlots.ExtraSlots;
@@ -18,15 +17,11 @@ namespace ExtraSlots
                 if (!isEpicLootEnabled)
                     return false;
 
-                Type epicLootPlayerExtensions = AccessTools.TypeByName("EpicLoot.PlayerExtensions");
-                if (epicLootPlayerExtensions == null)
-                    return false;
-
-                target = AccessTools.Method(epicLootPlayerExtensions, "GetEquipment");
+                target = AccessTools.Method("EpicLoot.PlayerExtensions:GetEquipment");
                 if (target == null)
                     return false;
 
-                LogInfo("EpicLoot.PlayerExtensions.GetEquipment method will be patched to add extra utility items");
+                LogInfo("EpicLoot.PlayerExtensions:GetEquipment method will be patched to add extra utility items");
                 return true;
             }
 

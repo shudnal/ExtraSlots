@@ -1,0 +1,19 @@
+﻿exsl_slot_equipment_helmet_label: Tête
+exsl_slot_equipment_chest_label: Coffre
+exsl_slot_equipment_legs_label: Pieds
+exsl_slot_equipment_shoulders_label: Retour
+exsl_slot_equipment_utility_label: Article
+exsl_slot_equipment: Emplacement d'équipement
+exsl_slot_equipment_desc: Articles d'équipement équipables
+exsl_slot_ammo: Emplacement pour munitions
+exsl_slot_ammo_label: Flèches
+exsl_slot_ammo_desc: Munitions et appâts de pêche
+exsl_slot_quick: Emplacement rapide
+exsl_slot_quick_label: Rapide
+exsl_slot_quick_desc: Tous les éléments
+exsl_slot_misc: Divers
+exsl_slot_misc_label: Divers
+exsl_slot_misc_desc: Objets de quête, clés, pièces, trophées et poissons
+exsl_slot_food: Emplacement de nourriture
+exsl_slot_food_label: Nourriture
+exsl_slot_food_desc: Nourriture prête à manger

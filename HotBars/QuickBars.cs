@@ -9,9 +9,10 @@ namespace ExtraSlots
 {
     public static class QuickBars
     {
-        public static List<HotkeyBar> bars;
-        public static int _currentBarIndex = -1;
         public const string vanillaBarName = "HotKeyBar";
+
+        private static List<HotkeyBar> bars;
+        private static int _currentBarIndex = -1;
 
         private static readonly HashSet<string> barNames = new HashSet<string>(){
                 vanillaBarName,
@@ -25,48 +26,56 @@ namespace ExtraSlots
             bars = GetHotKeyBarsToControl();
         }
 
+        // Patch this method if you want your bar to be controlled in the same way
         public static bool IsBarToControl(HotkeyBar bar) => bar != null && barNames.Contains(bar.name);
 
-        public static List<HotkeyBar> GetHotKeyBarsToControl() => Hud.instance ? Hud.instance.transform.parent.GetComponentsInChildren<HotkeyBar>().Where(IsBarToControl).ToList() : null;
-
-        private static bool IsSelectedIndex() => _currentBarIndex >= 0 && _currentBarIndex < bars.Count;
-
-        private static bool UpdateHotkeyBar(HotkeyBar hotkeyBar)
+        public static void UseCustomBarItem(HotkeyBar bar)
         {
-            if (hotkeyBar.m_selected < 0 || !IsHotkeyBarActive())
+            // Patch this method to use selected item from your hotbar
+        }
+
+        private static List<HotkeyBar> GetHotKeyBarsToControl() => Hud.instance ? Hud.instance.transform.parent.GetComponentsInChildren<HotkeyBar>().Where(IsBarToControl).ToList() : null;
+
+        private static bool UpdateCurrentHotkeyBar()
+        {
+            if (_currentBarIndex < 0 || _currentBarIndex > bars.Count - 1)
+                return false;
+
+            HotkeyBar hotkeyBar = bars[_currentBarIndex];
+            if (hotkeyBar.m_selected < 0 || hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1 || !IsHotkeyBarActive())
                 return !IsHotkeyBarActive();
 
-            if (ZInput.GetButtonDown("JoyDPadLeft"))
-                hotkeyBar.m_selected = hotkeyBar.m_selected == 0 ? ChangeActiveHotkeyBar(next: false) : Mathf.Max(0, hotkeyBar.m_selected - 1);
-            else if (ZInput.GetButtonDown("JoyDPadRight"))
-                hotkeyBar.m_selected = hotkeyBar.m_selected == hotkeyBar.m_elements.Count - 1 ? ChangeActiveHotkeyBar(next: true) : Mathf.Min(hotkeyBar.m_elements.Count - 1, hotkeyBar.m_selected + 1);
-
-            if (ZInput.GetButtonDown("JoyDPadUp"))
+            if (ZInput.GetButtonDown("JoyDPadLeft") && --hotkeyBar.m_selected < 0)
+                ChangeActiveHotkeyBar(next: false);
+            else if (ZInput.GetButtonDown("JoyDPadRight") && ++hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1)
+                ChangeActiveHotkeyBar(next: true);
+            else if (ZInput.GetButtonDown("JoyDPadUp"))
                 if (hotkeyBar.name == QuickSlotsHotBar.barName)
                     Player.m_localPlayer.UseItem(Player.m_localPlayer.GetInventory(), QuickSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), fromInventoryGui: false);
                 else if (hotkeyBar.name == AmmoSlotsHotBar.barName)
                     Player.m_localPlayer.UseItem(Player.m_localPlayer.GetInventory(), AmmoSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), fromInventoryGui: false);
-                else
+                else if (hotkeyBar.name == vanillaBarName)
                     Player.m_localPlayer.UseHotbarItem(hotkeyBar.m_selected + 1);
+                else
+                    UseCustomBarItem(hotkeyBar);
 
             return true;
         }
 
-        private static int ChangeActiveHotkeyBar(bool next = true)
+        private static void ChangeActiveHotkeyBar(bool next = true)
         {
             int[] activeBars = bars.Where(bar => bar.m_elements.Count > 0).Select(bar => bars.IndexOf(bar)).ToArray();
             if (activeBars.Length == 0)
             {
                 _currentBarIndex = -1;
-                return _currentBarIndex;
+                return;
             }
 
             int index = Array.IndexOf(activeBars, _currentBarIndex);
             index = (index == -1) ? 0 : index + (next ? 1 : -1);
 
             _currentBarIndex = activeBars[(index + activeBars.Length) % activeBars.Length];
-            bars.Do(bar => bar.m_selected = bars.IndexOf(bar) == _currentBarIndex ? (next ? 0 : bar.m_elements.Count - 1) : -1);
-            return _currentBarIndex;
+            bars[_currentBarIndex].m_selected = next ? 0 : bars[_currentBarIndex].m_elements.Count - 1;
         }
 
         private static bool IsHotkeyBarActive() => !InventoryGui.IsVisible() && !Menu.IsVisible() && !GameCamera.InFreeFly()
@@ -90,9 +99,8 @@ namespace ExtraSlots
                 if (bars == null)
                     return;
 
-                if (!IsSelectedIndex() || !UpdateHotkeyBar(bars[_currentBarIndex]))
-                    if (ZInput.GetButtonDown("JoyDPadLeft") || ZInput.GetButtonDown("JoyDPadRight") || ZInput.GetButtonDown("JoyDPadUp"))
-                        ChangeActiveHotkeyBar();
+                if (!UpdateCurrentHotkeyBar() && (ZInput.GetButtonDown("JoyDPadLeft") || ZInput.GetButtonDown("JoyDPadRight") || ZInput.GetButtonDown("JoyDPadUp")))
+                    ChangeActiveHotkeyBar();
 
                 bool clearBars = false;
                 for (int i = bars.Count - 1; i >= 0; i--)
@@ -105,7 +113,7 @@ namespace ExtraSlots
                     }
 
                     HotkeyBar bar = bars[i];
-                    bar.m_selected = Mathf.Clamp(bar.m_selected, -1, bar.m_elements.Count - 1);
+                    bar.m_selected = _currentBarIndex != i ? -1 : Mathf.Clamp(bar.m_selected, -1, bar.m_elements.Count - 1);
                     bar.UpdateIcons(Player.m_localPlayer);
                 }
 

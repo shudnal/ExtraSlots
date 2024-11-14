@@ -1,0 +1,19 @@
+﻿exsl_slot_equipment_helmet_label: Kafa
+exsl_slot_equipment_chest_label: Göğüs
+exsl_slot_equipment_legs_label: Bacaklar
+exsl_slot_equipment_shoulders_label: Geri
+exsl_slot_equipment_utility_label: Öğe
+exsl_slot_equipment: Ekipman yuvası
+exsl_slot_equipment_desc: Donanılabilir Ekipman Öğeleri
+exsl_slot_ammo: Cephane yuvası
+exsl_slot_ammo_label: Oklar
+exsl_slot_ammo_desc: Cephane ve balık yemi
+exsl_slot_quick: Hızlı slot
+exsl_slot_quick_label: Hızlı
+exsl_slot_quick_desc: Herhangi bir öğe
+exsl_slot_misc: Çeşitli
+exsl_slot_misc_label: Çeşitli
+exsl_slot_misc_desc: Görev eşyaları, anahtarlar, madeni paralar, kupalar ve balıklar
+exsl_slot_food: Yiyecek yuvası
+exsl_slot_food_label: Yiyecek
+exsl_slot_food_desc: Yemek yemeye hazır

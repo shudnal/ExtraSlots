@@ -1,0 +1,19 @@
+﻿exsl_slot_equipment_helmet_label: Голова
+exsl_slot_equipment_chest_label: Грудь
+exsl_slot_equipment_legs_label: Штаны
+exsl_slot_equipment_shoulders_label: Спина
+exsl_slot_equipment_utility_label: Предмет
+exsl_slot_equipment: Слот для экипировки
+exsl_slot_equipment_desc: Надеваемые предметы снаряжения
+exsl_slot_ammo: Слот для стрел
+exsl_slot_ammo_label: Стрелы
+exsl_slot_ammo_desc: Боеприпасы и рыболовные наживки
+exsl_slot_quick: Быстрый слот
+exsl_slot_quick_label: Быстрый
+exsl_slot_quick_desc: Любые предметы
+exsl_slot_misc: Разное
+exsl_slot_misc_label: Разное
+exsl_slot_misc_desc: Предметы заданий, ключи, монеты, трофеи и рыба
+exsl_slot_food: Слот для еды
+exsl_slot_food_label: Еда
+exsl_slot_food_desc: Готовая к употреблению еда
