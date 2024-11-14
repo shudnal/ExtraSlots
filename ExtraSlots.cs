@@ -136,9 +136,13 @@ namespace ExtraSlots
 
         public static ConfigEntry<string> utilitySlotGlobalKey1;
         public static ConfigEntry<string> utilitySlotGlobalKey2;
+        public static ConfigEntry<string> utilitySlotGlobalKey3;
+        public static ConfigEntry<string> utilitySlotGlobalKey4;
 
         public static ConfigEntry<string> utilitySlotItemDiscovered1;
         public static ConfigEntry<string> utilitySlotItemDiscovered2;
+        public static ConfigEntry<string> utilitySlotItemDiscovered3;
+        public static ConfigEntry<string> utilitySlotItemDiscovered4;
 
         public static ConfigEntry<string> quickSlotItemDiscovered1;
         public static ConfigEntry<string> quickSlotItemDiscovered2;
@@ -221,7 +225,7 @@ namespace ExtraSlots
             loggingDebugEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
 
             quickSlotsAmount = config("Extra slots", "Amount of quick slots", defaultValue: 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
-            extraUtilitySlotsAmount = config("Extra slots", "Amount of extra utility slots", defaultValue: 2, new ConfigDescription("How much extra utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
+            extraUtilitySlotsAmount = config("Extra slots", "Amount of extra utility slots", defaultValue: 2, new ConfigDescription("How much extra utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 4)), synchronizedSetting: true);
             extraRows = config("Extra slots", "Amount of extra inventory rows", defaultValue: 0, new ConfigDescription("How much rows to add in regular inventory [Synced with Server]", new AcceptableValueRange<int>(0, 2)), synchronizedSetting: true);
             ammoSlotsEnabled = config("Extra slots", "Enable ammo slots", defaultValue: true, "Enable 3 slots for ammo [Synced with Server]", synchronizedSetting: true);
             foodSlotsEnabled = config("Extra slots", "Enable food slots", defaultValue: true, "Enable 3 slots for food [Synced with Server]", synchronizedSetting: true);
@@ -368,6 +372,8 @@ namespace ExtraSlots
 
             utilitySlotGlobalKey1 = config("Progression - Global keys", "Extra utility slot 1", "defeated_bonemass", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
             utilitySlotGlobalKey2 = config("Progression - Global keys", "Extra utility slot 2", "defeated_goblinking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotGlobalKey3 = config("Progression - Global keys", "Extra utility slot 3", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotGlobalKey4 = config("Progression - Global keys", "Extra utility slot 4", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
 
             ammoSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Ammo slots", true, "Ammo slots will be active after acquiring first ammo item [Synced with Server]", synchronizedSetting: true);
             utilitySlotAvailableAfterDiscovery = config("Progression - Discovery", "Utility slots", true, "Utility slots will be active after acquiring first utility item [Synced with Server]", synchronizedSetting: true);
@@ -387,6 +393,8 @@ namespace ExtraSlots
 
             utilitySlotGlobalKey1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             utilitySlotGlobalKey2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            utilitySlotGlobalKey3.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            utilitySlotGlobalKey4.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
             ammoSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             utilitySlotAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
@@ -395,9 +403,13 @@ namespace ExtraSlots
 
             utilitySlotItemDiscovered1 = config("Progression - Items", "Extra utility slot 1", "$item_wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
             utilitySlotItemDiscovered2 = config("Progression - Items", "Extra utility slot 2", "$item_demister,$mod_epicloot_assets_goldrubyring,$mod_epicloot_assets_silverring", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotItemDiscovered3 = config("Progression - Items", "Extra utility slot 3", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotItemDiscovered4 = config("Progression - Items", "Extra utility slot 4", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
 
             utilitySlotItemDiscovered1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             utilitySlotItemDiscovered2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            utilitySlotItemDiscovered3.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            utilitySlotItemDiscovered4.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
             quickSlotItemDiscovered1 = config("Progression - Items", "Quickslot 1", "$item_cryptkey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
             quickSlotItemDiscovered2 = config("Progression - Items", "Quickslot 2", "$item_cryptkey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);

@@ -15,7 +15,7 @@ Quick slots and ammo slots will create a dedicated hotbars for quick use.
 
 Miscellaneous items includes quest items, keys, fish, trophies and coins.
 
-You can equip up to 3 utility items simultaneously.
+You can equip up to 5 utility items simultaneously.
 
 You can add up to 2 extra rows in regular player inventory in case you really need large inventory.
 
@@ -23,7 +23,7 @@ Both equipment panel and hotbars are totally gamepad friendly.
 
 Slots obtaining progression is enabled by default. It means not every slot could be available from the start. It requires obtaining certain items or killing bosses to get more slots.
 
-There is public API to access some mod's functions and to dynamically add up to 11 custom equipment slots which can be enabled/disabled on the fly for it to be part of progression.
+There is public API to access some mod's functions and to dynamically add up to 9 custom equipment slots which can be enabled/disabled on the fly for it to be part of progression.
 
 This mod is incompatible with other similar purpose mods which singular purpose is inventory management. Valheim Plus is supported yet inventory part is better be disabled. BetterArchery's quiver will be disabled. You will not lose your arrows.
 
@@ -73,7 +73,7 @@ If mod installed on a server then client and server versions should be equal.
 In case mod installed on a server, some crucial config values will be synchronized from a server:
 * amount of quick slots (0-6)
 * amount of extra inventory rows (0-2)
-* amount of extra utility items (0-2)
+* amount of extra utility items (0-4)
 * should ammo slots be enabled
 * should food slots be enabled
 * should misc slots be enabled

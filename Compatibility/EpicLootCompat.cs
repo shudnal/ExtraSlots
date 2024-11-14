@@ -37,11 +37,7 @@ namespace ExtraSlots
                 if (!Slots.IsValidPlayer(player))
                     return;
 
-                if (ExtraUtilitySlots.Item1 != null)
-                    __result.Add(ExtraUtilitySlots.Item1);
-
-                if (ExtraUtilitySlots.Item2 != null)
-                    __result.Add(ExtraUtilitySlots.Item2);
+                __result.AddRange(ExtraUtilitySlots.GetEquippedItems());
             }
         }
     }

@@ -13,6 +13,8 @@ namespace ExtraSlots
     {
         public ItemDrop.ItemData utility1 = null;
         public ItemDrop.ItemData utility2 = null;
+        public ItemDrop.ItemData utility3 = null;
+        public ItemDrop.ItemData utility4 = null;
     }
 
     public static class HumanoidExtension
@@ -21,9 +23,29 @@ namespace ExtraSlots
 
         public static HumanoidExtraUtilitySlots GetExtraUtilityData(this Humanoid humanoid) => data.GetOrCreateValue(humanoid);
 
-        public static ItemDrop.ItemData GetExtraUtility(this Humanoid humanoid, int index) => index == 0 ? humanoid.GetExtraUtilityData().utility1 : humanoid.GetExtraUtilityData().utility2;
+        public static ItemDrop.ItemData GetExtraUtility(this Humanoid humanoid, int index) 
+        {
+            return index switch
+            {
+                0 => humanoid.GetExtraUtilityData().utility1,
+                1 => humanoid.GetExtraUtilityData().utility2,
+                2 => humanoid.GetExtraUtilityData().utility3,
+                3 => humanoid.GetExtraUtilityData().utility4,
+                _ => null
+            };
+        }
 
-        public static ItemDrop.ItemData SetExtraUtility(this Humanoid humanoid, int index, ItemDrop.ItemData item) => index == 0 ? humanoid.GetExtraUtilityData().utility1 = item : humanoid.GetExtraUtilityData().utility2 = item;
+        public static ItemDrop.ItemData SetExtraUtility(this Humanoid humanoid, int index, ItemDrop.ItemData item)
+        {
+            return index switch
+            {
+                0 => humanoid.GetExtraUtilityData().utility1 = item,
+                1 => humanoid.GetExtraUtilityData().utility2 = item,
+                2 => humanoid.GetExtraUtilityData().utility3 = item,
+                3 => humanoid.GetExtraUtilityData().utility4 = item,
+                _ => null
+            };
+        }
     }
 
     public static class ExtraUtilitySlots
@@ -32,13 +54,20 @@ namespace ExtraSlots
         private static readonly HashSet<StatusEffect> tempEffects = new HashSet<StatusEffect>();
         private static readonly List<HashSet<string>> uniqueEquipped = new List<HashSet<string>>();
 
-        public static ItemDrop.ItemData Item1 => Player.m_localPlayer?.GetExtraUtility(0);
+        public static int ActiveSlots => ExtraSlots.extraUtilitySlotsAmount.Value;
 
-        public static ItemDrop.ItemData Item2 => Player.m_localPlayer?.GetExtraUtility(1);
+        public static ItemDrop.ItemData GetItem(int index) => Player.m_localPlayer?.GetExtraUtility(index);
 
         public static bool IsItemEquipped(ItemDrop.ItemData item) => GetUtilityItemIndex(item) != -1;
 
-        public static int GetEmptySlot() => IsFirstSlotFree() ? 0 : (IsSecondSlotFree() ? 1 : -1);
+        public static int GetEmptySlot()
+        {
+            for (int i = 0; i < ActiveSlots; i++)
+                if (IsSlotAvailable(i))
+                    return i;
+
+            return -1;
+        }
 
         public static int GetSlotForItem(ItemDrop.ItemData item)
         {
@@ -49,29 +78,48 @@ namespace ExtraSlots
                     if (Player.m_localPlayer.m_utilityItem != null && uniqueItems.Contains(Player.m_localPlayer.m_utilityItem.m_shared.m_name))
                         return -1;
 
-                    if (Item1 != null && uniqueItems.Contains(Item1.m_shared.m_name))
-                        return 0;
-
-                    if (Item2 != null && uniqueItems.Contains(Item2.m_shared.m_name))
-                        return 1;
+                    for (int i = 0; i < ActiveSlots; i++)
+                        if (GetItem(i) is ItemDrop.ItemData utilityItem && uniqueItems.Contains(utilityItem.m_shared.m_name))
+                            return i;
                 }
             }
 
             return GetEmptySlot();
         }
+        
+        private static bool IsSlotAvailable(int index) => IsExtraUtilitySlotAvailable(index) && GetItem(index) == null;
 
-        private static bool IsFirstSlotFree() => IsFirstExtraUtilitySlotAvailable() && Item1 == null;
-        private static bool IsSecondSlotFree() => IsSecondExtraUtilitySlotAvailable() && Item2 == null;
+        internal static string UtilitySlotGlobalKey(int index)
+        {
+            return index switch
+            {
+                0 => ExtraSlots.utilitySlotGlobalKey1.Value,
+                1 => ExtraSlots.utilitySlotGlobalKey2.Value,
+                2 => ExtraSlots.utilitySlotGlobalKey3.Value,
+                3 => ExtraSlots.utilitySlotGlobalKey4.Value,
+                _ => ""
+            };
+        }
+
+        internal static string UtilitySlotItemDiscovered(int index)
+        {
+            return index switch
+            {
+                0 => ExtraSlots.utilitySlotItemDiscovered1.Value,
+                1 => ExtraSlots.utilitySlotItemDiscovered2.Value,
+                2 => ExtraSlots.utilitySlotItemDiscovered3.Value,
+                3 => ExtraSlots.utilitySlotItemDiscovered4.Value,
+                _ => ""
+            };
+        }
 
         public static IEnumerable<ItemDrop.ItemData> GetEquippedItems()
         {
             tempItems.Clear();
 
-            if (Item1 != null)
-                tempItems.Add(Item1);
-
-            if (Item2 != null)
-                tempItems.Add(Item2);
+            for (int i = 0; i < ActiveSlots; i++)
+                if (GetItem(i) is ItemDrop.ItemData utilityItem)
+                    tempItems.Add(utilityItem);
 
             return tempItems;
         }
@@ -81,11 +129,9 @@ namespace ExtraSlots
             if (item == null)
                 return -1;
 
-            if (ExtraSlots.extraUtilitySlotsAmount.Value > 0 && Item1 == item)
-                return 0;
-
-            if (ExtraSlots.extraUtilitySlotsAmount.Value > 1 && Item2 == item)
-                return 1;
+            for (int i = 0; i < ActiveSlots; i++)
+                if (GetItem(i) is ItemDrop.ItemData utilityItem && utilityItem == item)
+                    return i;
 
             return -1;
         }
@@ -114,9 +160,14 @@ namespace ExtraSlots
 
                     tempEffects.Clear();
 
-                    GetEquippedItems().DoIf(item => (bool)item.m_shared.m_equipStatusEffect, item => tempEffects.Add(item.m_shared.m_equipStatusEffect));
+                    foreach(ItemDrop.ItemData item in GetEquippedItems())
+                    {
+                        if ((bool)item.m_shared.m_equipStatusEffect)
+                            tempEffects.Add(item.m_shared.m_equipStatusEffect);
 
-                    GetEquippedItems().DoIf(item => __instance.HaveSetEffect(item), item => tempEffects.Add(item.m_shared.m_setStatusEffect));
+                        if (__instance.HaveSetEffect(item))
+                            tempEffects.Add(item.m_shared.m_setStatusEffect);
+                    }
                 }
 
                 private static void Postfix(Humanoid __instance)
@@ -152,8 +203,7 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    foreach (ItemDrop.ItemData item in GetEquippedItems())
-                        __result += item.m_shared.m_weight;
+                    __result += GetEquippedItems().Sum(item => item.m_shared.m_weight);
                 }
             }
 
@@ -189,8 +239,8 @@ namespace ExtraSlots
 
                     item.m_shared.m_itemType = ItemDrop.ItemData.ItemType.Utility;
 
-                    if (__instance.GetExtraUtility(__state) != null)
-                        __instance.UnequipItem(__instance.GetExtraUtility(__state), triggerEquipEffects);
+                    if (__instance.GetExtraUtility(__state) is ItemDrop.ItemData utilityItem)
+                        __instance.UnequipItem(utilityItem, triggerEquipEffects);
 
                     __instance.SetExtraUtility(__state, item);
 
@@ -213,15 +263,9 @@ namespace ExtraSlots
                     if (item == null)
                         return;
 
-                    if (__instance.GetExtraUtility(0) == item)
+                    if (GetUtilityItemIndex(item) is int i && i != -1)
                     {
-                        __instance.SetExtraUtility(0, null);
-                        __instance.SetupEquipment();
-                    }
-
-                    if (__instance.GetExtraUtility(1) == item)
-                    {
-                        __instance.SetExtraUtility(1, null);
+                        __instance.SetExtraUtility(i, null);
                         __instance.SetupEquipment();
                     }
                 }
@@ -236,8 +280,7 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    __instance.UnequipItem(Item1, triggerEquipEffects: false);
-                    __instance.UnequipItem(Item2, triggerEquipEffects: false);
+                    GetEquippedItems().Do(item => __instance.UnequipItem(item, triggerEquipEffects: false));
                 }
             }
 
@@ -261,22 +304,17 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    bool setupEq = Item1 != null || Item2 != null;
+                    bool setupVisEq = false;
+                    for (int i = 0; i < ActiveSlots; i++)
+                        if (GetItem(i) is ItemDrop.ItemData utilityItem)
+                        {
+                            utilityItem.m_equipped = false;
+                            __instance.SetExtraUtility(i, null);
+                            setupVisEq = true;
+                        }
 
-                    if (Item1 != null)
-                    {
-                        Item1.m_equipped = false;
-                        Player.m_localPlayer.SetExtraUtility(0, null);
-                    }
-
-                    if (Item2 != null)
-                    {
-                        Item2.m_equipped = false;
-                        Player.m_localPlayer.SetExtraUtility(1, null);
-                    }
-
-                    if (setupEq)
-                        Player.m_localPlayer.SetupEquipment();
+                    if (setupVisEq)
+                        __instance.SetupEquipment();
                 }
             }
 
@@ -288,11 +326,7 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    if (Item1 != null)
-                        __result += Item1.m_shared.m_eitrRegenModifier;
-
-                    if (Item2 != null)
-                        __result += Item2.m_shared.m_eitrRegenModifier;
+                    __result += GetEquippedItems().Sum(item => item.m_shared.m_eitrRegenModifier);
                 }
             }
 
@@ -304,14 +338,7 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    DrainDurability(Item1, dt);
-                    DrainDurability(Item2, dt);
-
-                    void DrainDurability(ItemDrop.ItemData item, float dt)
-                    {
-                        if (item != null && item.m_shared.m_useDurability)
-                            __instance.DrainEquipedItemDurability(item, dt);
-                    }
+                    GetEquippedItems().DoIf(item => item.m_shared.m_useDurability, item => __instance.DrainEquipedItemDurability(item, dt));
                 }
             }
 
@@ -323,11 +350,7 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    if (Item1 != null)
-                        mods.Apply(Item1.m_shared.m_damageModifiers);
-
-                    if (Item2 != null)
-                        mods.Apply(Item2.m_shared.m_damageModifiers);
+                    GetEquippedItems().Select(item => item.m_shared.m_damageModifiers).Do(mods.Apply);
                 }
             }
 
@@ -343,13 +366,7 @@ namespace ExtraSlots
                         return;
 
                     for (int i = 0; i < __instance.m_equipmentModifierValues.Length; i++)
-                    {
-                        if (Item1 != null)
-                            __instance.m_equipmentModifierValues[i] += (float)Player.s_equipmentModifierSourceFields[i].GetValue(Item1.m_shared);
-
-                        if (Item2 != null)
-                            __instance.m_equipmentModifierValues[i] += (float)Player.s_equipmentModifierSourceFields[i].GetValue(Item2.m_shared);
-                    }
+                        GetEquippedItems().Do(item => __instance.m_equipmentModifierValues[i] += (float)Player.s_equipmentModifierSourceFields[i].GetValue(item.m_shared));
                 }
             }
 
@@ -358,20 +375,19 @@ namespace ExtraSlots
             {
                 private static void Postfix(Player __instance)
                 {
-                    if (IsValidPlayer(__instance) && !__instance.m_isLoading)
-                    {
-                        if (Item1 != null && !PlayerInventory.ContainsItem(Item1))
+                    if (!IsValidPlayer(__instance) || __instance.m_isLoading)
+                        return;
+
+                    bool setupVisEq = false;
+                    for (int i = 0; i < ActiveSlots; i++)
+                        if (GetItem(i) is ItemDrop.ItemData utilityItem && !PlayerInventory.ContainsItem(utilityItem))
                         {
-                            Player.m_localPlayer.SetExtraUtility(0, null);
-                            Player.m_localPlayer.SetupEquipment();
+                            __instance.SetExtraUtility(i, null);
+                            setupVisEq = true;
                         }
 
-                        if (Item2 != null && !PlayerInventory.ContainsItem(Item2))
-                        {
-                            Player.m_localPlayer.SetExtraUtility(1, null);
-                            Player.m_localPlayer.SetupEquipment();
-                        }
-                    }
+                    if (setupVisEq)
+                        __instance.SetupEquipment();
                 }
             }
 
@@ -383,15 +399,7 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    if (Item1 != null && Item1.m_shared.m_setName == setName)
-                    {
-                        __result++;
-                    }
-
-                    if (Item2 != null && Item2.m_shared.m_setName == setName)
-                    {
-                        __result++;
-                    }
+                    __result += GetEquippedItems().Count(item => item.m_shared.m_setName == setName);
                 }
             }
 

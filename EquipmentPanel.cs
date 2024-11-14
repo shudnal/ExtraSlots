@@ -534,14 +534,14 @@ namespace ExtraSlots
 
                 QQQQQQMM
                 AAAFFFUU
-                VVVVVCCC
+                VVVVVUUC
                 CCCCCCCC
 
                 Extra slots equipment layout (maxed slots variant)
 
                 VVUCCC FA
-                VVCCCC FA
-                VUCCCC FA
+                VVUCCC FA
+                VUUCCC FA
                 QQQQQQ MM
 
                 Q - quickslot, M - misc slot

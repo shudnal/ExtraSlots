@@ -165,7 +165,7 @@ namespace ExtraSlots
 
         internal static class CustomSlot
         {
-            internal const int customSlotStartingIndex = 21;
+            internal static int customSlotStartingIndex = 23;
 
             internal static bool TryAddNewSlotBefore(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
@@ -515,8 +515,8 @@ namespace ExtraSlots
             AddSlot($"{foodSlotID}2", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => IsFoodSlotAvailable());
             AddSlot($"{foodSlotID}3", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => IsFoodSlotAvailable());
 
-            AddSlot($"{extraUtilitySlotID}1", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsFirstExtraUtilitySlotAvailable());
-            AddSlot($"{extraUtilitySlotID}2", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsSecondExtraUtilitySlotAvailable());
+            AddSlot($"{extraUtilitySlotID}1", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsExtraUtilitySlotAvailable(0));
+            AddSlot($"{extraUtilitySlotID}2", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsExtraUtilitySlotAvailable(1));
 
             // Third row
             AddSlot(helmetSlotID, () => "$exsl_slot_equipment_helmet_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet, () => IsHelmetSlotKnown());
@@ -524,6 +524,11 @@ namespace ExtraSlots
             AddSlot(legsSlotID, () => "$exsl_slot_equipment_legs_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Legs, () => IsLegsSlotKnown());
             AddSlot(shoulderSlotID, () => "$exsl_slot_equipment_shoulders_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Shoulder, () => IsShoulderSlotKnown());
             AddSlot(utilitySlotID, () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsUtilitySlotKnown());
+
+            AddSlot($"{extraUtilitySlotID}3", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsExtraUtilitySlotAvailable(2));
+            AddSlot($"{extraUtilitySlotID}4", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsExtraUtilitySlotAvailable(3));
+
+            CustomSlot.customSlotStartingIndex = index;
 
             for (int i = index; i < slots.Length; i++)
                 AddSlot(emptySlotID, null, (item) => false, () => false);
@@ -547,9 +552,9 @@ namespace ExtraSlots
             }
         }
 
-        internal static bool IsFirstExtraUtilitySlotAvailable() => extraUtilitySlotsAmount.Value > 0 && IsUtilitySlotKnown() && (IsAnyGlobalKeyActive(utilitySlotGlobalKey1.Value) || IsAnyMaterialDiscovered(utilitySlotItemDiscovered1.Value));
-
-        internal static bool IsSecondExtraUtilitySlotAvailable() => extraUtilitySlotsAmount.Value > 1 && IsUtilitySlotKnown() && (IsAnyGlobalKeyActive(utilitySlotGlobalKey2.Value) || IsAnyMaterialDiscovered(utilitySlotItemDiscovered2.Value));
+        internal static bool IsExtraUtilitySlotAvailable(int index) => extraUtilitySlotsAmount.Value > index && 
+                                                                       IsUtilitySlotKnown() && 
+                                                                       (IsAnyGlobalKeyActive(ExtraUtilitySlots.UtilitySlotGlobalKey(index)) || IsAnyMaterialDiscovered(ExtraUtilitySlots.UtilitySlotItemDiscovered(index)));
 
         internal static bool IsFirstMiscSlotAvailable() => EquipmentPanel.quickSlotsCount > 0 && miscSlotsEnabled.Value && (IsFoodSlotAvailable() || IsAmmoSlotAvailable()) && IsAnyGlobalKeyActive(miscSlotsGlobalKey.Value);
 
