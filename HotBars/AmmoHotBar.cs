@@ -80,17 +80,7 @@ namespace ExtraSlots
             hotBarRect = null;
         }
 
-        // Runs every frame Player.Update
-        internal static void UpdateItemUse()
-        {
-            if (!Player.m_localPlayer.TakeInput())
-                return;
-
-            if (hotBarSlots.Length == 0)
-                return;
-
-            hotBarSlots.DoIf(slot => slot.IsShortcutDown(), slot => Player.m_localPlayer.UseItem(PlayerInventory, slot.Item, fromInventoryGui: false));
-        }
+        internal static Slot GetSlotWithShortcutDown() => hotBarSlots.FirstOrDefault(slot => slot.IsShortcutDown());
 
         // Runs every frame Hud.Update
         internal static void UpdatePosition()
@@ -102,21 +92,10 @@ namespace ExtraSlots
             hotBarRect.localScale = Vector3.one * ammoSlotsHotBarScale.Value;
         }
 
-        [HarmonyPatch(typeof(Player), nameof(Player.Update))]
-        private static class Player_Update_SlotsUse
-        {
-            private static void Postfix(Player __instance)
-            {
-                if (!IsValidPlayer(__instance))
-                    return;
-
-                UpdateItemUse();
-            }
-        }
-
         [HarmonyPatch(typeof(Hud), nameof(Hud.Update))]
         private static class Hud_Update_SlotsPosition
         {
+            [HarmonyPriority(Priority.Low)]
             private static void Postfix() => UpdatePosition();
         }
     }

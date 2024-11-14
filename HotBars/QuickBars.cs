@@ -42,8 +42,8 @@ namespace ExtraSlots
                 return false;
 
             HotkeyBar hotkeyBar = bars[_currentBarIndex];
-            if (hotkeyBar.m_selected < 0 || hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1 || !IsHotkeyBarActive())
-                return !IsHotkeyBarActive();
+            if (hotkeyBar.m_selected < 0 || hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1 || !IsHotkeyBarsActive())
+                return !IsHotkeyBarsActive();
 
             if (ZInput.GetButtonDown("JoyDPadLeft") && --hotkeyBar.m_selected < 0)
                 ChangeActiveHotkeyBar(next: false);
@@ -78,10 +78,40 @@ namespace ExtraSlots
             bars[_currentBarIndex].m_selected = next ? 0 : bars[_currentBarIndex].m_elements.Count - 1;
         }
 
-        private static bool IsHotkeyBarActive() => !InventoryGui.IsVisible() && !Menu.IsVisible() && !GameCamera.InFreeFly()
+        private static bool IsHotkeyBarsActive() => !InventoryGui.IsVisible() && !Menu.IsVisible() && !GameCamera.InFreeFly()
                                                     && !Minimap.IsOpen() && !Hud.IsPieceSelectionVisible() && !StoreGui.IsVisible()
                                                     && !Console.IsVisible() && !Chat.instance.HasFocus() && !PlayerCustomizaton.IsBarberGuiVisible()
                                                     && !Hud.InRadial();
+
+        // Runs every frame Player.Update
+        internal static void UpdateItemUse()
+        {
+            if (!Player.m_localPlayer.TakeInput())
+                return;
+
+            if (GetItemToUse() is ItemDrop.ItemData item)
+                Player.m_localPlayer.UseItem(PlayerInventory, item, fromInventoryGui: false);
+        }
+
+        private static ItemDrop.ItemData GetItemToUse()
+        {
+            Slot quickSlotUsed = QuickSlotsHotBar.GetSlotWithShortcutDown();
+            Slot ammoSlotUsed = AmmoSlotsHotBar.GetSlotWithShortcutDown();
+
+            if (quickSlotUsed != null && ammoSlotUsed != null)
+            {
+                if (quickSlotUsed.GetShortcut().Modifiers.Count() >= ammoSlotUsed.GetShortcut().Modifiers.Count())
+                    return quickSlotUsed.Item;
+                else
+                    return ammoSlotUsed.Item;
+            }
+            else if (quickSlotUsed != null)
+                return quickSlotUsed.Item;
+            else if (ammoSlotUsed != null)
+                return ammoSlotUsed.Item;
+
+            return null;
+        }
 
         [HarmonyPatch(typeof(Hud), nameof(Hud.Update))]
         public static class Hud_Update_BarController
@@ -201,5 +231,18 @@ namespace ExtraSlots
                 AmmoSlotsHotBar.ClearBar();
             }
         }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.Update))]
+        private static class Player_Update_SlotsUse
+        {
+            private static void Postfix(Player __instance)
+            {
+                if (!IsValidPlayer(__instance))
+                    return;
+
+                UpdateItemUse();
+            }
+        }
+
     }
 }
