@@ -18,6 +18,7 @@ namespace ExtraSlots
             public int nrOfItems;
             public int width;
             public int height;
+            public int extraRows;
             public string inventoryBase64;
 
             public string GetTooltip()
@@ -54,7 +55,15 @@ namespace ExtraSlots
             ZPackage compressed = new ZPackage();
             compressed.WriteCompressed(pkg);
 
-            ExtraSlotsBackup extraSlotsBackup = new ExtraSlotsBackup { date = DateTime.Now.ToString(), worldName = ZNet.instance?.GetWorldName(), nrOfItems = backup.NrOfItems(), width = width, height = height, inventoryBase64 = compressed.GetBase64() };
+            ExtraSlotsBackup extraSlotsBackup = new ExtraSlotsBackup { 
+                date = DateTime.Now.ToString(), 
+                worldName = ZNet.instance?.GetWorldName(), 
+                nrOfItems = backup.NrOfItems(), 
+                width = width, 
+                height = height,
+                extraRows = ExtraRowsPlayer,
+                inventoryBase64 = compressed.GetBase64() 
+            };
 
             LogMessage($"Extra slots backup saved {extraSlotsBackup.date}, world {extraSlotsBackup.worldName}, items {extraSlotsBackup.nrOfItems}, size {(float)pkg.Size() / 1000:f1} kb, compressed {(float)compressed.Size() / 1000:f1} kb");
 
@@ -112,11 +121,16 @@ namespace ExtraSlots
                 if (inventory.m_height < InventoryHeightPlayer + backup.m_height)
                     inventory.m_height = InventoryHeightPlayer + backup.m_height;
 
-                ItemDrop.ItemData item;
+                if (ExtraRowsPlayer > extraSlotsBackup.extraRows && CheckForRowChange(inventory, backup, extraSlotsBackup.extraRows))
+                {
+                    LogMessage($"Extra slots backup skipped. Number of inventory rows was changed {extraSlotsBackup.extraRows} -> {ExtraRowsPlayer}.");
+                    return;
+                }
+
                 foreach (ItemDrop.ItemData backupItem in backup.GetAllItemsInGridOrder().Reverse<ItemDrop.ItemData>())
                     if (inventory.AddItem(backupItem.Clone(), new Vector2i(backupItem.m_gridPos.x, backupItem.m_gridPos.y + InventoryHeightPlayer)))
                     {
-                        item = inventory.GetAllItems().Last();
+                        ItemDrop.ItemData item = inventory.GetAllItems().Last();
                         if (item.IsEquipable() && item.m_equipped && !player.EquipItem(item, triggerEquipEffects: false))
                             item.m_equipped = false;
                     }
@@ -128,6 +142,16 @@ namespace ExtraSlots
             }
 
             LogMessage($"Extra slots backup restored. Backup date {extraSlotsBackup.date}, world {extraSlotsBackup.worldName}, items {extraSlotsBackup.nrOfItems}");
+        }
+
+        private static bool CheckForRowChange(Inventory playerInventory, Inventory backup, int previousRows)
+        {
+            int delta = ExtraRowsPlayer - previousRows;
+
+            return backup.GetAllItems().All(item => playerInventory.GetItemAt(item.m_gridPos.x, item.m_gridPos.y + InventoryHeightPlayer - delta) is ItemDrop.ItemData playerItem 
+                                                    && playerItem.m_shared.m_name == item.m_shared.m_name
+                                                    && playerItem.m_stack == item.m_stack
+                                                    && playerItem.m_quality == item.m_quality);
         }
 
         [HarmonyPatch(typeof(Player), nameof(Player.Save))]
