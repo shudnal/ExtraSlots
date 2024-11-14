@@ -1,3 +1,12 @@
+# 1.0.3
+* configurable autoequip on tombstone interaction
+* fixed major issue with BetterArchery compatibility on tombstone interaction
+* hotbars made more responsive and stable
+* hotbars visibility can now be toggled ingame
+* perfomance improvements
+* +2 more extra utility slots (up to 5 total utility items)
+* +3 more extra rows (up to 5 extra rows and total 9 rows of player inventory)
+
 # 1.0.2
 * compatibility with EpicLoot enchantments for extra utility slot items
 
