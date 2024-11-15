@@ -5,58 +5,57 @@ using System.Reflection;
 using static ExtraSlots.Slots;
 using UnityEngine.InputSystem;
 
-namespace ExtraSlots
+namespace ExtraSlots.HotBars;
+
+public static class PreventSimilarHotkeys
 {
-    public static class PreventSimilarHotkeys
+    private static readonly Dictionary<string, Slot> similarHotkey = new Dictionary<string, Slot>();
+
+    public static void FillSimilarHotkey() => FillSimilarHotkey(ZInput.instance);
+
+    internal static void FillSimilarHotkey(ZInput __instance)
     {
-        private static readonly Dictionary<string, Slot> similarHotkey = new Dictionary<string, Slot>();
+        if (__instance == null)
+            return;
 
-        public static void FillSimilarHotkey() => FillSimilarHotkey(ZInput.instance);
+        if (__instance.m_buttons == null)
+            return;
 
-        internal static void FillSimilarHotkey(ZInput __instance)
+        similarHotkey.Clear();
+        foreach (Slot slot in slots.Where(slot => slot.IsHotkeySlot))
         {
-            if (__instance == null)
-                return;
+            if (!ZInput.TryKeyCodeToKey(slot.GetShortcut().MainKey, out Key key))
+                continue;
 
-            if (__instance.m_buttons == null)
-                return;
+            var button = __instance.m_buttons.FirstOrDefault(kvp => kvp.Value.GetActionPath() == ZInput.KeyToPath(key));
+            if (button.Key == null)
+                continue;
 
-            similarHotkey.Clear();
-            foreach (Slot slot in slots.Where(slot => slot.IsHotkeySlot))
-            {
-                if (!ZInput.TryKeyCodeToKey(slot.GetShortcut().MainKey, out Key key))
-                    continue;
+            similarHotkey[button.Key] = slot;
+        }
+    }
 
-                var button = __instance.m_buttons.FirstOrDefault(kvp => kvp.Value.GetActionPath() == ZInput.KeyToPath(key));
-                if (button.Key == null)
-                    continue;
+    [HarmonyPatch(typeof(ZInput), nameof(ZInput.TryGetButtonState))]
+    private static class ZInput_TryGetButtonState_PreventSimilarHotkeys
+    {
+        private static bool Prefix(string name) => !(similarHotkey.TryGetValue(name, out Slot slot) && slot.IsShortcutDown() && slot.IsActive && !slot.IsFree);
+    }
 
-                similarHotkey[button.Key] = slot;
-            }
+    [HarmonyPatch]
+    public static class ZInput_SimilarHotkeyOnBind
+    {
+        private static IEnumerable<MethodBase> TargetMethods()
+        {
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetKBMButtons));
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadButtonsGeneric));
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadToClassic));
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadToAlt1));
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadToAlt2));
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.OnRebindComplete));
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetToDefault));
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.Load));
         }
 
-        [HarmonyPatch(typeof(ZInput), nameof(ZInput.TryGetButtonState))]
-        private static class ZInput_TryGetButtonState_PreventSimilarHotkeys
-        {
-            private static bool Prefix(string name) => !(similarHotkey.TryGetValue(name, out Slot slot) && slot.IsShortcutDown() && slot.IsActive && !slot.IsFree);
-        }
-
-        [HarmonyPatch]
-        public static class ZInput_SimilarHotkeyOnBind
-        {
-            private static IEnumerable<MethodBase> TargetMethods()
-            {
-                yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetKBMButtons));
-                yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadButtonsGeneric));
-                yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadToClassic));
-                yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadToAlt1));
-                yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadToAlt2));
-                yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.OnRebindComplete));
-                yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetToDefault));
-                yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.Load));
-            }
-
-            private static void Postfix(ZInput __instance) => FillSimilarHotkey(__instance);
-        }
+        private static void Postfix(ZInput __instance) => FillSimilarHotkey(__instance);
     }
 }

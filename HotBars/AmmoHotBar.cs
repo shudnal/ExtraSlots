@@ -6,97 +6,96 @@ using UnityEngine;
 using static ExtraSlots.ExtraSlots;
 using static ExtraSlots.Slots;
 
-namespace ExtraSlots
+namespace ExtraSlots.HotBars;
+
+public static class AmmoSlotsHotBar
 {
-    public static class AmmoSlotsHotBar
+    public const string barName = "ExtraSlotsAmmoHotBar";
+    public static bool isDirty = true;
+    private static HotkeyBar hotBar = null;
+    private static RectTransform hotBarRect = null;
+    private static Slot[] hotBarSlots = Array.Empty<Slot>();
+
+    internal static void UpdateSlots() => hotBarSlots = GetAmmoSlots();
+
+    public static void GetItems(List<ItemDrop.ItemData> bound)
     {
-        public const string barName = "ExtraSlotsAmmoHotBar";
-        public static bool isDirty = true;
-        private static HotkeyBar hotBar = null;
-        private static RectTransform hotBarRect = null;
-        private static Slot[] hotBarSlots = Array.Empty<Slot>();
+        if (PlayerInventory == null)
+            return;
 
-        internal static void UpdateSlots() => hotBarSlots = GetAmmoSlots();
+        bound.AddRange(GetItems());
+    }
 
-        public static void GetItems(List<ItemDrop.ItemData> bound)
+    public static List<ItemDrop.ItemData> GetItems()
+    {
+        return hotBarSlots.Where(slot => slot.IsActive).Select(slot => slot.Item).Where(item => item != null).ToList();
+    }
+
+    public static ItemDrop.ItemData GetItemInSlot(int slotIndex) => slots[slotIndex + 8].Item;
+
+    internal static void MarkDirty() => isDirty = true;
+
+    internal static void CreateBar()
+    {
+        hotBarRect = UnityEngine.Object.Instantiate(Hud.instance.m_rootObject.transform.Find("HotKeyBar"), Hud.instance.m_rootObject.transform, true).GetComponent<RectTransform>();
+        hotBarRect.name = barName;
+        hotBarRect.localPosition = Vector3.zero;
+
+        if (hotBar = hotBarRect.GetComponent<HotkeyBar>())
         {
-            if (PlayerInventory == null)
-                return;
+            hotBar.m_selected = -1;
 
-            bound.AddRange(GetItems());
+            foreach (HotkeyBar.ElementData element in hotBar.m_elements)
+                UnityEngine.Object.Destroy(element.m_go);
+
+            for (int i = hotBarRect.childCount - 1; i >= 0; i--)
+                UnityEngine.Object.Destroy(hotBarRect.GetChild(i).gameObject);
+
+            hotBar.m_elements.Clear();
+            hotBar.m_items.Clear();
         }
+    }
 
-        public static List<ItemDrop.ItemData> GetItems()
-        {
-            return hotBarSlots.Where(slot => slot.IsActive).Select(slot => slot.Item).Where(item => item != null).ToList();
-        }
+    internal static bool Refresh()
+    {
+        if (!isDirty)
+            return false;
 
-        public static ItemDrop.ItemData GetItemInSlot(int slotIndex) => slots[slotIndex + 8].Item;
+        if (ammoSlotsHotBarEnabled.Value && hotBarRect == null)
+            CreateBar();
+        else if (!ammoSlotsHotBarEnabled.Value && hotBarRect != null)
+            ClearBar();
 
-        internal static void MarkDirty() => isDirty = true;
+        isDirty = false;
 
-        internal static void CreateBar()
-        {
-            hotBarRect = UnityEngine.Object.Instantiate(Hud.instance.m_rootObject.transform.Find("HotKeyBar"), Hud.instance.m_rootObject.transform, true).GetComponent<RectTransform>();
-            hotBarRect.name = barName;
-            hotBarRect.localPosition = Vector3.zero;
+        return true;
+    }
 
-            if (hotBar = hotBarRect.GetComponent<HotkeyBar>())
-            {
-                hotBar.m_selected = -1;
+    internal static void ClearBar()
+    {
+        if (hotBarRect != null)
+            UnityEngine.Object.DestroyImmediate(hotBarRect.gameObject);
 
-                foreach (HotkeyBar.ElementData element in hotBar.m_elements)
-                    UnityEngine.Object.Destroy(element.m_go);
+        hotBar = null;
+        hotBarRect = null;
+    }
 
-                for (int i = hotBarRect.childCount - 1; i >= 0; i--)
-                    UnityEngine.Object.Destroy(hotBarRect.GetChild(i).gameObject);
+    internal static Slot GetSlotWithShortcutDown() => hotBarSlots.FirstOrDefault(slot => slot.IsShortcutDown());
 
-                hotBar.m_elements.Clear();
-                hotBar.m_items.Clear();
-            }
-        }
+    // Runs every frame Hud.Update
+    internal static void UpdatePosition()
+    {
+        if (!hotBar)
+            return;
 
-        internal static bool Refresh()
-        {
-            if (!isDirty)
-                return false;
+        hotBarRect.anchoredPosition = new Vector2(ammoSlotsHotBarOffset.Value.x, -ammoSlotsHotBarOffset.Value.y);
+        hotBarRect.localScale = Vector3.one * ammoSlotsHotBarScale.Value;
+    }
 
-            if (ammoSlotsHotBarEnabled.Value && hotBarRect == null)
-                CreateBar();
-            else if (!ammoSlotsHotBarEnabled.Value && hotBarRect != null)
-                ClearBar();
-
-            isDirty = false;
-
-            return true;
-        }
-
-        internal static void ClearBar()
-        {
-            if (hotBarRect != null)
-                UnityEngine.Object.DestroyImmediate(hotBarRect.gameObject);
-
-            hotBar = null;
-            hotBarRect = null;
-        }
-
-        internal static Slot GetSlotWithShortcutDown() => hotBarSlots.FirstOrDefault(slot => slot.IsShortcutDown());
-
-        // Runs every frame Hud.Update
-        internal static void UpdatePosition()
-        {
-            if (!hotBar)
-                return;
-
-            hotBarRect.anchoredPosition = new Vector2(ammoSlotsHotBarOffset.Value.x, -ammoSlotsHotBarOffset.Value.y);
-            hotBarRect.localScale = Vector3.one * ammoSlotsHotBarScale.Value;
-        }
-
-        [HarmonyPatch(typeof(Hud), nameof(Hud.Update))]
-        private static class Hud_Update_SlotsPosition
-        {
-            [HarmonyPriority(Priority.Low)]
-            private static void Postfix() => UpdatePosition();
-        }
+    [HarmonyPatch(typeof(Hud), nameof(Hud.Update))]
+    private static class Hud_Update_SlotsPosition
+    {
+        [HarmonyPriority(Priority.Low)]
+        private static void Postfix() => UpdatePosition();
     }
 }

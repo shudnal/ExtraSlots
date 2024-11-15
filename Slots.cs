@@ -296,7 +296,7 @@ namespace ExtraSlots
         public const int vanillaInventoryHeight = 4;
 
         public static PlayerProfile PlayerProfile => Game.instance?.GetPlayerProfile() ?? FejdStartup.instance?.m_profiles[FejdStartup.instance.m_profileIndex];
-        public static Player CurrentPlayer => Player.m_localPlayer ?? EquipmentAndQuickSlotsCompat.playerToLoad;
+        public static Player CurrentPlayer => Player.m_localPlayer ?? Compatibility.EquipmentAndQuickSlotsCompat.playerToLoad;
         public static Inventory PlayerInventory => CurrentPlayer?.GetInventory();
         public static int ExtraRowsPlayer => extraRows.Value;
         public static int InventoryWidth => PlayerInventory != null ? PlayerInventory.GetWidth() : 8;
@@ -535,8 +535,8 @@ namespace ExtraSlots
 
             UpdateSlotsGridPosition();
 
-            QuickSlotsHotBar.UpdateSlots();
-            AmmoSlotsHotBar.UpdateSlots();
+            HotBars.QuickSlotsHotBar.UpdateSlots();
+            HotBars.AmmoSlotsHotBar.UpdateSlots();
             EquipmentPanel.UpdateSlotsCount();
 
             void AddSlot(string id, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive)

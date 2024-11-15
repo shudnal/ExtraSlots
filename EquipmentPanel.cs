@@ -224,7 +224,7 @@ namespace ExtraSlots
                 element.m_tooltip.Set(item.m_shared.m_name, item.GetTooltip(), InventoryGui.instance.m_playerGrid.m_tooltipAnchor); // Fix possible tooltip lose
                 element.m_icon.transform.localScale = originalScale == Vector3.zero ? Vector3.one: originalScale;
 
-                if (isEpicLootEnabled && epicLootMagicItemUnequippedAlpha.Value != 1f && !item.m_equipped && element.m_go.transform.Find("magicItem") is Transform magicItem && magicItem.GetComponent<Image>() is Image magicItemImage)
+                if (Compatibility.EpicLootCompat.isEnabled && epicLootMagicItemUnequippedAlpha.Value != 1f && !item.m_equipped && element.m_go.transform.Find("magicItem") is Transform magicItem && magicItem.GetComponent<Image>() is Image magicItemImage)
                     magicItemImage.color = new Color(magicItemImage.color.r, magicItemImage.color.g, magicItemImage.color.b, epicLootMagicItemUnequippedAlpha.Value);
                 return;
             }

@@ -19,15 +19,16 @@ namespace ExtraSlots
     [BepInIncompatibility("randyknapp.mods.auga")]
     [BepInIncompatibility("toombe.EquipMultipleUtilityItemsUpdate")] // https://thunderstore.io/c/valheim/p/JackFrostCC/ToombeEquipMultipleUtilityItemsUnofficialUpdate/
     [BepInIncompatibility("aedenthorn.EquipMultipleUtilityItems")] // https://www.nexusmods.com/valheim/mods/1348
-    [BepInDependency("randyknapp.mods.epicloot", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency("ishid4.mods.betterarchery", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency(ValheimPlusCompat.valheimPlusGuid, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.EpicLootCompat.epicLootGUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.BetterArcheryCompat.betterArcheryGUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.ValheimPlusCompat.valheimPlusGuid, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.PlantEasilyCompat.plantEasilyGUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     public class ExtraSlots : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.3";
+        public const string pluginVersion = "1.0.4";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -159,8 +160,6 @@ namespace ExtraSlots
 
         public static string configDirectory;
 
-        public static bool isEpicLootEnabled;
-
         public enum SlotsAlignment
         {
             VerticalTopHorizontalLeft,
@@ -190,9 +189,11 @@ namespace ExtraSlots
             if (loggingDebugEnabled.Value || loggingEnabled.Value)
                 LogCurrentLogLevel();
 
-            isEpicLootEnabled = Chainloader.PluginInfos.ContainsKey("randyknapp.mods.epicloot");
+            Compatibility.EpicLootCompat.CheckForCompatibility();
 
-            BetterArcheryCompat.CheckForCompatibility();
+            Compatibility.BetterArcheryCompat.CheckForCompatibility();
+
+            Compatibility.PlantEasilyCompat.CheckForCompatibility();
 
             harmony.PatchAll();
         }
@@ -278,7 +279,7 @@ namespace ExtraSlots
             ammoSlotsShowHintImage = config("Panels - Ammo slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             ammoSlotsShowTooltip = config("Panels - Ammo slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
 
-            ammoSlotsHotBarEnabled.SettingChanged += (s, e) => AmmoSlotsHotBar.MarkDirty();
+            ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
 
             ammoSlotHotKey1 = config("Hotkeys", "Ammo 1", new KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
             ammoSlotHotKey2 = config("Hotkeys", "Ammo 2", new KeyboardShortcut(KeyCode.Alpha2, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
@@ -288,9 +289,9 @@ namespace ExtraSlots
             ammoSlotHotKey2Text = config("Hotkeys", "Ammo 2 Text", "Alt + 2", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
             ammoSlotHotKey3Text = config("Hotkeys", "Ammo 3 Text", "Alt + 3", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
 
-            ammoSlotHotKey1.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
-            ammoSlotHotKey2.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
-            ammoSlotHotKey3.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
+            ammoSlotHotKey1.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+            ammoSlotHotKey2.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+            ammoSlotHotKey3.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
 
             quickSlotsHotBarEnabled = config("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots");
             quickSlotsHotBarOffset = config("Panels - Quick slots", "Offset", defaultValue: new Vector2(230f, 923f), "On screen position of quick slots hotbar panel");
@@ -299,7 +300,7 @@ namespace ExtraSlots
             quickSlotsShowHintImage = config("Panels - Quick slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             quickSlotsShowTooltip = config("Panels - Quick slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
 
-            quickSlotsHotBarEnabled.SettingChanged += (s, e) => QuickSlotsHotBar.MarkDirty();
+            quickSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
 
             quickSlotHotKey1 = config("Hotkeys", "Quickslot 1", new KeyboardShortcut(KeyCode.Z, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
             quickSlotHotKey2 = config("Hotkeys", "Quickslot 2", new KeyboardShortcut(KeyCode.X, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
@@ -308,12 +309,12 @@ namespace ExtraSlots
             quickSlotHotKey5 = config("Hotkeys", "Quickslot 5", new KeyboardShortcut(KeyCode.B), "Use configuration manager to set shortcuts.");
             quickSlotHotKey6 = config("Hotkeys", "Quickslot 6", new KeyboardShortcut(KeyCode.N), "Use configuration manager to set shortcuts.");
 
-            quickSlotHotKey1.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
-            quickSlotHotKey2.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
-            quickSlotHotKey3.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
-            quickSlotHotKey4.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
-            quickSlotHotKey5.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
-            quickSlotHotKey6.SettingChanged += (s, e) => PreventSimilarHotkeys.FillSimilarHotkey();
+            quickSlotHotKey1.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+            quickSlotHotKey2.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+            quickSlotHotKey3.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+            quickSlotHotKey4.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+            quickSlotHotKey5.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+            quickSlotHotKey6.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
 
             quickSlotHotKey1Text = config("Hotkeys", "Quickslot 1 Text", "Alt + Z", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
             quickSlotHotKey2Text = config("Hotkeys", "Quickslot 2 Text", "Alt + X", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");

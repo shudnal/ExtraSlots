@@ -10,4 +10,4 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "<Pending>", Scope = "member", Target = "~M:ExtraSlots.ExtraSlots.OnDestroy")]
 [assembly: SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>", Scope = "member", Target = "~M:ExtraSlots.ExtraSlots.config``1(System.String,System.String,``0,BepInEx.Configuration.ConfigDescription,System.Boolean)~BepInEx.Configuration.ConfigEntry{``0}")]
 [assembly: SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>", Scope = "member", Target = "~M:ExtraSlots.ExtraSlots.config``1(System.String,System.String,``0,System.String,System.Boolean)~BepInEx.Configuration.ConfigEntry{``0}")]
-[assembly: SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "<Pending>", Scope = "member", Target = "~M:ExtraSlots.QuickBars.UseCustomBarItem(HotkeyBar)")]
+[assembly: SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "<Pending>", Scope = "member", Target = "~M:ExtraSlots.HotBars.QuickBars.UseCustomBarItem(HotkeyBar)")]
