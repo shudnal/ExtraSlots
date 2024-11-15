@@ -168,61 +168,73 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnSelectedItem))]
-        public static class InventoryGui_OnSelectedItem_GetEquippedDragItem
+        private static bool PassDropItem(string source, InventoryGrid grid, Inventory fromInventory, ItemDrop.ItemData item, Vector2i pos)
         {
-            public static void Prefix(InventoryGui __instance)
-            {
-                Player localPlayer = Player.m_localPlayer;
-                if (localPlayer.IsTeleporting())
-                    return;
+            if (item.m_gridPos == pos)
+                return true;
 
-                if ((bool)__instance.m_dragGo && localPlayer.IsItemEquiped(__instance.m_dragItem))
+            // If the equipped item from slot is dropped at player inventory
+            if (grid.m_inventory == PlayerInventory && GetItemSlot(item) is Slot itemSlot && itemSlot.IsEquipmentSlot && Player.m_localPlayer.IsItemEquiped(item))
+            {
+                if (GetSlotInGrid(pos) is not Slot posSlot)
                 {
-                    InventoryGrid_DropItem_DropPrevention.equippedDragItem = __instance.m_dragItem;
+                    LogDebug($"{source} Prevented dropping equipped item {item.m_shared.m_name} {item.m_gridPos} into regular inventory {pos}");
+                    return false;
+                };
+
+                if (!IsSameSlotType(itemSlot, posSlot))
+                {
+                    LogDebug($"{source} Prevented dropping equipped item {item.m_shared.m_name} {item.m_gridPos} into slot with other type {posSlot}");
+                    return false;
                 }
             }
 
-            public static void Postfix() => InventoryGrid_DropItem_DropPrevention.equippedDragItem = null;
+            // If target slot is in player inventory and is extra slot
+            if (grid.m_inventory == PlayerInventory && GetSlotInGrid(pos) is Slot targetSlot)
+            {
+                // If the dropped item is unfit for target slot
+                if (!targetSlot.ItemFits(item))
+                {
+                    LogDebug($"{source} Prevented dropping {item.m_shared.m_name} {item.m_gridPos} into unfit slot {targetSlot}");
+                    return false;
+                }
+
+                // If the dropped item is not from equipment slot and target item is equipped item at equipment slot
+                if (targetSlot.IsEquipmentSlot && Player.m_localPlayer.IsItemEquiped(targetSlot.Item) && (GetItemSlot(item) is not Slot fromSlot || !fromSlot.IsEquipmentSlot))
+                {
+                    LogDebug($"{source} Prevented dropping {item.m_shared.m_name} {item.m_gridPos} into occupied equipment slot {targetSlot}");
+                    return false;
+                }
+            }
+
+            ItemDrop.ItemData itemAt = grid.m_inventory.GetItemAt(pos.x, pos.y);
+
+            // If dropped item is in slot and interchanged item is unfit for dragged item slot
+            if (itemAt != null && fromInventory == PlayerInventory && GetSlotInGrid(item.m_gridPos) is Slot slot1 && !slot1.ItemFits(itemAt))
+            {
+                LogDebug($"{source} Prevented swapping {item.m_shared.m_name} {slot1} with unfit item {itemAt.m_shared.m_name} {pos}");
+                return false;
+            }
+
+            return true;
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnSelectedItem))]
+        public static class InventoryGui_OnSelectedItem_GetEquippedDragItem
+        {
+            public static bool Prefix(InventoryGui __instance, InventoryGrid grid, Vector2i pos)
+            {
+                if (Player.m_localPlayer && !Player.m_localPlayer.IsTeleporting() && __instance.m_dragGo && __instance.m_dragItem != null && __instance.m_dragInventory != null)
+                    return PassDropItem("InventoryGui.OnSelectedItem", grid, __instance.m_dragInventory, __instance.m_dragItem, pos);
+
+                return true;
+            }
         }
 
         [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.DropItem))]
         public static class InventoryGrid_DropItem_DropPrevention
         {
-            public static ItemDrop.ItemData equippedDragItem;
-
-            public static bool Prefix(InventoryGrid __instance, Inventory fromInventory, ItemDrop.ItemData item, Vector2i pos)
-            {
-                if (item == null)
-                    return true;
-
-                ItemDrop.ItemData itemAt = __instance.m_inventory.GetItemAt(pos.x, pos.y);
-                if (itemAt == item)
-                    return true;
-
-                // If the equipped item from slot is dropped at player inventory into other slot type
-                if (__instance.m_inventory == PlayerInventory && item == equippedDragItem && GetItemSlot(item) is Slot itemSlot && (GetSlotInGrid(pos) is not Slot posSlot || !IsSameSlotType(itemSlot, posSlot)))
-                {
-                    LogDebug($"InventoryGrid.DropItem Prevented dropping equipped item {item.m_shared.m_name} {item.m_gridPos} into slot with other type");
-                    return false;
-                }
-
-                // If the dropped item is unfit for target slot
-                if (__instance.m_inventory == PlayerInventory && GetSlotInGrid(pos) is Slot slot && !slot.ItemFits(item))
-                {
-                    LogDebug($"InventoryGrid.DropItem Prevented dropping {item.m_shared.m_name} {item.m_gridPos} into unfit slot {slot}");
-                    return false;
-                }
-
-                // If dropped item is in slot and interchanged item is unfit for dragged item slot
-                if (itemAt != null && fromInventory == PlayerInventory && GetSlotInGrid(item.m_gridPos) is Slot slot1 && !slot1.ItemFits(itemAt))
-                {
-                    LogDebug($"InventoryGrid.DropItem Prevented swapping {item.m_shared.m_name} {slot1} with unfit item {itemAt.m_shared.m_name} {pos}");
-                    return false;
-                }
-
-                return true;
-            }
+            public static bool Prefix(InventoryGrid __instance, Inventory fromInventory, ItemDrop.ItemData item, Vector2i pos) => PassDropItem("InventoryGrid.DropItem", __instance, fromInventory, item, pos);
         }
 
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(ItemDrop.ItemData), typeof(int), typeof(int), typeof(int))]

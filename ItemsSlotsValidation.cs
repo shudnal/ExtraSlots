@@ -89,10 +89,11 @@ namespace ExtraSlots
                             else
                             {
                                 ItemDrop.ItemData itemToSwap = slotToSwap.Item;
+                                
                                 LogDebug($"SlotValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was swapped with unequipped {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos} into slot {slotToSwap} {slotToSwap.GridPosition}");
+                                
                                 itemToSwap.m_gridPos = item.m_gridPos;
                                 item.m_gridPos = slotToSwap.GridPosition;
-                                LogDebug($"SlotValidation: swap result {item.m_shared.m_name} {item.m_gridPos} {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos}");
 
                                 slotToSwap.ClearItemCache();
                                 if (slot.ItemFits(item = slot.Item))

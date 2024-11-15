@@ -111,15 +111,15 @@ namespace ExtraSlots
             if (!InventoryGui.instance.m_playerGrid)
                 return;
 
+            bool regularInventoryUnfitsForDragItem = InventoryGui.instance.m_dragItem != null && CurrentPlayer.IsItemEquiped(InventoryGui.instance.m_dragItem) && IsItemInEquipmentSlot(InventoryGui.instance.m_dragItem);
+            for (int i = 0; i < Math.Min(InventoryGui.instance.m_playerGrid.m_elements.Count, startIndex); i++)
+                SetSlotColor(InventoryGui.instance.m_playerGrid.m_elements[i]?.m_go?.GetComponent<Button>(), regularInventoryUnfitsForDragItem);
+
             for (int i = 0; i < Math.Min(slots.Length, InventoryGui.instance.m_playerGrid.m_elements.Count - startIndex); ++i)
-                SetSlotElement(InventoryGui.instance.m_playerGrid.m_elements[startIndex + i], slots[i]);
+                SetSlotElement(InventoryGui.instance.m_playerGrid.m_elements[startIndex + i], slots[i], regularInventoryUnfitsForDragItem);
 
             for (int i = startIndex + slots.Length; i < InventoryGui.instance.m_playerGrid.m_elements.Count; i++)
                 InventoryGui.instance.m_playerGrid.m_elements[i]?.m_go?.SetActive(false);
-
-            bool regularInventoryUnfitsForDragItem = InventoryGui.instance.m_dragItem != null && CurrentPlayer.IsItemEquiped(InventoryGui.instance.m_dragItem);
-            for (int i = 0; i < Math.Min(InventoryGui.instance.m_playerGrid.m_elements.Count, startIndex); i++)
-                SetSlotColor(InventoryGui.instance.m_playerGrid.m_elements[i]?.m_go?.GetComponent<Button>(), regularInventoryUnfitsForDragItem);
 
             if (originalTooltipPosition == Vector2.zero)
                 originalTooltipPosition = InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition;
@@ -144,7 +144,7 @@ namespace ExtraSlots
             selectedFrame.anchoredPosition = equipmentBackground.anchoredPosition;
         }
 
-        internal static void SetSlotElement(InventoryGrid.Element element, Slot slot)
+        internal static void SetSlotElement(InventoryGrid.Element element, Slot slot, bool regularInventoryUnfitsForDragItem)
         {
             GameObject currentChild = element?.m_go;
             if (!currentChild)
@@ -155,7 +155,7 @@ namespace ExtraSlots
             SetSlotLabel(currentChild.transform.Find("binding"), slot);
             SetSlotColor(currentChild.GetComponent<Button>(), InventoryGui.instance.m_dragItem != null && 
                                                               slot.IsActive && 
-                                                              (!slot.ItemFits(InventoryGui.instance.m_dragItem) || !slot.IsEquipmentSlot && CurrentPlayer.IsItemEquiped(InventoryGui.instance.m_dragItem)));
+                                                              (!slot.ItemFits(InventoryGui.instance.m_dragItem) || !slot.IsEquipmentSlot && regularInventoryUnfitsForDragItem));
         }
 
         internal static void SetSlotLabel(Transform binding, Slot slot, bool hotbarElement = false)
