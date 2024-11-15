@@ -1,3 +1,11 @@
+# 1.0.4
+* more built-in translations
+* hotbars refinements
+* prevent simultaneous hotbar item use with similar hotkeys
+* quick and extra utility slots progression requires previous slots to be obtained
+* PlantEasily gamepad compatibility
+* dragging item visuals and logic refinements
+
 # 1.0.3
 * configurable autoequip on tombstone interaction
 * fixed major issue with BetterArchery compatibility on tombstone interaction
