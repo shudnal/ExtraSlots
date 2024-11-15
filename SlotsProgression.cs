@@ -11,13 +11,22 @@ namespace ExtraSlots
     internal static class SlotsProgression
     {
         private static readonly HashSet<ItemDrop.ItemData.ItemType> itemTypes = new HashSet<ItemDrop.ItemData.ItemType>();
+        private static readonly Dictionary<string, IEnumerable<string>> requiredKeysCache = new Dictionary<string, IEnumerable<string>>();
+
+        private static IEnumerable<string> GetRequiredKeys(string configValue)
+        {
+            if (requiredKeysCache.TryGetValue(configValue, out IEnumerable<string> keys))
+                return keys;
+
+            return requiredKeysCache[configValue] = configValue.Split(',').Select(s => s.Trim()).Where(s => !s.IsNullOrWhiteSpace());
+        }
 
         public static bool IsAnyGlobalKeyActive(string requiredKeys)
         {
             if (!slotsProgressionEnabled.Value || string.IsNullOrEmpty(requiredKeys) || !ZoneSystem.instance || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
                 return true;
 
-            IEnumerable<string> keys = requiredKeys.Split(',').Select(s => s.Trim()).Where(s => !s.IsNullOrWhiteSpace());
+            IEnumerable<string> keys = GetRequiredKeys(requiredKeys);
 
             return keys.Count() == 0 || keys.Any(s => ZoneSystem.instance.GetGlobalKey(s)) || keys.Any(s => Player.m_localPlayer.HaveUniqueKey(s));
         }
@@ -63,6 +72,62 @@ namespace ExtraSlots
                 if (Player.m_localPlayer.m_knownMaterial.Contains(itemData.m_shared.m_name))
                     itemTypes.Add(itemData.m_shared.m_itemType);
             }
+        }
+
+        internal static bool IsQuickSlotKnown(int index) => IsAnyGlobalKeyActive(QuickSlotGlobalKey(index)) || IsAnyMaterialDiscovered(QuickSlotItemDiscovered(index));
+
+        private static string QuickSlotGlobalKey(int index)
+        {
+            return index switch
+            {
+                0 => quickSlotGlobalKey1.Value,
+                1 => quickSlotGlobalKey2.Value,
+                2 => quickSlotGlobalKey3.Value,
+                3 => quickSlotGlobalKey4.Value,
+                4 => quickSlotGlobalKey5.Value,
+                5 => quickSlotGlobalKey6.Value,
+                _ => ""
+            };
+        }
+
+        private static string QuickSlotItemDiscovered(int index)
+        {
+            return index switch
+            {
+                0 => quickSlotItemDiscovered1.Value,
+                1 => quickSlotItemDiscovered2.Value,
+                2 => quickSlotItemDiscovered3.Value,
+                3 => quickSlotItemDiscovered4.Value,
+                4 => quickSlotItemDiscovered5.Value,
+                5 => quickSlotItemDiscovered6.Value,
+                _ => ""
+            };
+        }
+
+        internal static bool IsExtraUtilitySlotKnown(int index) => IsAnyGlobalKeyActive(UtilitySlotGlobalKey(index)) || IsAnyMaterialDiscovered(UtilitySlotItemDiscovered(index));
+
+        internal static string UtilitySlotGlobalKey(int index)
+        {
+            return index switch
+            {
+                0 => utilitySlotGlobalKey1.Value,
+                1 => utilitySlotGlobalKey2.Value,
+                2 => utilitySlotGlobalKey3.Value,
+                3 => utilitySlotGlobalKey4.Value,
+                _ => ""
+            };
+        }
+
+        internal static string UtilitySlotItemDiscovered(int index)
+        {
+            return index switch
+            {
+                0 => utilitySlotItemDiscovered1.Value,
+                1 => utilitySlotItemDiscovered2.Value,
+                2 => utilitySlotItemDiscovered3.Value,
+                3 => utilitySlotItemDiscovered4.Value,
+                _ => ""
+            };
         }
 
         [HarmonyPatch(typeof(Player), nameof(Player.AddKnownItem))]

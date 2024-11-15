@@ -89,30 +89,6 @@ namespace ExtraSlots
         
         private static bool IsSlotAvailable(int index) => IsExtraUtilitySlotAvailable(index) && GetItem(index) == null;
 
-        internal static string UtilitySlotGlobalKey(int index)
-        {
-            return index switch
-            {
-                0 => ExtraSlots.utilitySlotGlobalKey1.Value,
-                1 => ExtraSlots.utilitySlotGlobalKey2.Value,
-                2 => ExtraSlots.utilitySlotGlobalKey3.Value,
-                3 => ExtraSlots.utilitySlotGlobalKey4.Value,
-                _ => ""
-            };
-        }
-
-        internal static string UtilitySlotItemDiscovered(int index)
-        {
-            return index switch
-            {
-                0 => ExtraSlots.utilitySlotItemDiscovered1.Value,
-                1 => ExtraSlots.utilitySlotItemDiscovered2.Value,
-                2 => ExtraSlots.utilitySlotItemDiscovered3.Value,
-                3 => ExtraSlots.utilitySlotItemDiscovered4.Value,
-                _ => ""
-            };
-        }
-
         public static IEnumerable<ItemDrop.ItemData> GetEquippedItems()
         {
             tempItems.Clear();

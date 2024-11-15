@@ -496,12 +496,12 @@ namespace ExtraSlots
             int index = 0;
 
             // First row
-            AddHotkeySlot($"{quickSlotID}1", () => quickSlotsShowLabel.Value ? GetQuickSlot1Text() : "", null, () => quickSlotsAmount.Value > 0 && (IsAnyGlobalKeyActive(quickSlotGlobalKey1.Value) || IsAnyMaterialDiscovered(quickSlotItemDiscovered1.Value)), () => quickSlotHotKey1.Value, () => GetQuickSlot1Text());
-            AddHotkeySlot($"{quickSlotID}2", () => quickSlotsShowLabel.Value ? GetQuickSlot2Text() : "", null, () => quickSlotsAmount.Value > 1 && (IsAnyGlobalKeyActive(quickSlotGlobalKey2.Value) || IsAnyMaterialDiscovered(quickSlotItemDiscovered2.Value)), () => quickSlotHotKey2.Value, () => GetQuickSlot2Text());
-            AddHotkeySlot($"{quickSlotID}3", () => quickSlotsShowLabel.Value ? GetQuickSlot3Text() : "", null, () => quickSlotsAmount.Value > 2 && (IsAnyGlobalKeyActive(quickSlotGlobalKey3.Value) || IsAnyMaterialDiscovered(quickSlotItemDiscovered3.Value)), () => quickSlotHotKey3.Value, () => GetQuickSlot3Text());
-            AddHotkeySlot($"{quickSlotID}4", () => quickSlotsShowLabel.Value ? GetQuickSlot4Text() : "", null, () => quickSlotsAmount.Value > 3 && (IsAnyGlobalKeyActive(quickSlotGlobalKey4.Value) || IsAnyMaterialDiscovered(quickSlotItemDiscovered4.Value)), () => quickSlotHotKey4.Value, () => GetQuickSlot4Text());
-            AddHotkeySlot($"{quickSlotID}5", () => quickSlotsShowLabel.Value ? GetQuickSlot5Text() : "", null, () => quickSlotsAmount.Value > 4 && (IsAnyGlobalKeyActive(quickSlotGlobalKey5.Value) || IsAnyMaterialDiscovered(quickSlotItemDiscovered5.Value)), () => quickSlotHotKey5.Value, () => GetQuickSlot5Text());
-            AddHotkeySlot($"{quickSlotID}6", () => quickSlotsShowLabel.Value ? GetQuickSlot6Text() : "", null, () => quickSlotsAmount.Value > 5 && (IsAnyGlobalKeyActive(quickSlotGlobalKey6.Value) || IsAnyMaterialDiscovered(quickSlotItemDiscovered6.Value)), () => quickSlotHotKey6.Value, () => GetQuickSlot6Text());
+            AddHotkeySlot($"{quickSlotID}1", () => quickSlotsShowLabel.Value ? GetQuickSlot1Text() : "", null, () => IsQuickSlotAvailable(0), () => quickSlotHotKey1.Value, () => GetQuickSlot1Text());
+            AddHotkeySlot($"{quickSlotID}2", () => quickSlotsShowLabel.Value ? GetQuickSlot2Text() : "", null, () => IsQuickSlotAvailable(1), () => quickSlotHotKey2.Value, () => GetQuickSlot2Text());
+            AddHotkeySlot($"{quickSlotID}3", () => quickSlotsShowLabel.Value ? GetQuickSlot3Text() : "", null, () => IsQuickSlotAvailable(2), () => quickSlotHotKey3.Value, () => GetQuickSlot3Text());
+            AddHotkeySlot($"{quickSlotID}4", () => quickSlotsShowLabel.Value ? GetQuickSlot4Text() : "", null, () => IsQuickSlotAvailable(3), () => quickSlotHotKey4.Value, () => GetQuickSlot4Text());
+            AddHotkeySlot($"{quickSlotID}5", () => quickSlotsShowLabel.Value ? GetQuickSlot5Text() : "", null, () => IsQuickSlotAvailable(4), () => quickSlotHotKey5.Value, () => GetQuickSlot5Text());
+            AddHotkeySlot($"{quickSlotID}6", () => quickSlotsShowLabel.Value ? GetQuickSlot6Text() : "", null, () => IsQuickSlotAvailable(5), () => quickSlotHotKey6.Value, () => GetQuickSlot6Text());
 
             AddSlot($"{miscSlotID}1", () => miscSlotsShowLabel.Value ? "$exsl_slot_misc_label" : "", IsMiscSlotItem, () => IsFirstMiscSlotAvailable());
             AddSlot($"{miscSlotID}2", () => miscSlotsShowLabel.Value ? "$exsl_slot_misc_label" : "", IsMiscSlotItem, () => IsSecondMiscSlotAvailable());
@@ -552,9 +552,9 @@ namespace ExtraSlots
             }
         }
 
-        internal static bool IsExtraUtilitySlotAvailable(int index) => extraUtilitySlotsAmount.Value > index && 
-                                                                       IsUtilitySlotKnown() && 
-                                                                       (IsAnyGlobalKeyActive(ExtraUtilitySlots.UtilitySlotGlobalKey(index)) || IsAnyMaterialDiscovered(ExtraUtilitySlots.UtilitySlotItemDiscovered(index)));
+        internal static bool IsQuickSlotAvailable(int index) => quickSlotsAmount.Value > index && IsQuickSlotKnown(index) && (index == 0 || IsQuickSlotAvailable(index - 1));
+
+        internal static bool IsExtraUtilitySlotAvailable(int index) => extraUtilitySlotsAmount.Value > index && IsUtilitySlotKnown() && IsExtraUtilitySlotKnown(index) && (index == 0 || IsExtraUtilitySlotAvailable(index - 1));
 
         internal static bool IsFirstMiscSlotAvailable() => EquipmentPanel.quickSlotsCount > 0 && miscSlotsEnabled.Value && (IsFoodSlotAvailable() || IsAmmoSlotAvailable()) && IsAnyGlobalKeyActive(miscSlotsGlobalKey.Value);
 
