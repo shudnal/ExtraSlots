@@ -134,4 +134,4 @@ internal static bool IsCircletKnown()
 
 This is the basic example. Real logic for CircletExtended is [there](https://github.com/shudnal/CircletExtended/blob/b5c8af365631191ddb9543b2641870ef28c9950a/CircletExtended.cs#L148).
 
-If you have questions feel free to reach me at [discord](https://discord.com/users/shudnal), Nexus or just open github issue.
+If you have questions feel free to reach me at [discord](https://discord.com/users/shudnal), Nexus or just open github issue. 
