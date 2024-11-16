@@ -1,3 +1,7 @@
+# 1.0.5
+* even better ValheimPlus compat
+* fix for tombstone extra utility items preventing tombstone spawn
+
 # 1.0.4
 * more built-in translations
 * hotbars refinements

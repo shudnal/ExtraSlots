@@ -1,5 +1,4 @@
 ﻿using BepInEx;
-using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
 using LocalizationManager;
@@ -28,7 +27,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.4";
+        public const string pluginVersion = "1.0.5";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -194,6 +193,8 @@ namespace ExtraSlots
             Compatibility.BetterArcheryCompat.CheckForCompatibility();
 
             Compatibility.PlantEasilyCompat.CheckForCompatibility();
+
+            Compatibility.ValheimPlusCompat.CheckForCompatibility();
 
             harmony.PatchAll();
         }

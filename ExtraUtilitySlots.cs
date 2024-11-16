@@ -256,7 +256,7 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    GetEquippedItems().Do(item => __instance.UnequipItem(item, triggerEquipEffects: false));
+                    GetEquippedItems().ToArray().Do(item => __instance.UnequipItem(item, triggerEquipEffects: false));
                 }
             }
 

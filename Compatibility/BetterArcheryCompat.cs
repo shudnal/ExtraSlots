@@ -27,7 +27,7 @@ public static class BetterArcheryCompat
             if (method != null && patch != null)
             {
                 ExtraSlots.instance.harmony.Unpatch(method, patch);
-                ExtraSlots.LogInfo("BetterArchery's BetterArchery.Tombstone+TombStone_OnTakeAllSuccess_Patch:Postfix was unpatched.");
+                ExtraSlots.LogInfo("BetterArchery.Tombstone+TombStone_OnTakeAllSuccess_Patch:Postfix was unpatched.");
             }
         }
     }
