@@ -16,12 +16,20 @@ namespace ExtraSlots
 
         private static bool IsItemToEquip(ItemDrop.ItemData item) => slotsTombstoneAutoEquipEnabled.Value ||
                    slotsTombstoneAutoEquipCarryWeightItemsEnabled.Value && item != null && item.m_shared.m_equipStatusEffect is SE_Stats se && se.m_addMaxCarryWeight > 0;
+        
+        private static bool IsWeaponShieldToEquip(ItemDrop.ItemData item) => slotsTombstoneAutoEquipWeaponShield.Value && 
+                item.m_customData.TryGetValue(customKeyWeaponShield, out string value) && value == Game.instance.GetPlayerProfile().GetPlayerID().ToString();
 
         private static void TryEquipItem(ItemDrop.ItemData item)
         {
             if (item != null && !CurrentPlayer.IsItemEquiped(item))
                 if (CurrentPlayer.EquipItem(item))
                     LogDebug($"Item {item.m_shared.m_name} was equipped on tombstone interaction");
+        }
+
+        public static void EquipWeaponShield()
+        {
+            PlayerInventory.GetAllItems().Where(IsWeaponShieldToEquip).Do(TryEquipItem);
         }
 
         [HarmonyPatch(typeof(TombStone), nameof(TombStone.OnTakeAllSuccess))]
@@ -43,6 +51,8 @@ namespace ExtraSlots
                     return;
 
                 EquipItemsInSlots();
+
+                EquipWeaponShield();
             }
         }
 
@@ -97,6 +107,14 @@ namespace ExtraSlots
                     return;
 
                 __state = (__instance.m_lootStatusEffect as SE_Stats)?.m_addMaxCarryWeight ?? 0f;
+
+                if (slotsTombstoneAutoEquipCarryWeightItemsEnabled.Value || slotsTombstoneAutoEquipEnabled.Value)
+                {
+                    __state += __instance.m_container.GetInventory().GetAllItems()
+                        .Where(item => item != null && item.m_shared.m_equipStatusEffect is SE_Stats se && se.m_addMaxCarryWeight > 0 && GetSlotInGrid(item.m_gridPos) is Slot slot && slot.IsEquipmentSlot)
+                        .Sum(item => (item.m_shared.m_equipStatusEffect as SE_Stats).m_addMaxCarryWeight);
+                };
+
                 Player.m_localPlayer.m_maxCarryWeight += __state;
             }
 
@@ -166,6 +184,8 @@ namespace ExtraSlots
                     return;
 
                 SaveLastEquippedSlotsToItems();
+
+                SaveLastEquippedWeaponShieldToItems(__instance);
             }
         }
     }

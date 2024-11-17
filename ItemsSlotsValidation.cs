@@ -198,6 +198,8 @@ namespace ExtraSlots
 
                     PruneLastEquippedSlotFromItem(item);
 
+                    PruneLastEquippeWeaponShieldFromItem(item);
+
                     occupiedPositions.Add(item.m_gridPos);
                 }
 

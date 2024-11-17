@@ -31,6 +31,7 @@ namespace ExtraSlots
 
         private const string customKeyPlayerID = "ExtraSlotsEquippedBy";
         private const string customKeySlotID = "ExtraSlotsEquippedSlot";
+        internal const string customKeyWeaponShield = "ExtraSlotsEquippedWeaponShield";
 
         public class Slot
         {
@@ -466,7 +467,21 @@ namespace ExtraSlots
             }
 
             if (savedItems > 0)
-                LogInfo($"Last equpped slot was saved for {savedItems} items at extra slots. Player ID: {playerID}");
+                LogDebug($"Last equpped slot was saved for {savedItems} items at extra slots. Player ID: {playerID}");
+        }
+
+        internal static void SaveLastEquippedWeaponShieldToItems(Player player)
+        {
+            long playerID = Game.instance.GetPlayerProfile().GetPlayerID();
+            
+            if (player.LeftItem != null)
+                player.LeftItem.m_customData[customKeyWeaponShield] = playerID.ToString();
+
+            if (player.RightItem != null)
+                player.RightItem.m_customData[customKeyWeaponShield] = playerID.ToString();
+
+            if (player.LeftItem != null || player.RightItem != null)
+                LogDebug($"Last equpped weapon/shield was saved to {(player.LeftItem != null ? player.LeftItem.m_shared.m_name + " ": "")}{(player.RightItem != null ? player.RightItem.m_shared.m_name : "")}. Player ID: {playerID}");
         }
 
         internal static void PruneLastEquippedSlotFromItem(ItemDrop.ItemData item)
@@ -478,6 +493,12 @@ namespace ExtraSlots
             item.m_customData.Remove(customKeySlotID);
 
             LogDebug($"{item.m_shared.m_name} {item.m_gridPos} pruned last equipped");
+        }
+
+        internal static void PruneLastEquippeWeaponShieldFromItem(ItemDrop.ItemData item)
+        {
+            if (item != null && item.m_customData.Remove(customKeyWeaponShield))
+                LogDebug($"{item.m_shared.m_name} {item.m_gridPos} pruned last equipped weapon/shield");
         }
 
         public static string GetQuickSlot1Text() => quickSlotHotKey1Text.Value == "" ? quickSlotHotKey1.Value.ToString() : quickSlotHotKey1Text.Value;

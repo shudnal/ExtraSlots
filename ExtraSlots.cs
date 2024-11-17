@@ -18,6 +18,7 @@ namespace ExtraSlots
     [BepInIncompatibility("randyknapp.mods.auga")]
     [BepInIncompatibility("toombe.EquipMultipleUtilityItemsUpdate")] // https://thunderstore.io/c/valheim/p/JackFrostCC/ToombeEquipMultipleUtilityItemsUnofficialUpdate/
     [BepInIncompatibility("aedenthorn.EquipMultipleUtilityItems")] // https://www.nexusmods.com/valheim/mods/1348
+    [BepInIncompatibility("neobotics.valheim_mod.requipme")]
     [BepInDependency(Compatibility.EpicLootCompat.epicLootGUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.BetterArcheryCompat.betterArcheryGUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.ValheimPlusCompat.valheimPlusGuid, BepInDependency.DependencyFlags.SoftDependency)]
@@ -27,7 +28,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.5";
+        public const string pluginVersion = "1.0.6";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -47,6 +48,8 @@ namespace ExtraSlots
         public static ConfigEntry<bool> ammoSlotsEnabled;
         public static ConfigEntry<bool> backupEnabled;
         public static ConfigEntry<string> preventUniqueUtilityItemsEquip;
+
+        public static ConfigEntry<bool> slotsTombstoneAutoEquipWeaponShield;
         public static ConfigEntry<bool> slotsTombstoneAutoEquipEnabled;
         public static ConfigEntry<bool> slotsTombstoneAutoEquipCarryWeightItemsEnabled;
 
@@ -243,6 +246,7 @@ namespace ExtraSlots
 
             slotsTombstoneAutoEquipEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip all equipment slots", defaultValue: false, "Auto equip items in equipment slots if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
             slotsTombstoneAutoEquipCarryWeightItemsEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip items increasing carry weight", defaultValue: true, "Auto equip items in equipment slots that increase max carry weight (like Megingjord) if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
+            slotsTombstoneAutoEquipWeaponShield = config("Extra slots - Auto equip on tombstone pickup", "Equip previous weapon and shield", defaultValue: false, "Auto equip weapon and shield that was equipped on death. [Synced with Server]", synchronizedSetting: true);
 
             extraRows.SettingChanged += (s, e) => API.UpdateSlots();
             extraUtilitySlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
