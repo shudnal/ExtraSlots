@@ -201,7 +201,7 @@ Mod is incompatible with other mods altering inventory in similar way or allowin
 * [Extended Player Inventory (aedenthorn)](https://www.nexusmods.com/valheim/mods/1356)
 * [Equip Multiple Utility Items (aedenthorn)](https://www.nexusmods.com/valheim/mods/1348)
 * [EquipMultipleUtilityItems (toombe)](https://thunderstore.io/c/valheim/p/JackFrostCC/ToombeEquipMultipleUtilityItemsUnofficialUpdate/)
-* [RequipMe]https://thunderstore.io/c/valheim/p/Neobotics/RequipMe/
+* [RequipMe](https://thunderstore.io/c/valheim/p/Neobotics/RequipMe/)
 
 ## Localization
 To add your own localization create a file with the name **ExtraSlots.LanguageName.yml** or **ExtraSlots.LanguageName.json** anywhere inside of the Bepinex folder.
