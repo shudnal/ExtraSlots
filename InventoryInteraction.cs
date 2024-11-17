@@ -200,7 +200,7 @@ namespace ExtraSlots
                 }
 
                 // If the dropped item is not from equipment slot and target item is equipped item at equipment slot
-                if (targetSlot.IsEquipmentSlot && Player.m_localPlayer.IsItemEquiped(targetSlot.Item) && (GetItemSlot(item) is not Slot fromSlot || !fromSlot.IsEquipmentSlot))
+                if (targetSlot.IsEquipmentSlot && targetSlot.Item != null && Player.m_localPlayer.IsItemEquiped(targetSlot.Item) && (GetItemSlot(item) is not Slot fromSlot || !fromSlot.IsEquipmentSlot))
                 {
                     LogDebug($"{source} Prevented dropping {item.m_shared.m_name} {item.m_gridPos} into occupied equipment slot {targetSlot}");
                     return false;

@@ -387,13 +387,13 @@ namespace ExtraSlots
             if (item == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (!CurrentPlayer.IsItemEquiped(prevSlot.Item) || item == prevSlot.Item))
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.Item != null && !CurrentPlayer.IsItemEquiped(prevSlot.Item) || item == prevSlot.Item))
             {
                 slot = prevSlot;
                 return true;
             }
 
-            slot = GetEquipmentSlots().FirstOrDefault(slot => slot.ItemFits(item) && !CurrentPlayer.IsItemEquiped(slot.Item));
+            slot = GetEquipmentSlots().FirstOrDefault(slot => slot.ItemFits(item) && (slot.Item != null && !CurrentPlayer.IsItemEquiped(slot.Item)));
             return slot != null;
         }
 

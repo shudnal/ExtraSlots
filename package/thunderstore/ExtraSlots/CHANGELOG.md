@@ -1,3 +1,6 @@
+# 1.0.7
+* fixed an issue where you could not drag unequipped item in slot
+
 # 1.0.6
 * incompatibility with RequipMe
 * option to auto equip last equipped weapon/shield on tombstone interaction
