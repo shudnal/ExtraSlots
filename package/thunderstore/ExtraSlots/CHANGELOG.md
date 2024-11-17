@@ -1,3 +1,8 @@
+# 1.0.6
+* incompatibility with RequipMe
+* option to auto equip last equipped weapon/shield on tombstone interaction
+* better check if tombstone easy fits into inventory
+
 # 1.0.5
 * even better ValheimPlus compat
 * fix for tombstone extra utility items preventing tombstone spawn

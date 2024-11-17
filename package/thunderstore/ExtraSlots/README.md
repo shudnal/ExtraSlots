@@ -17,7 +17,7 @@ Miscellaneous items includes quest items, keys, fish, trophies and coins.
 
 You can equip up to 5 utility items simultaneously.
 
-You can add up to 2 extra rows in regular player inventory in case you really need large inventory.
+You can add up to 5 extra rows in regular player inventory in case you really need large inventory.
 
 Both equipment panel and hotbars are totally gamepad friendly.
 
@@ -72,7 +72,7 @@ If mod installed on a server then client and server versions should be equal.
 
 In case mod installed on a server, some crucial config values will be synchronized from a server:
 * amount of quick slots (0-6)
-* amount of extra inventory rows (0-2)
+* amount of extra inventory rows (0-5)
 * amount of extra utility items (0-4)
 * should ammo slots be enabled
 * should food slots be enabled
@@ -183,9 +183,17 @@ Default progression is designed to gradually get slots the moment you obtain ite
 
 You can add more quickslots and set globalkeys or items to unlock.
 
+## Slots auto equip on tombstone interaction
+
+Tombstone interaction has several configurable options of what items should be auto equipped if tombstone was successfully picked up at once.
+
+* should items that increase max carry weight be auto equipped
+* should all items in equipment slots be auto equipped
+* should your weapon/shield that was last equipped on death be auto equipped
+
 ## Incompatibility
 
-Mod is incompatible with other mods altering inventory or allowing multiple utility items:
+Mod is incompatible with other mods altering inventory in similar way or allowing multiple utility items:
 
 * [AzuExtendedPlayerInventory](https://thunderstore.io/c/valheim/p/Azumatt/AzuExtendedPlayerInventory/)
 * [Equipment And Quick Slots](https://thunderstore.io/c/valheim/p/RandyKnapp/EquipmentAndQuickSlots/)
@@ -193,6 +201,7 @@ Mod is incompatible with other mods altering inventory or allowing multiple util
 * [Extended Player Inventory (aedenthorn)](https://www.nexusmods.com/valheim/mods/1356)
 * [Equip Multiple Utility Items (aedenthorn)](https://www.nexusmods.com/valheim/mods/1348)
 * [EquipMultipleUtilityItems (toombe)](https://thunderstore.io/c/valheim/p/JackFrostCC/ToombeEquipMultipleUtilityItemsUnofficialUpdate/)
+* [RequipMe]https://thunderstore.io/c/valheim/p/Neobotics/RequipMe/
 
 ## Localization
 To add your own localization create a file with the name **ExtraSlots.LanguageName.yml** or **ExtraSlots.LanguageName.json** anywhere inside of the Bepinex folder.
