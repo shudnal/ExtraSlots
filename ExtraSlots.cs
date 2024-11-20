@@ -28,7 +28,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.8";
+        public const string pluginVersion = "1.0.9";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -159,6 +159,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> equipmentSlotsAvailableAfterDiscovery;
 
         public static ConfigEntry<float> epicLootMagicItemUnequippedAlpha;
+        public static ConfigEntry<bool> epicLootExcludeMiscItemsFromSacrifice;
 
         public static string configDirectory;
 
@@ -431,6 +432,7 @@ namespace ExtraSlots
             quickSlotItemDiscovered6.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
             epicLootMagicItemUnequippedAlpha = config("Mods compatibility", "EpicLoot unequipped item alpha", 0.2f, "Make unequipped enchanted item more visible in equipment panel by making its background image more transparent.");
+            epicLootExcludeMiscItemsFromSacrifice = config("Mods compatibility", "EpicLoot exclude misc items from sacrifice", true, "If EpicLoot config ShowEquippedAndHotbarItemsInSacrificeTab is enabled then items in misc slots will be excluded from sacrifice.");
         }
 
         public static void LogDebug(object data)

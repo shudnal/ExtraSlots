@@ -33,7 +33,7 @@ namespace ExtraSlots
 
         public static bool IsItemTypeKnown(ItemDrop.ItemData.ItemType itemType)
         {
-            if (!slotsProgressionEnabled.Value || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
+            if (!slotsProgressionEnabled.Value || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading || itemTypes.Count == 0)
                 return true;
 
             return itemTypes.Contains(itemType);
@@ -145,8 +145,8 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(Player), nameof(Player.EquipInventoryItems))]
-        private static class Player_EquipInventoryItems_UpdateKnownItemTypes
+        [HarmonyPatch(typeof(Player), nameof(Player.OnSpawned))]
+        private static class Player_OnSpawned_UpdateKnownItemTypes
         {
             private static void Prefix(Player __instance)
             {

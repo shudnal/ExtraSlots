@@ -1,4 +1,5 @@
-﻿using BepInEx.Bootstrap;
+﻿using BepInEx;
+using BepInEx.Bootstrap;
 using HarmonyLib;
 using System;
 using System.Reflection;
@@ -8,16 +9,19 @@ namespace ExtraSlots.Compatibility;
 internal static class PlantEasilyCompat
 {
     public const string plantEasilyGUID = "advize.PlantEasily";
+    public static Assembly assembly;
 
     public static bool isEnabled;
 
     public static void CheckForCompatibility()
     {
-        isEnabled = Chainloader.PluginInfos.ContainsKey(plantEasilyGUID);
+        isEnabled = Chainloader.PluginInfos.TryGetValue(plantEasilyGUID, out PluginInfo plantEasilyPlugin);
         if (!isEnabled)
             return;
 
-        Type pluginPlantEasily = AccessTools.TypeByName("Advize_PlantEasily.PlantEasily");
+        assembly ??= Assembly.GetAssembly(plantEasilyPlugin.Instance.GetType());
+
+        Type pluginPlantEasily = assembly.GetType("Advize_PlantEasily.PlantEasily");
         if (pluginPlantEasily == null)
             return;
 

@@ -1,3 +1,7 @@
+# 1.0.9
+* EpicLoot enchantments will work at any custom slot
+* EpicLoot support for ignoring sacrifice of hotbar items (quickslots and misc slots could be excluded as well)
+
 # 1.0.8
 * new API methods
 * translations fixed
