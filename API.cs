@@ -10,164 +10,128 @@ public static class API
     /// <summary>
     /// Returns list of all slots
     /// </summary>
-    public static List<Slot> GetExtraSlots()
-    {
-        return slots.ToList();
-    }
+    public static List<Slot> GetExtraSlots() => slots.ToList();
 
     /// <summary>
     /// Returns list of corresponding slots
     /// </summary>
-    public static List<Slot> GetEquipmentSlots()
-    {
-        return slots.Where(slot => slot.IsEquipmentSlot).ToList();
-    }
+    public static List<Slot> GetEquipmentSlots() => slots.Where(slot => slot.IsEquipmentSlot).ToList();
 
     /// <summary>
     /// Returns list of corresponding slots
     /// </summary>
-    public static List<Slot> GetQuickSlots()
-    {
-        return slots.Where(slot => slot.IsQuickSlot).ToList();
-    }
+    public static List<Slot> GetQuickSlots() => slots.Where(slot => slot.IsQuickSlot).ToList();
 
     /// <summary>
     /// Returns list of corresponding slots
     /// </summary>
-    public static List<Slot> GetFoodSlots()
-    {
-        return slots.Where(slot => slot.IsFoodSlot).ToList();
-    }
+    public static List<Slot> GetFoodSlots() => slots.Where(slot => slot.IsFoodSlot).ToList();
 
     /// <summary>
     /// Returns list of corresponding slots
     /// </summary>
-    public static List<Slot> GetAmmoSlots()
-    {
-        return slots.Where(slot => slot.IsAmmoSlot).ToList();
-    }
+    public static List<Slot> GetAmmoSlots() => slots.Where(slot => slot.IsAmmoSlot).ToList();
 
     /// <summary>
     /// Returns list of corresponding slots
     /// </summary>
-    public static List<Slot> GetMiscSlots()
-    {
-        return slots.Where(slot => slot.IsMiscSlot).ToList();
-    }
+    public static List<Slot> GetMiscSlots() => slots.Where(slot => slot.IsMiscSlot).ToList();
 
     /// <summary>
     /// Returns slot with given ID
     /// </summary>
     /// <param name="slotID"></param>
-    public static Slot FindSlot(string slotID)
-    {
-        return slots.Where(slot => slot.ID == slotID || slot.ID == CustomSlot.GetSlotID(slotID)).FirstOrDefault();
-    }
+    public static Slot FindSlot(string slotID) => slots.Where(slot => slot.ID == slotID || slot.ID == CustomSlot.GetSlotID(slotID)).FirstOrDefault();
 
     /// <summary>
     /// Returns list of items located in extra slots
     /// </summary>
     /// <returns>List of not null ItemDrop.ItemData</returns>
-    public static List<ItemDrop.ItemData> GetAllExtraSlotsItems()
-    {
-        return slots.Select(slot => slot.Item).Where(item => item != null).ToList();
-    }
+    public static List<ItemDrop.ItemData> GetAllExtraSlotsItems() => slots.Select(slot => slot.Item).Where(item => item != null).ToList();
 
     /// <summary>
     /// Returns list of items located in corresponding slots
     /// </summary>
     /// <returns>List of not null ItemDrop.ItemData</returns>
-    public static List<ItemDrop.ItemData> GetEquipmentSlotsItems()
-    {
-        return GetEquipmentSlots().Select(slot => slot.Item).Where(item => item != null).ToList();
-    }
+    public static List<ItemDrop.ItemData> GetEquipmentSlotsItems() => GetEquipmentSlots().Select(slot => slot.Item).Where(item => item != null).ToList();
 
     /// <summary>
     /// Returns list of items located in corresponding slots
     /// </summary>
     /// <returns>List of not null ItemDrop.ItemData</returns>
-    public static List<ItemDrop.ItemData> GetQuickSlotsItems()
-    {
-        return GetQuickSlots().Select(slot => slot.Item).Where(item => item != null).ToList();
-    }
+    public static List<ItemDrop.ItemData> GetQuickSlotsItems() => GetQuickSlots().Select(slot => slot.Item).Where(item => item != null).ToList();
 
     /// <summary>
     /// Returns list of items located in corresponding slots
     /// </summary>
     /// <returns>List of not null ItemDrop.ItemData</returns>
-    public static List<ItemDrop.ItemData> GetFoodSlotsItems()
-    {
-        return GetFoodSlots().Select(slot => slot.Item).Where(item => item != null).ToList();
-    }
+    public static List<ItemDrop.ItemData> GetFoodSlotsItems() => GetFoodSlots().Select(slot => slot.Item).Where(item => item != null).ToList();
 
     /// <summary>
     /// Returns list of items located in corresponding slots
     /// </summary>
     /// <returns>List of not null ItemDrop.ItemData</returns>
-    public static List<ItemDrop.ItemData> GetAmmoSlotsItems()
-    {
-        return GetAmmoSlots().Select(slot => slot.Item).Where(item => item != null).ToList();
-    }
+    public static List<ItemDrop.ItemData> GetAmmoSlotsItems() => GetAmmoSlots().Select(slot => slot.Item).Where(item => item != null).ToList();
 
     /// <summary>
     /// Returns list of items located in corresponding slots
     /// </summary>
     /// <returns>List of not null ItemDrop.ItemData</returns>
-    public static List<ItemDrop.ItemData> GetMiscSlotsItems()
-    {
-        return GetMiscSlots().Select(slot => slot.Item).Where(item => item != null).ToList();
-    }
+    public static List<ItemDrop.ItemData> GetMiscSlotsItems() => GetMiscSlots().Select(slot => slot.Item).Where(item => item != null).ToList();
 
     /// <summary>
     /// Returns amount of extra rows added to player available inventory
     /// </summary>
-    public static int GetExtraRows()
-    {
-        return ExtraRowsPlayer;
-    }
+    public static int GetExtraRows() => ExtraRowsPlayer;
 
     /// <summary>
     /// Returns full height of inventory
     /// </summary>
-    public static int GetInventoryHeightFull()
-    {
-        return InventoryHeightFull;
-    }
+    public static int GetInventoryHeightFull() => InventoryHeightFull;
 
     /// <summary>
     /// Returns full height of inventory
     /// </summary>
-    public static int GetInventoryHeightPlayer()
-    {
-        return InventoryHeightPlayer;
-    }
+    public static int GetInventoryHeightPlayer() => InventoryHeightPlayer;
 
     /// <summary>
     /// Returns if given position is extra slot
     /// </summary>
     /// <param name="gridPos">Position in inventory grid</param>
-    public static bool IsGridPositionASlot(Vector2i gridPos)
-    {
-        return Slots.IsGridPositionASlot(gridPos);
-    }
+    public static bool IsGridPositionASlot(Vector2i gridPos) => Slots.IsGridPositionASlot(gridPos);
 
     /// <summary>
     /// Returns if given item is in extra slot
     /// </summary>
     /// <param name="item"></param>
-    public static bool IsItemInSlot(ItemDrop.ItemData item)
-    {
-        return Slots.IsItemInSlot(item);
-    }
+    public static bool IsItemInSlot(ItemDrop.ItemData item) => Slots.IsItemInSlot(item);
 
     /// <summary>
     /// Returns if given item is in equipment slot
     /// </summary>
     /// <param name="item"></param>
-    public static bool IsItemInEquipmentSlot(ItemDrop.ItemData item)
-    {
-        return Slots.IsItemInEquipmentSlot(item);
-    }
+    public static bool IsItemInEquipmentSlot(ItemDrop.ItemData item) => Slots.IsItemInEquipmentSlot(item);
+
+    /// <summary>
+    /// Returns if any global key or player unique key from comma-separated string is enabled.
+    /// Respects if slots progression is enabled
+    /// </summary>
+    /// <param name="requiredKeys">Comma-separated list of global keys and player unique keys</param>
+    public static bool IsAnyGlobalKeyActive(string requiredKeys) => SlotsProgression.IsAnyGlobalKeyActive(requiredKeys);
+
+    /// <summary>
+    /// Returns if any global key or player unique key from comma-separated string is enabled.
+    /// Respects if slots progression is enabled
+    /// </summary>
+    /// <param name="itemType"></param>
+    public static bool IsItemTypeKnown(ItemDrop.ItemData.ItemType itemType) => SlotsProgression.IsItemTypeKnown(itemType);
+
+    /// <summary>
+    /// Returns if any global key or player unique key from comma-separated string is enabled.
+    /// Respects if slots progression is enabled
+    /// </summary>
+    /// <param name="itemNames">Comma-separated list of item names (m_shared.m_name)</param>
+    public static bool IsAnyMaterialDiscovered(string itemNames) => SlotsProgression.IsAnyMaterialDiscovered(itemNames);
 
     /// <summary>
     /// Adds new custom equipment slot at first available position
@@ -228,10 +192,7 @@ public static class API
     /// Tries to remove custom slot with given ID
     /// </summary>
     /// <param name="slotID"></param>
-    public static bool RemoveSlot(string slotID)
-    {
-        return CustomSlot.TryRemoveSlot(slotID);
-    }
+    public static bool RemoveSlot(string slotID) => CustomSlot.TryRemoveSlot(slotID);
 
     /// <summary>
     /// Calls an update to slots layout and equipment panel

@@ -204,8 +204,8 @@ Mod is incompatible with other mods altering inventory in similar way or allowin
 * [RequipMe](https://thunderstore.io/c/valheim/p/Neobotics/RequipMe/)
 
 ## Localization
-To add your own localization create a file with the name **ExtraSlots.LanguageName.yml** or **ExtraSlots.LanguageName.json** anywhere inside of the Bepinex folder.
-For example, to add a French translation you could create a **ExtraSlots.French.yml** file inside of the config folder and add French translations there.
+To add your own localization create a file with the name **Extra Slots.LanguageName.yml** or **Extra Slots.LanguageName.json** anywhere inside of the Bepinex folder.
+For example, to add a French translation you could create a **Extra Slots.French.yml** file inside of the config folder and add French translations there.
 
 Localization file will be loaded on the next game launch or on the next language change.
 
@@ -213,7 +213,7 @@ You can send me a file with your localization at [GitHub](https://github.com/shu
 
 [Language list](https://valheim-modding.github.io/Jotunn/data/localization/language-list.html).
 
-English localization example is located in `ExtraSlots.English.json` file next to plugin dll.
+English localization example is located in `Extra Slots.English.json` file next to plugin dll.
 
 ## Installation (manual)
 extract ExtraSlots.dll into your BepInEx\Plugins\ folder

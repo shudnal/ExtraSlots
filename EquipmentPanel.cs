@@ -848,5 +848,22 @@ namespace ExtraSlots
                 LogDebug($"SetSelection {pos}");
             }
         }
+
+        [HarmonyPatch(typeof(RectTransformUtility), nameof(RectTransformUtility.RectangleContainsScreenPoint), typeof(RectTransform), typeof(Vector2))]
+        public static class RectTransformUtility_RectangleContainsScreenPoint_BackpacksCompat
+        {
+            private static void Postfix(RectTransform rect, Vector2 screenPoint, ref bool __result)
+            {
+                if (rect != InventoryGui.instance.m_playerGrid.m_gridRoot)
+                    return;
+
+                for (int i = 0; i < Math.Min(slots.Length, InventoryGui.instance.m_playerGrid.m_elements.Count - InventorySizePlayer); ++i)
+                    if (RectTransformUtility.RectangleContainsScreenPoint(InventoryGui.instance.m_playerGrid.m_elements[InventorySizePlayer + i].m_go.transform as RectTransform, screenPoint))
+                    {
+                        __result = true;
+                        return;
+                    }
+            }
+        }
     }
 }

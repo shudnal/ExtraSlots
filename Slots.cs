@@ -170,24 +170,18 @@ namespace ExtraSlots
 
             internal static bool TryAddNewSlotBefore(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
-                if (slotIDs.Length > 0)
-                {
-                    Slot slotToAdd = slots.FirstOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(GetSlotID(slotID)));
-                    if (slotToAdd != null)
-                        TryAddNewSlotWithIndex(slotID, slotToAdd.Index, getName, itemIsValid, isActive);
-                }
+                Slot slotToAdd = slots.FirstOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(GetSlotID(slotID)));
+                if (slotToAdd != null)
+                    return TryAddNewSlotWithIndex(slotID, slotToAdd.Index, getName, itemIsValid, isActive);
 
                 return TryAddNewSlotWithIndex(slotID, -1, getName, itemIsValid, isActive);
             }
 
             internal static bool TryAddNewSlotAfter(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
-                if (slotIDs.Length > 0)
-                {
-                    Slot slotToAdd = slots.LastOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(GetSlotID(slotID)));
-                    if (slotToAdd != null)
-                        TryAddNewSlotWithIndex(slotID, slotToAdd.Index, getName, itemIsValid, isActive);
-                }
+                Slot slotToAdd = slots.LastOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(GetSlotID(slotID)));
+                if (slotToAdd != null)
+                    return TryAddNewSlotWithIndex(slotID, slotToAdd.Index, getName, itemIsValid, isActive);
 
                 return TryAddNewSlotWithIndex(slotID, -1, getName, itemIsValid, isActive);
             }
@@ -355,7 +349,10 @@ namespace ExtraSlots
                 return true;
             }
 
-            int index = Array.FindIndex(slots, slot => slot.IsActive && slot.IsFree && slot.ItemFits(item));
+            int index = Array.FindIndex(slots, slot => slot.IsCustomSlot && slot.IsActive && slot.IsFree && slot.ItemFits(item));
+            if (index == -1)
+                index = Array.FindIndex(slots, slot => slot.IsActive && slot.IsFree && slot.ItemFits(item));
+
             if (index == -1)
                 return false;
 
@@ -376,7 +373,9 @@ namespace ExtraSlots
                 return true;
             }
 
-            slot = GetEquipmentSlots().FirstOrDefault(slot => slot.ItemFits(item) && slot.IsFree);
+            Slot[] equipmentSlots = GetEquipmentSlots();
+
+            slot = equipmentSlots.FirstOrDefault(slot => slot.IsCustomSlot && slot.ItemFits(item) && slot.IsFree) ?? equipmentSlots.FirstOrDefault(slot => slot.ItemFits(item) && slot.IsFree);
             return slot != null;
         }
 
@@ -392,8 +391,9 @@ namespace ExtraSlots
                 slot = prevSlot;
                 return true;
             }
+            Slot[] equipmentSlots = GetEquipmentSlots();
 
-            slot = GetEquipmentSlots().FirstOrDefault(slot => slot.ItemFits(item) && (slot.Item != null && !CurrentPlayer.IsItemEquiped(slot.Item)));
+            slot = equipmentSlots.FirstOrDefault(slot => slot.IsCustomSlot && slot.ItemFits(item) && slot.Item != null && !CurrentPlayer.IsItemEquiped(slot.Item)) ?? equipmentSlots.FirstOrDefault(slot => slot.ItemFits(item) && slot.Item != null && !CurrentPlayer.IsItemEquiped(slot.Item));
             return slot != null;
         }
 

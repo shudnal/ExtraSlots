@@ -28,7 +28,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.7";
+        public const string pluginVersion = "1.0.8";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -171,6 +171,8 @@ namespace ExtraSlots
 
         private void Awake()
         {
+            Localizer.Load();
+
             instance = this;
 
             ConfigInit();
@@ -185,8 +187,6 @@ namespace ExtraSlots
             Slots.InitializeSlots();
 
             EquipmentPanel.ReorderVanillaSlots();
-
-            Localizer.Load();
 
             if (loggingDebugEnabled.Value || loggingEnabled.Value)
                 LogCurrentLogLevel();
@@ -311,8 +311,8 @@ namespace ExtraSlots
             quickSlotHotKey2 = config("Hotkeys", "Quickslot 2", new KeyboardShortcut(KeyCode.X, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
             quickSlotHotKey3 = config("Hotkeys", "Quickslot 3", new KeyboardShortcut(KeyCode.C, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
             quickSlotHotKey4 = config("Hotkeys", "Quickslot 4", new KeyboardShortcut(KeyCode.V, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
-            quickSlotHotKey5 = config("Hotkeys", "Quickslot 5", new KeyboardShortcut(KeyCode.B), "Use configuration manager to set shortcuts.");
-            quickSlotHotKey6 = config("Hotkeys", "Quickslot 6", new KeyboardShortcut(KeyCode.N), "Use configuration manager to set shortcuts.");
+            quickSlotHotKey5 = config("Hotkeys", "Quickslot 5", new KeyboardShortcut(KeyCode.Q, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
+            quickSlotHotKey6 = config("Hotkeys", "Quickslot 6", new KeyboardShortcut(KeyCode.R, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
 
             quickSlotHotKey1.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
             quickSlotHotKey2.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
@@ -325,8 +325,8 @@ namespace ExtraSlots
             quickSlotHotKey2Text = config("Hotkeys", "Quickslot 2 Text", "Alt + X", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
             quickSlotHotKey3Text = config("Hotkeys", "Quickslot 3 Text", "Alt + C", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
             quickSlotHotKey4Text = config("Hotkeys", "Quickslot 4 Text", "Alt + V", "Hotkey 4 Display Text. Leave blank to use the hotkey itself.");
-            quickSlotHotKey5Text = config("Hotkeys", "Quickslot 5 Text", "", "Hotkey 5 Display Text. Leave blank to use the hotkey itself.");
-            quickSlotHotKey6Text = config("Hotkeys", "Quickslot 6 Text", "", "Hotkey 6 Display Text. Leave blank to use the hotkey itself.");
+            quickSlotHotKey5Text = config("Hotkeys", "Quickslot 5 Text", "Alt + Q", "Hotkey 5 Display Text. Leave blank to use the hotkey itself.");
+            quickSlotHotKey6Text = config("Hotkeys", "Quickslot 6 Text", "Alt + R", "Hotkey 6 Display Text. Leave blank to use the hotkey itself.");
 
             equipmentSlotLabelAlignment = config("Panels - Equipment slots - Label style", "Horizontal alignment", TMPro.HorizontalAlignmentOptions.Left, "Horizontal alignment of text component in equipment slot label");
             equipmentSlotLabelWrappingMode = config("Panels - Equipment slots - Label style", "Text wrapping mode", TMPro.TextWrappingModes.Normal, "Size of text component in slot label");
@@ -367,9 +367,9 @@ namespace ExtraSlots
             quickSlotGlobalKey1 = config("Progression - Global keys", "Quickslot 1", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
             quickSlotGlobalKey2 = config("Progression - Global keys", "Quickslot 2", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
             quickSlotGlobalKey3 = config("Progression - Global keys", "Quickslot 3", "defeated_bonemass", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotGlobalKey4 = config("Progression - Global keys", "Quickslot 4", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotGlobalKey5 = config("Progression - Global keys", "Quickslot 5", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotGlobalKey6 = config("Progression - Global keys", "Quickslot 6", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotGlobalKey4 = config("Progression - Global keys", "Quickslot 4", "defeated_dragon", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotGlobalKey5 = config("Progression - Global keys", "Quickslot 5", "defeated_goblinking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotGlobalKey6 = config("Progression - Global keys", "Quickslot 6", "defeated_queen", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
 
             ammoSlotsGlobalKey = config("Progression - Global keys", "Ammo slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
             foodSlotsGlobalKey = config("Progression - Global keys", "Food slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
@@ -377,8 +377,8 @@ namespace ExtraSlots
 
             utilitySlotGlobalKey1 = config("Progression - Global keys", "Extra utility slot 1", "defeated_bonemass", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
             utilitySlotGlobalKey2 = config("Progression - Global keys", "Extra utility slot 2", "defeated_goblinking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            utilitySlotGlobalKey3 = config("Progression - Global keys", "Extra utility slot 3", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            utilitySlotGlobalKey4 = config("Progression - Global keys", "Extra utility slot 4", "", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotGlobalKey3 = config("Progression - Global keys", "Extra utility slot 3", "defeated_queen", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotGlobalKey4 = config("Progression - Global keys", "Extra utility slot 4", "defeated_queen", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
 
             ammoSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Ammo slots", true, "Ammo slots will be active after acquiring first ammo item [Synced with Server]", synchronizedSetting: true);
             utilitySlotAvailableAfterDiscovery = config("Progression - Discovery", "Utility slots", true, "Utility slots will be active after acquiring first utility item [Synced with Server]", synchronizedSetting: true);

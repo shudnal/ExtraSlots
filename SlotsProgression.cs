@@ -8,7 +8,7 @@ using static ExtraSlots.ExtraSlots;
 
 namespace ExtraSlots
 {
-    internal static class SlotsProgression
+    public static class SlotsProgression
     {
         private static readonly HashSet<ItemDrop.ItemData.ItemType> itemTypes = new HashSet<ItemDrop.ItemData.ItemType>();
         private static readonly Dictionary<string, IEnumerable<string>> requiredKeysCache = new Dictionary<string, IEnumerable<string>>();

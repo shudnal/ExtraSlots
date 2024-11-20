@@ -11,10 +11,10 @@ namespace ExtraSlots
     [Serializable]
     public class HumanoidExtraUtilitySlots
     {
-        public ItemDrop.ItemData utility1 = null;
-        public ItemDrop.ItemData utility2 = null;
-        public ItemDrop.ItemData utility3 = null;
-        public ItemDrop.ItemData utility4 = null;
+        public ItemDrop.ItemData utility1;
+        public ItemDrop.ItemData utility2;
+        public ItemDrop.ItemData utility3;
+        public ItemDrop.ItemData utility4;
     }
 
     public static class HumanoidExtension

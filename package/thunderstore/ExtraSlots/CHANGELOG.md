@@ -1,3 +1,10 @@
+# 1.0.8
+* new API methods
+* translations fixed
+* mod name in translation section fixed (it lacked space)
+* Backpacks compatibility
+* Extra Slots Custom Slots mod support
+
 # 1.0.7
 * fixed an issue where you could not drag unequipped item in slot
 
