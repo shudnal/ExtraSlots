@@ -51,6 +51,8 @@ For backward migration you should clear all extra slots beforehand or you will l
 
 ### Custom slots API
 
+There is [ExtraSlotsCustomSlots](https://thunderstore.io/c/valheim/p/shudnal/ExtraSlotsCustomSlots/) mod that adds custom slots for various mods.
+
 You can add/remove custom equipment slots on the fly but most stable way is to do it on Awake.
 
 You should set slot ID as fixed string unique among other slots and you can set slot name as a function which result can be changed on the runtime.
