@@ -192,9 +192,17 @@ public static class QuickBars
 
             for (int index = 0; index < __instance.m_elements.Count; index++)
                 if (__instance.name == QuickSlotsHotBar.barName)
+                {
                     EquipmentPanel.SetSlotLabel(__instance.m_elements[index].m_go.transform.Find("binding"), slots[index], hotbarElement: true);
+                    if (ExtraSlots.quickSlotsHideStackSize.Value && __instance.m_elements[index].m_amount.gameObject.activeInHierarchy && (slots[index].Item is ItemDrop.ItemData item) && (item.IsEquipable() || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable))
+                        __instance.m_elements[index].m_amount.SetText(__instance.m_elements[index].m_stackText.ToFastString());
+                }
                 else if (__instance.name == AmmoSlotsHotBar.barName)
+                {
                     EquipmentPanel.SetSlotLabel(__instance.m_elements[index].m_go.transform.Find("binding"), slots[index + 8], hotbarElement: true);
+                    if (ExtraSlots.ammoSlotsHideStackSize.Value && __instance.m_elements[index].m_amount.gameObject.activeInHierarchy && (slots[index + 8].Item is ItemDrop.ItemData item) && (item.IsEquipable() || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable))
+                        __instance.m_elements[index].m_amount.SetText(__instance.m_elements[index].m_stackText.ToFastString());
+                }
         }
     }
 

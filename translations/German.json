@@ -1,9 +1,9 @@
 {
     "exsl_slot_equipment_helmet_label": "Kopf",
-    "exsl_slot_equipment_chest_label": "Truhe",
+    "exsl_slot_equipment_chest_label": "Brust",
     "exsl_slot_equipment_legs_label": "Beine",
-    "exsl_slot_equipment_shoulders_label": "Zurück",
-    "exsl_slot_equipment_utility_label": "Artikel",
+    "exsl_slot_equipment_shoulders_label": "Rücken",
+    "exsl_slot_equipment_utility_label": "Gebrauch",
     "exsl_slot_equipment": "Ausrüstungsplatz",
     "exsl_slot_equipment_desc": "Ausrüstbare Ausrüstungsgegenstände",
     "exsl_slot_ammo": "Munitionsplatz",

@@ -1,3 +1,7 @@
+# 1.0.10
+* german translation refined
+* new option to hide stack size in hot bars
+
 # 1.0.9
 * EpicLoot enchantments will work at any custom slot
 * EpicLoot support for ignoring sacrifice of hotbar items (quickslots and misc slots could be excluded as well)

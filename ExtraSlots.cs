@@ -28,7 +28,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.9";
+        public const string pluginVersion = "1.0.10";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -75,6 +75,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> ammoSlotsShowLabel;
         public static ConfigEntry<bool> ammoSlotsShowHintImage;
         public static ConfigEntry<bool> ammoSlotsShowTooltip;
+        public static ConfigEntry<bool> ammoSlotsHideStackSize;
 
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey2;
@@ -90,6 +91,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> quickSlotsShowLabel;
         public static ConfigEntry<bool> quickSlotsShowHintImage;
         public static ConfigEntry<bool> quickSlotsShowTooltip;
+        public static ConfigEntry<bool> quickSlotsHideStackSize;
 
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey2;
@@ -284,6 +286,7 @@ namespace ExtraSlots
             ammoSlotsShowLabel = config("Panels - Ammo slots", "Show label", defaultValue: false, "Show slot label");
             ammoSlotsShowHintImage = config("Panels - Ammo slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             ammoSlotsShowTooltip = config("Panels - Ammo slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
+            ammoSlotsHideStackSize = config("Panels - Ammo slots", "Hide stack size in hotbar", defaultValue: false, "Hide stack size and left only current amount for consumable and equipable items in hotbar");
 
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
 
@@ -305,6 +308,7 @@ namespace ExtraSlots
             quickSlotsShowLabel = config("Panels - Quick slots", "Show label", defaultValue: false, "Show slot label");
             quickSlotsShowHintImage = config("Panels - Quick slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             quickSlotsShowTooltip = config("Panels - Quick slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
+            quickSlotsHideStackSize = config("Panels - Quick slots", "Hide stack size in hotbar", defaultValue: false, "Hide stack size and left only current amount for consumable and equipable items in hotbar");
 
             quickSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
 
