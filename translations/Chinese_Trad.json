@@ -1,0 +1,21 @@
+{
+    "exsl_slot_equipment_helmet_label": "頭部",
+    "exsl_slot_equipment_chest_label": "上裝",
+    "exsl_slot_equipment_legs_label": "下裝",
+    "exsl_slot_equipment_shoulders_label": "背部",
+    "exsl_slot_equipment_utility_label": "飾品",
+    "exsl_slot_equipment": "裝備欄",
+    "exsl_slot_equipment_desc": "放置可穿戴的裝備",
+    "exsl_slot_ammo": "彈藥欄",
+    "exsl_slot_ammo_label": "彈藥",
+    "exsl_slot_ammo_desc": "放置彈藥或魚餌",
+    "exsl_slot_quick": "快捷欄",
+    "exsl_slot_quick_label": "快捷",
+    "exsl_slot_quick_desc": "放置任何物品",
+    "exsl_slot_misc": "雜物欄",
+    "exsl_slot_misc_label": "雜物",
+    "exsl_slot_misc_desc": "放置任務物品、鑰匙、金幣、戰利品或魚",
+    "exsl_slot_food": "食物欄",
+    "exsl_slot_food_label": "食物",
+    "exsl_slot_food_desc": "放置可消耗的食物"
+}
