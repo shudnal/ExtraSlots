@@ -150,7 +150,7 @@ public static class QuickBars
             }
 
             if (clearBars)
-                bars.Do(bar => bar.UpdateIcons(null));
+                bars.Do(bar => { bar.m_items.Clear(); bar.UpdateIcons(null); });
         }
     }
 

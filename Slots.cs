@@ -585,7 +585,17 @@ namespace ExtraSlots
 
         internal static bool IsAmmoSlotAvailable() => ammoSlotsEnabled.Value && IsAnyGlobalKeyActive(ammoSlotsGlobalKey.Value) && IsAmmoSlotKnown();
 
-        internal static void UpdateSlotsGridPosition() => slots.Do(slot => slot.UpdateGridPosition());
+        internal static void UpdateSlotsGridPosition()
+        {
+            ClearCachedItems();
+            Dictionary<Slot, ItemDrop.ItemData> slotItems = slots.ToDictionary(slot => slot, slot => slot.CacheItem());
+
+            slots.Do(slot => slot.UpdateGridPosition());
+
+            ClearCachedItems();
+
+            InventoryInteraction.UpdatePlayerInventorySize();
+        }
 
         internal static void SwapSlots(int index, int indexToExchange)
         {

@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace ExtraSlots
 {
-    internal class InventoryInteraction
+    internal static class InventoryInteraction
     {
         public static void UpdatePlayerInventorySize()
         {
