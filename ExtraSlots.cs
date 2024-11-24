@@ -19,16 +19,17 @@ namespace ExtraSlots
     [BepInIncompatibility("toombe.EquipMultipleUtilityItemsUpdate")] // https://thunderstore.io/c/valheim/p/JackFrostCC/ToombeEquipMultipleUtilityItemsUnofficialUpdate/
     [BepInIncompatibility("aedenthorn.EquipMultipleUtilityItems")] // https://www.nexusmods.com/valheim/mods/1348
     [BepInIncompatibility("neobotics.valheim_mod.requipme")]
-    [BepInDependency(Compatibility.EpicLootCompat.epicLootGUID, BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency(Compatibility.BetterArcheryCompat.betterArcheryGUID, BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency(Compatibility.ValheimPlusCompat.valheimPlusGuid, BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency(Compatibility.PlantEasilyCompat.plantEasilyGUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.EpicLootCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.BetterArcheryCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.ValheimPlusCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.PlantEasilyCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.BetterProgressionCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     public class ExtraSlots : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.10";
+        public const string pluginVersion = "1.0.11";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -201,6 +202,8 @@ namespace ExtraSlots
             Compatibility.PlantEasilyCompat.CheckForCompatibility();
 
             Compatibility.ValheimPlusCompat.CheckForCompatibility();
+
+            Compatibility.BetterProgressionCompat.CheckForCompatibility();
 
             harmony.PatchAll();
         }

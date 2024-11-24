@@ -11,7 +11,7 @@ namespace ExtraSlots.Compatibility;
 
 public static class EpicLootCompat
 {
-    public const string epicLootGUID = "randyknapp.mods.epicloot";
+    public const string GUID = "randyknapp.mods.epicloot";
     public static PluginInfo epicLootPlugin;
     public static Assembly assembly;
 
@@ -21,7 +21,7 @@ public static class EpicLootCompat
 
     public static void CheckForCompatibility()
     {
-        isEnabled = Chainloader.PluginInfos.TryGetValue(epicLootGUID, out epicLootPlugin);
+        isEnabled = Chainloader.PluginInfos.TryGetValue(GUID, out epicLootPlugin);
 
         if (isEnabled)
         {

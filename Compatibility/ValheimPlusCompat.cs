@@ -7,12 +7,12 @@ namespace ExtraSlots.Compatibility;
 
 internal static class ValheimPlusCompat
 {
-    public const string valheimPlusGuid = "org.bepinex.plugins.valheim_plus";
+    public const string GUID = "org.bepinex.plugins.valheim_plus";
     public static Assembly assembly;
 
     internal static void CheckForCompatibility()
     {
-        if (Chainloader.PluginInfos.TryGetValue(valheimPlusGuid, out PluginInfo vplusPlugin))
+        if (Chainloader.PluginInfos.TryGetValue(GUID, out PluginInfo vplusPlugin))
         {
             assembly ??= Assembly.GetAssembly(vplusPlugin.Instance.GetType());
 

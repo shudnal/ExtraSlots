@@ -33,6 +33,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Compatibility\BetterProgressionCompat.cs" />
     <Compile Include="Compatibility\BetterArcheryCompat.cs" />
     <Compile Include="Compatibility\EquipmentAndQuickSlotsCompat.cs" />
     <Compile Include="Compatibility\PlantEasilyCompat.cs" />
@@ -173,6 +174,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Include="translations\Turkish.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="translations\Chinese_Trad.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>

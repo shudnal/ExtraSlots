@@ -8,7 +8,7 @@ namespace ExtraSlots.Compatibility;
 
 public static class BetterArcheryCompat
 {
-    public const string betterArcheryGUID = "ishid4.mods.betterarchery";
+    public const string GUID = "ishid4.mods.betterarchery";
     public static Assembly assembly;
     public static PluginInfo betterArcheryPlugin;
 
@@ -16,7 +16,7 @@ public static class BetterArcheryCompat
 
     public static void CheckForCompatibility()
     {
-        if (Chainloader.PluginInfos.TryGetValue(betterArcheryGUID, out betterArcheryPlugin))
+        if (Chainloader.PluginInfos.TryGetValue(GUID, out betterArcheryPlugin))
         {
             // Make BetterArchery quiver unenableable since it will mess the inventory grid
             if (betterArcheryPlugin.Instance.Config.TryGetEntry("Quiver", "Enable Quiver", out baEnableQuiver))

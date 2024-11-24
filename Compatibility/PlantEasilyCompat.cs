@@ -8,14 +8,14 @@ namespace ExtraSlots.Compatibility;
 
 internal static class PlantEasilyCompat
 {
-    public const string plantEasilyGUID = "advize.PlantEasily";
+    public const string GUID = "advize.PlantEasily";
     public static Assembly assembly;
 
     public static bool isEnabled;
 
     public static void CheckForCompatibility()
     {
-        isEnabled = Chainloader.PluginInfos.TryGetValue(plantEasilyGUID, out PluginInfo plantEasilyPlugin);
+        isEnabled = Chainloader.PluginInfos.TryGetValue(GUID, out PluginInfo plantEasilyPlugin);
         if (!isEnabled)
             return;
 
