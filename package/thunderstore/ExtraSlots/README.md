@@ -193,6 +193,12 @@ Tombstone interaction has several configurable options of what items should be a
 * should all items in equipment slots be auto equipped
 * should your weapon/shield that was last equipped on death be auto equipped
 
+## Inventory rows progression
+
+You can enable gradual extra inventory rows progression to get it after meeting certain conditions.
+
+Rows obtaining depends on unique player keys or known items.
+
 ## Incompatibility
 
 Mod is incompatible with other mods altering inventory in similar way or allowing multiple utility items:

@@ -1,3 +1,11 @@
+# 1.0.11
+* Chinese translations refined
+* BetterProgression compatibility
+* Valheim Enchantment System compatibility
+* Inventory rows amount can now be changed ingame without issues
+* Inventory rows obtaining progression
+* Fix for spamming error on tooltip
+
 # 1.0.10
 * german translation refined
 * new option to hide stack size in hot bars
