@@ -290,10 +290,12 @@ namespace ExtraSlots
         public static readonly Dictionary<Vector2i, ItemDrop.ItemData> cachedItems = new Dictionary<Vector2i, ItemDrop.ItemData>();
         public const int vanillaInventoryHeight = 4;
 
-        public static PlayerProfile PlayerProfile => Game.instance?.GetPlayerProfile() ?? FejdStartup.instance?.m_profiles[FejdStartup.instance.m_profileIndex];
-        public static Player CurrentPlayer => Player.m_localPlayer ?? Compatibility.EquipmentAndQuickSlotsCompat.playerToLoad;
+        public static Player loadedPlayer;
+
+        public static PlayerProfile CurrentPlayerProfile => Game.instance?.GetPlayerProfile() ?? FejdStartup.instance?.m_profiles[FejdStartup.instance.m_profileIndex];
+        public static Player CurrentPlayer => Player.m_localPlayer ?? Compatibility.EquipmentAndQuickSlotsCompat.playerToLoad ?? loadedPlayer ?? FejdStartup.instance?.GetPreviewPlayer();
         public static Inventory PlayerInventory => CurrentPlayer?.GetInventory();
-        public static int ExtraRowsPlayer => extraRows.Value;
+        public static int ExtraRowsPlayer => GetExtraRows();
         public static int InventoryWidth => PlayerInventory != null ? PlayerInventory.GetWidth() : 8;
         public static int InventoryHeightPlayer => vanillaInventoryHeight + ExtraRowsPlayer;
         public static int InventoryHeightFull => InventoryHeightPlayer + GetTargetInventoryHeight(slots.Length, InventoryWidth);
@@ -326,10 +328,10 @@ namespace ExtraSlots
         {
             slot = null;
 
-            if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == PlayerProfile?.GetPlayerID().ToString())
+            if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == CurrentPlayerProfile?.GetPlayerID().ToString())
                 if ((slot = API.FindSlot(slotID)) != null)
                 {
-                    LogDebug($"Previous equipped slot {slot} found for item {item.m_shared.m_name}");
+                    LogDebug($"Previous slot {slot} found for item {item.m_shared.m_name}");
                     return true;
                 }
 
@@ -467,7 +469,7 @@ namespace ExtraSlots
             }
 
             if (savedItems > 0)
-                LogDebug($"Last equpped slot was saved for {savedItems} items at extra slots. Player ID: {playerID}");
+                LogDebug($"Last slot was saved for {savedItems} items at extra slots. Player ID: {playerID}");
         }
 
         internal static void SaveLastEquippedWeaponShieldToItems(Player player)
@@ -486,13 +488,15 @@ namespace ExtraSlots
 
         internal static void PruneLastEquippedSlotFromItem(ItemDrop.ItemData item)
         {
+            PruneLastEquippeWeaponShieldFromItem(item);
+
             if (item == null || !item.m_customData.ContainsKey(customKeySlotID))
                 return;
 
             item.m_customData.Remove(customKeyPlayerID);
             item.m_customData.Remove(customKeySlotID);
 
-            LogDebug($"{item.m_shared.m_name} {item.m_gridPos} pruned last equipped");
+            LogDebug($"{item.m_shared.m_name} {item.m_gridPos} pruned last taken slot");
         }
 
         internal static void PruneLastEquippeWeaponShieldFromItem(ItemDrop.ItemData item)
@@ -584,6 +588,17 @@ namespace ExtraSlots
         internal static bool IsFoodSlotAvailable() => foodSlotsEnabled.Value && IsAnyGlobalKeyActive(foodSlotsGlobalKey.Value) && IsFoodSlotKnown();
 
         internal static bool IsAmmoSlotAvailable() => ammoSlotsEnabled.Value && IsAnyGlobalKeyActive(ammoSlotsGlobalKey.Value) && IsAmmoSlotKnown();
+
+        internal static bool IsExtraRowAvailable(int index) => extraRows.Value > index && IsExtraRowKnown(index) && (index == 0 || IsExtraRowAvailable(index - 1));
+
+        internal static int GetExtraRows()
+        {
+            for (int i = extraRows.Value - 1; i >= 0; i--)
+                if (IsExtraRowAvailable(i))
+                    return i + 1;
+
+            return 0;
+        }
 
         internal static void UpdateSlotsGridPosition()
         {

@@ -11,15 +11,18 @@ namespace ExtraSlots
     {
         public static void UpdatePlayerInventorySize()
         {
-            if (Player.m_localPlayer == null)
+            if (CurrentPlayer == null)
                 return;
 
-            if (Player.m_localPlayer.m_inventory.m_height != InventoryHeightFull)
-                LogInfo($"Player inventory height changed {Player.m_localPlayer.m_inventory.m_height} -> {InventoryHeightFull}");
+            if (CurrentPlayer.m_inventory.m_height != InventoryHeightFull)
+                LogInfo($"Player inventory height changed {CurrentPlayer.m_inventory.m_height} -> {InventoryHeightFull}");
 
-            Player.m_localPlayer.m_inventory.m_height = InventoryHeightFull;
-            Player.m_localPlayer.m_tombstone.GetComponent<Container>().m_height = InventoryHeightFull;
-            Player.m_localPlayer.m_inventory.Changed();
+            CurrentPlayer.m_inventory.m_height = InventoryHeightFull;
+            
+            if (CurrentPlayer.m_tombstone?.GetComponent<Container>() is Container tombstone)
+                tombstone.m_height = InventoryHeightFull;
+
+            CurrentPlayer.m_inventory.Changed();
 
             ItemsSlotsValidation.ValidateItems();
         }
@@ -41,7 +44,8 @@ namespace ExtraSlots
                 if (__instance != Player.m_localPlayer)
                     return;
 
-                UpdatePlayerInventorySize();
+                if (!IsAwaitingForSlotsUpdate())
+                    UpdatePlayerInventorySize();
             }
         }
 
@@ -244,6 +248,10 @@ namespace ExtraSlots
             private static void Prefix(Inventory __instance, ItemDrop.ItemData item, ref int x, ref int y)
             {
                 if (__instance != PlayerInventory)
+                    return;
+
+                // Known materials and player keys are not yet loaded, skip validation
+                if (rowsProgressionEnabled.Value && Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall && CurrentPlayer.m_isLoading)
                     return;
 
                 if (item == null)

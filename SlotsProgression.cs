@@ -5,35 +5,36 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using static ExtraSlots.ExtraSlots;
+using static ExtraSlots.Slots;
 
 namespace ExtraSlots
 {
     public static class SlotsProgression
     {
         private static readonly HashSet<ItemDrop.ItemData.ItemType> itemTypes = new HashSet<ItemDrop.ItemData.ItemType>();
-        private static readonly Dictionary<string, IEnumerable<string>> requiredKeysCache = new Dictionary<string, IEnumerable<string>>();
+        private static readonly Dictionary<string, IEnumerable<string>> keysCache = new Dictionary<string, IEnumerable<string>>();
 
-        private static IEnumerable<string> GetRequiredKeys(string configValue)
+        private static IEnumerable<string> GetKeys(string configValue)
         {
-            if (requiredKeysCache.TryGetValue(configValue, out IEnumerable<string> keys))
+            if (keysCache.TryGetValue(configValue, out IEnumerable<string> keys))
                 return keys;
 
-            return requiredKeysCache[configValue] = configValue.Split(',').Select(s => s.Trim()).Where(s => !s.IsNullOrWhiteSpace());
+            return keysCache[configValue] = configValue.Split(',').Select(s => s.Trim()).Where(s => !s.IsNullOrWhiteSpace());
         }
 
         public static bool IsAnyGlobalKeyActive(string requiredKeys)
         {
-            if (!slotsProgressionEnabled.Value || string.IsNullOrEmpty(requiredKeys) || !ZoneSystem.instance || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
+            if (!slotsProgressionEnabled.Value || !CurrentPlayer || CurrentPlayer.m_isLoading || string.IsNullOrEmpty(requiredKeys))
                 return true;
 
-            IEnumerable<string> keys = GetRequiredKeys(requiredKeys);
+            IEnumerable<string> keys = GetKeys(requiredKeys);
 
-            return keys.Count() == 0 || keys.Any(s => ZoneSystem.instance.GetGlobalKey(s)) || keys.Any(s => Player.m_localPlayer.HaveUniqueKey(s));
+            return keys.Count() == 0 || ZoneSystem.instance && keys.Any(s => ZoneSystem.instance.GetGlobalKey(s)) || keys.Any(s => CurrentPlayer.HaveUniqueKey(s));
         }
 
         public static bool IsItemTypeKnown(ItemDrop.ItemData.ItemType itemType)
         {
-            if (!slotsProgressionEnabled.Value || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading || itemTypes.Count == 0)
+            if (!slotsProgressionEnabled.Value || !CurrentPlayer || CurrentPlayer.m_isLoading || itemTypes.Count == 0)
                 return true;
 
             return itemTypes.Contains(itemType);
@@ -41,12 +42,12 @@ namespace ExtraSlots
 
         public static bool IsAnyMaterialDiscovered(string itemNames)
         {
-            if (!slotsProgressionEnabled.Value || string.IsNullOrEmpty(itemNames) || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
+            if (!slotsProgressionEnabled.Value || !CurrentPlayer || CurrentPlayer.m_isLoading || string.IsNullOrEmpty(itemNames))
                 return true;
 
-            IEnumerable<string> items = itemNames.Split(',').Select(s => s.Trim()).Where(s => !s.IsNullOrWhiteSpace());
+            IEnumerable<string> keys = GetKeys(itemNames);
 
-            return items.Count() == 0 || items.Any(s => Player.m_localPlayer.IsMaterialKnown(s));
+            return keys.Count() == 0 || keys.Any(s => CurrentPlayer.IsMaterialKnown(s));
         }
 
         public static bool IsAmmoSlotKnown() => !ammoSlotsAvailableAfterDiscovery.Value || IsItemTypeKnown(ItemDrop.ItemData.ItemType.Ammo);
@@ -130,18 +131,85 @@ namespace ExtraSlots
             };
         }
 
+        public static readonly HashSet<string> m_knownMaterialCache = new HashSet<string>();
+        public static readonly HashSet<string> m_uniquesCache = new HashSet<string>();
+
+        public static bool IsAnyPlayerKeyActiveCached(string requiredKeys)
+        {
+            if (string.IsNullOrEmpty(requiredKeys))
+                return true;
+
+            IEnumerable<string> keys = GetKeys(requiredKeys);
+
+            if (keys.Count() == 0)
+                return true;
+            else if (CurrentPlayer && !CurrentPlayer.m_isLoading)
+                return keys.Any(s => CurrentPlayer.HaveUniqueKey(s));
+            else
+                return keys.Any(s => m_uniquesCache.Contains(s));
+        }
+
+        // Check for cache currently loaded mats and keys
+        public static bool IsAnyItemDiscoveredCached(string itemNames)
+        {
+            if (string.IsNullOrEmpty(itemNames))
+                return true;
+
+            IEnumerable<string> keys = GetKeys(itemNames);
+            if (keys.Count() == 0)
+                return true;
+            else if (CurrentPlayer && !CurrentPlayer.m_isLoading)
+                return keys.Any(s => CurrentPlayer.IsMaterialKnown(s));
+            else
+                return keys.Any(s => m_knownMaterialCache.Contains(s));
+        }
+
+        internal static bool IsRowProgressionActive() => rowsProgressionEnabled.Value && (CurrentPlayer && !CurrentPlayer.m_isLoading || m_knownMaterialCache.Count + m_uniquesCache.Count > 0);
+
+        internal static bool IsExtraRowKnown(int index) => !IsRowProgressionActive() || IsAnyPlayerKeyActiveCached(ExtraRowPlayerKey(index)) || IsAnyItemDiscoveredCached(ExtraRowItemDiscovered(index));
+
+        private static string ExtraRowPlayerKey(int index)
+        {
+            return index switch
+            {
+                0 => extraRowPlayerKey1.Value,
+                1 => extraRowPlayerKey2.Value,
+                2 => extraRowPlayerKey3.Value,
+                3 => extraRowPlayerKey4.Value,
+                4 => extraRowPlayerKey5.Value,
+                _ => ""
+            };
+        }
+
+        private static string ExtraRowItemDiscovered(int index)
+        {
+            return index switch
+            {
+                0 => extraRowItemDiscovered1.Value,
+                1 => extraRowItemDiscovered2.Value,
+                2 => extraRowItemDiscovered3.Value,
+                3 => extraRowItemDiscovered4.Value,
+                4 => extraRowItemDiscovered5.Value,
+                _ => ""
+            };
+        }
+
         [HarmonyPatch(typeof(Player), nameof(Player.AddKnownItem))]
         private static class Player_AddKnownItem_UpdateKnownItemTypes
         {
-            private static void Prefix(ref int __state)
+            private static void Prefix(Player __instance, ref int __state)
             {
-                __state = Player.m_localPlayer.m_knownMaterial.Count;
+                __state = __instance.m_knownMaterial.Count;
             }
 
-            private static void Postfix(ItemDrop.ItemData item, int __state)
+            private static void Postfix(Player __instance, ItemDrop.ItemData item, int __state)
             {
-                if (__state != Player.m_localPlayer.m_knownMaterial.Count)
+                if (__state != __instance.m_knownMaterial.Count)
+                {
                     itemTypes.Add(item.m_shared.m_itemType);
+                    if (IsRowProgressionActive())
+                        instance.StartSlotsUpdateNextFrame();
+                }
             }
         }
 
@@ -170,6 +238,68 @@ namespace ExtraSlots
             {
                 if (__instance == Player.m_localPlayer)
                     itemTypes.Clear();
+            }
+        }
+
+        [HarmonyPatch]
+        public static class Player_ResetCharacterUpdateRows
+        {
+            private static IEnumerable<MethodBase> TargetMethods()
+            {
+                yield return AccessTools.Method(typeof(Player), nameof(Player.ResetCharacter));
+                yield return AccessTools.Method(typeof(Player), nameof(Player.ResetCharacterKnownItems));
+            }
+
+            private static void Prefix(Player __instance)
+            {
+                if (__instance == Player.m_localPlayer)
+                    if (IsRowProgressionActive())
+                        instance.StartSlotsUpdateNextFrame();
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.Load))]
+        private static class Player_Load_UpdateSlotsGridPositions
+        {
+            private static void Postfix(Player __instance)
+            {
+                loadedPlayer = __instance;
+                if (IsRowProgressionActive())
+                    UpdateSlotsGridPosition();
+                loadedPlayer = null;
+            }
+        }
+
+        [HarmonyPatch(typeof(ZoneSystem), nameof(ZoneSystem.RPC_GlobalKeys))]
+        private static class ZoneSystem_RPC_GlobalKeys_UpdateInventoryRows
+        {
+            private static void Postfix()
+            {
+                if (IsRowProgressionActive())
+                    instance.StartSlotsUpdateNextFrame();
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.SetLocalPlayer))]
+        private static class Player_SetLocalPlayer_ClearPlayerKeyAndKnownMaterialsCache
+        {
+            private static void Prefix()
+            {
+                m_knownMaterialCache.Clear();
+                m_uniquesCache.Clear();
+            }
+        }
+
+        [HarmonyPatch(typeof(FejdStartup), nameof(FejdStartup.SetupCharacterPreview))]
+        private static class FejdStartup_SetupCharacterPreview_CacheLastPlayer
+        {
+            private static void Postfix()
+            {
+                if (CurrentPlayer != null)
+                {
+                    CurrentPlayer.m_knownMaterial.Do(mat => m_knownMaterialCache.Add(mat));
+                    CurrentPlayer.m_uniques.Do(mat => m_uniquesCache.Add(mat));
+                }
             }
         }
     }

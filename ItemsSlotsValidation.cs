@@ -11,6 +11,13 @@ namespace ExtraSlots
     {
         private static bool PutIntoFirstEmptySlot(ItemDrop.ItemData item)
         {
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
+            {
+                LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into previous slot {prevSlot} {prevSlot.GridPosition}");
+                item.m_gridPos = prevSlot.GridPosition;
+                return true;
+            }
+
             Vector2i gridPos = PlayerInventory.FindEmptySlot(true);
             if (gridPos.x > -1 && gridPos.y > -1)
             {
@@ -21,7 +28,7 @@ namespace ExtraSlots
 
             if (TryFindFreeSlotForItem(item, out Slot slot))
             {
-                LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into first free valid equipment slot {slot.GridPosition}");
+                LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into first free valid slot {slot} {slot.GridPosition}");
                 item.m_gridPos = slot.GridPosition;
                 return true;
             }
@@ -196,15 +203,13 @@ namespace ExtraSlots
                         tempItems.Add(item);
                     }
 
-                    PruneLastEquippedSlotFromItem(item);
-
-                    PruneLastEquippeWeaponShieldFromItem(item);
-
                     occupiedPositions.Add(item.m_gridPos);
                 }
 
                 if (tempItems.Count(PutIntoFirstEmptySlot) > 0)
                     PlayerInventory.Changed();
+
+                API.GetAllExtraSlotsItems().Do(PruneLastEquippedSlotFromItem);
             }
 
             private static bool ItemIsOverlapping(ItemDrop.ItemData itemData) => occupiedPositions.Contains(itemData.m_gridPos);

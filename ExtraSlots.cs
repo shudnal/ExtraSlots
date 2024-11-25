@@ -161,6 +161,20 @@ namespace ExtraSlots
         public static ConfigEntry<bool> foodSlotsAvailableAfterDiscovery;
         public static ConfigEntry<bool> equipmentSlotsAvailableAfterDiscovery;
 
+        public static ConfigEntry<bool> rowsProgressionEnabled;
+
+        public static ConfigEntry<string> extraRowPlayerKey1;
+        public static ConfigEntry<string> extraRowPlayerKey2;
+        public static ConfigEntry<string> extraRowPlayerKey3;
+        public static ConfigEntry<string> extraRowPlayerKey4;
+        public static ConfigEntry<string> extraRowPlayerKey5;
+
+        public static ConfigEntry<string> extraRowItemDiscovered1;
+        public static ConfigEntry<string> extraRowItemDiscovered2;
+        public static ConfigEntry<string> extraRowItemDiscovered3;
+        public static ConfigEntry<string> extraRowItemDiscovered4;
+        public static ConfigEntry<string> extraRowItemDiscovered5;
+
         public static ConfigEntry<float> epicLootMagicItemUnequippedAlpha;
         public static ConfigEntry<bool> epicLootExcludeMiscItemsFromSacrifice;
 
@@ -210,7 +224,7 @@ namespace ExtraSlots
 
         private void LateUpdate()
         {
-            if (InventoryGui.instance)
+            if (InventoryGui.instance && !IsAwaitingForSlotsUpdate())
                 ItemsSlotsValidation.Validate();
         }
 
@@ -247,6 +261,7 @@ namespace ExtraSlots
                                                                                         "\nIt could be restored in case of loading character without mod installed leading to extra slots item loss." +
                                                                                         "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.", synchronizedSetting: true);
             slotsProgressionEnabled = config("Extra slots", "Slots progression enabled", defaultValue: true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]", synchronizedSetting: true);
+            rowsProgressionEnabled = config("Extra slots", "Inventory rows progression enabled", defaultValue: false, "Enabled inventory rows obtaining progression.  Use with caution and report bugs. [Synced with Server]", synchronizedSetting: true);
             preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "$item_beltstrength:$belt_ymir_TW", "Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
                                                                                            "\nIf you just want one item to be unique-equipped just add its name without \":\"", synchronizedSetting: true);
 
@@ -255,6 +270,8 @@ namespace ExtraSlots
             slotsTombstoneAutoEquipWeaponShield = config("Extra slots - Auto equip on tombstone pickup", "Equip previous weapon and shield", defaultValue: false, "Auto equip weapon and shield that was equipped on death. [Synced with Server]", synchronizedSetting: true);
 
             extraRows.SettingChanged += (s, e) => API.UpdateSlots();
+            rowsProgressionEnabled.SettingChanged += (s, e) => API.UpdateSlots();
+            
             extraUtilitySlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             foodSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
@@ -438,6 +455,30 @@ namespace ExtraSlots
             quickSlotItemDiscovered5.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotItemDiscovered6.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
+            extraRowPlayerKey1 = config("Progression - Inventory - Player keys", "Extra row 1", "GP_Bonemass", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowPlayerKey2 = config("Progression - Inventory - Player keys", "Extra row 2", "GP_Moder", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowPlayerKey3 = config("Progression - Inventory - Player keys", "Extra row 3", "GP_Yagluth", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowPlayerKey4 = config("Progression - Inventory - Player keys", "Extra row 4", "GP_Queen", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowPlayerKey5 = config("Progression - Inventory - Player keys", "Extra row 5", "GP_Fader", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+
+            extraRowPlayerKey1.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowPlayerKey2.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowPlayerKey3.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowPlayerKey4.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowPlayerKey5.SettingChanged += (s, e) => API.UpdateSlots();
+
+            extraRowItemDiscovered1 = config("Progression - Inventory - Items", "Extra row 1", "$item_wishbone", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscovered2 = config("Progression - Inventory - Items", "Extra row 2", "$item_dragontear", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscovered3 = config("Progression - Inventory - Items", "Extra row 3", "$item_yagluththing", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscovered4 = config("Progression - Inventory - Items", "Extra row 4", "$item_seekerqueen_drop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscovered5 = config("Progression - Inventory - Items", "Extra row 5", "$item_fader_drop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+
+            extraRowItemDiscovered1.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowItemDiscovered2.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowItemDiscovered3.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowItemDiscovered4.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowItemDiscovered5.SettingChanged += (s, e) => API.UpdateSlots();
+
             epicLootMagicItemUnequippedAlpha = config("Mods compatibility", "EpicLoot unequipped item alpha", 0.2f, "Make unequipped enchanted item more visible in equipment panel by making its background image more transparent.");
             epicLootExcludeMiscItemsFromSacrifice = config("Mods compatibility", "EpicLoot exclude misc items from sacrifice", true, "If EpicLoot config ShowEquippedAndHotbarItemsInSacrificeTab is enabled then items in misc slots will be excluded from sacrifice.");
         }
@@ -527,6 +568,30 @@ namespace ExtraSlots
             resourceStream.Read(data, 0, data.Length);
 
             return data;
+        }
+
+        internal static bool IsAwaitingForSlotsUpdate() => instance.slotsUpdater != null;
+
+        private System.Collections.IEnumerator slotsUpdater;
+
+        internal void StartSlotsUpdateNextFrame()
+        {
+            if (IsAwaitingForSlotsUpdate())
+                return;
+
+            slotsUpdater = UpdateSlotsNextFrame();
+            instance.StartCoroutine(slotsUpdater);
+        }
+
+        private System.Collections.IEnumerator UpdateSlotsNextFrame()
+        {
+            yield return new WaitForEndOfFrame();
+
+            LogInfo("UpdateSlots delayed update");
+
+            API.UpdateSlots();
+
+            slotsUpdater = null;
         }
     }
 }
