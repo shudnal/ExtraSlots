@@ -854,7 +854,7 @@ namespace ExtraSlots
         {
             private static void Postfix(RectTransform rect, Vector2 screenPoint, ref bool __result)
             {
-                if (rect != InventoryGui.instance.m_playerGrid.m_gridRoot)
+                if (!InventoryGui.instance || rect != InventoryGui.instance.m_playerGrid.m_gridRoot)
                     return;
 
                 for (int i = 0; i < Math.Min(slots.Length, InventoryGui.instance.m_playerGrid.m_elements.Count - InventorySizePlayer); ++i)
