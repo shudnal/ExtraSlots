@@ -1,3 +1,6 @@
+# 1.0.12
+* fix for error on new character creation
+
 # 1.0.11
 * Chinese translations refined
 * BetterProgression compatibility

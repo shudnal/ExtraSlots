@@ -454,6 +454,9 @@ namespace ExtraSlots
 
         internal static void SaveLastEquippedSlotsToItems()
         {
+            if (!Game.instance)
+                return;
+
             long playerID = Game.instance.GetPlayerProfile().GetPlayerID();
 
             int savedItems = 0;
