@@ -77,6 +77,9 @@ namespace ExtraSlots
         public static ConfigEntry<bool> ammoSlotsShowHintImage;
         public static ConfigEntry<bool> ammoSlotsShowTooltip;
         public static ConfigEntry<bool> ammoSlotsHideStackSize;
+        public static ConfigEntry<int> ammoSlotsWidthInElements;
+        public static ConfigEntry<bool> ammoSlotsFillDirectionUp;
+        public static ConfigEntry<float> ammoSlotsElementSpace;
 
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey2;
@@ -93,6 +96,9 @@ namespace ExtraSlots
         public static ConfigEntry<bool> quickSlotsShowHintImage;
         public static ConfigEntry<bool> quickSlotsShowTooltip;
         public static ConfigEntry<bool> quickSlotsHideStackSize;
+        public static ConfigEntry<int> quickSlotsWidthInElements;
+        public static ConfigEntry<bool> quickSlotsFillDirectionUp;
+        public static ConfigEntry<float> quickSlotsElementSpace;
 
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey2;
@@ -307,6 +313,9 @@ namespace ExtraSlots
             ammoSlotsShowHintImage = config("Panels - Ammo slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             ammoSlotsShowTooltip = config("Panels - Ammo slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             ammoSlotsHideStackSize = config("Panels - Ammo slots", "Hide stack size in hotbar", defaultValue: false, "Hide stack size and left only current amount for consumable and equipable items in hotbar");
+            ammoSlotsWidthInElements = config("Panels - Ammo slots", "Hotbar width in elements", defaultValue: 3, new ConfigDescription("How much ammo slots should be displayed in one line", new AcceptableValueRange<int>(1, 3)));
+            ammoSlotsFillDirectionUp = config("Panels - Ammo slots", "Hotbar fill direction is up", defaultValue: false, "Ammo slots hotbar will fill from bottom to top");
+            ammoSlotsElementSpace = config("Panels - Ammo slots", "Hotbar element space", defaultValue: 70f, "Ammo slots hotbar element size. Defines space between elements as well.");
 
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
 
@@ -329,6 +338,9 @@ namespace ExtraSlots
             quickSlotsShowHintImage = config("Panels - Quick slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             quickSlotsShowTooltip = config("Panels - Quick slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             quickSlotsHideStackSize = config("Panels - Quick slots", "Hide stack size in hotbar", defaultValue: false, "Hide stack size and left only current amount for consumable and equipable items in hotbar");
+            quickSlotsWidthInElements = config("Panels - Quick slots", "Hotbar width in elements", defaultValue: 6, new ConfigDescription("How much quick slots should be displayed in one line", new AcceptableValueRange<int>(1, 6)));
+            quickSlotsFillDirectionUp = config("Panels - Quick slots", "Hotbar fill direction is up", defaultValue: false, "Quickslots hotbar will fill from bottom to top");
+            quickSlotsElementSpace = config("Panels - Quick slots", "Hotbar element space", defaultValue: 70f, "Quickslots hotbar element size. Defines space between elements as well.");
 
             quickSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
 

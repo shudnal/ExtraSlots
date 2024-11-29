@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using static ExtraSlots.Slots;
 
@@ -19,9 +20,11 @@ public static class QuickBars
             QuickSlotsHotBar.barName,
             AmmoSlotsHotBar.barName
         };
+    private static readonly Dictionary<GameObject, Tuple<RectTransform, TMP_Text>> elementsExtraData = new Dictionary<GameObject, Tuple<RectTransform, TMP_Text>>();
 
     public static void ResetBars()
     {
+        elementsExtraData.Clear();
         _currentBarIndex = -1;
         bars = GetHotKeyBarsToControl();
     }
@@ -190,18 +193,29 @@ public static class QuickBars
 
             inCall = false;
 
-            for (int index = 0; index < __instance.m_elements.Count; index++)
-                if (__instance.name == QuickSlotsHotBar.barName)
+            if (__instance.name == QuickSlotsHotBar.barName || __instance.name == AmmoSlotsHotBar.barName)
+                for (int index = 0; index < __instance.m_elements.Count; index++)
                 {
-                    EquipmentPanel.SetSlotLabel(__instance.m_elements[index].m_go.transform.Find("binding"), slots[index], hotbarElement: true);
-                    if (ExtraSlots.quickSlotsHideStackSize.Value && __instance.m_elements[index].m_amount.gameObject.activeInHierarchy && (slots[index].Item is ItemDrop.ItemData item) && (item.IsEquipable() || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable))
-                        __instance.m_elements[index].m_amount.SetText(__instance.m_elements[index].m_stackText.ToFastString());
-                }
-                else if (__instance.name == AmmoSlotsHotBar.barName)
-                {
-                    EquipmentPanel.SetSlotLabel(__instance.m_elements[index].m_go.transform.Find("binding"), slots[index + 8], hotbarElement: true);
-                    if (ExtraSlots.ammoSlotsHideStackSize.Value && __instance.m_elements[index].m_amount.gameObject.activeInHierarchy && (slots[index + 8].Item is ItemDrop.ItemData item) && (item.IsEquipable() || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable))
-                        __instance.m_elements[index].m_amount.SetText(__instance.m_elements[index].m_stackText.ToFastString());
+                    HotkeyBar.ElementData elementData = __instance.m_elements[index];
+                    if (!elementsExtraData.ContainsKey(elementData.m_go))
+                    {
+                        Transform binding = elementData.m_go.transform.Find("binding");
+                        elementsExtraData[elementData.m_go] = Tuple.Create(binding.GetComponent<RectTransform>(), binding.GetComponent<TMP_Text>());
+                    }
+
+                    Tuple<RectTransform, TMP_Text> extraData = elementsExtraData[elementData.m_go];
+
+                    Slot slot = slots[index + (__instance.name == AmmoSlotsHotBar.barName ? 8 : 0)];
+                    EquipmentPanel.SetSlotLabel(extraData.Item1, extraData.Item2, slot, hotbarElement: true);
+
+                    bool hideStackSize = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsHideStackSize.Value : ExtraSlots.ammoSlotsHideStackSize.Value;
+                    if (hideStackSize && elementData.m_amount.gameObject.activeInHierarchy && (slot.Item is ItemDrop.ItemData item) && (item.IsEquipable() || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable))
+                        elementData.m_amount.SetText(elementData.m_stackText.ToFastString());
+                    
+                    int widthInElements = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsWidthInElements.Value : ExtraSlots.ammoSlotsWidthInElements.Value;
+                    bool fillUp = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsFillDirectionUp.Value : ExtraSlots.ammoSlotsFillDirectionUp.Value;
+                    float elementSpace = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsElementSpace.Value : ExtraSlots.ammoSlotsElementSpace.Value;
+                    elementData.m_go.transform.localPosition = new Vector3(index % widthInElements, (fillUp ? 1 : -1) * index / widthInElements, 0f) * elementSpace;
                 }
         }
     }

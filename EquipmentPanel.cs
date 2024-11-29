@@ -163,27 +163,30 @@ namespace ExtraSlots
             if (!binding || !slot.IsActive)
                 return;
 
-            // Make component size of parent to let TMP_Text do its job on text positioning
-            RectTransform rt = binding.GetComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-            rt.sizeDelta = Vector2.zero;
-            rt.anchoredPosition = Vector2.zero;
+            SetSlotLabel(binding.GetComponent<RectTransform>(), binding.GetComponent<TMP_Text>(), slot, hotbarElement);
+        }
 
-            TMP_Text textComp = binding.GetComponent<TMP_Text>();
-            textComp.enableAutoSizing = true;
-            textComp.text = hotbarElement ? (ZInput.IsGamepadActive() ? "" : slot.GetShortcutText()) : slot.Name;
-            textComp.enabled = true;
-            textComp.overflowMode = TextOverflowModes.Overflow;
-            textComp.fontSizeMin = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelFontSize.Value.x : quickSlotLabelFontSize.Value.x) : equipmentSlotLabelFontSize.Value.x;
-            textComp.fontSizeMax = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelFontSize.Value.y : quickSlotLabelFontSize.Value.y) : equipmentSlotLabelFontSize.Value.y;
-            textComp.color = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelFontColor.Value : quickSlotLabelFontColor.Value) : equipmentSlotLabelFontColor.Value;
-            textComp.margin = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelMargin.Value : quickSlotLabelMargin.Value) : equipmentSlotLabelMargin.Value;
-            textComp.textWrappingMode = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelWrappingMode.Value : quickSlotLabelWrappingMode.Value) : equipmentSlotLabelWrappingMode.Value;
-            textComp.horizontalAlignment = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelAlignment.Value : quickSlotLabelAlignment.Value) : equipmentSlotLabelAlignment.Value;
-            textComp.verticalAlignment = VerticalAlignmentOptions.Top;
+        internal static void SetSlotLabel(RectTransform rectTransform, TMP_Text textComponent, Slot slot, bool hotbarElement = false)
+        {
+            // Make component size of parent to let TMP_Text do its job on text positioning
+            rectTransform.anchorMin = Vector2.zero;
+            rectTransform.anchorMax = Vector2.one;
+            rectTransform.offsetMin = Vector2.zero;
+            rectTransform.offsetMax = Vector2.zero;
+            rectTransform.sizeDelta = Vector2.zero;
+            rectTransform.anchoredPosition = Vector2.zero;
+
+            textComponent.enableAutoSizing = true;
+            textComponent.text = hotbarElement ? (ZInput.IsGamepadActive() ? "" : slot.GetShortcutText()) : slot.Name;
+            textComponent.enabled = true;
+            textComponent.overflowMode = TextOverflowModes.Overflow;
+            textComponent.fontSizeMin = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelFontSize.Value.x : quickSlotLabelFontSize.Value.x) : equipmentSlotLabelFontSize.Value.x;
+            textComponent.fontSizeMax = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelFontSize.Value.y : quickSlotLabelFontSize.Value.y) : equipmentSlotLabelFontSize.Value.y;
+            textComponent.color = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelFontColor.Value : quickSlotLabelFontColor.Value) : equipmentSlotLabelFontColor.Value;
+            textComponent.margin = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelMargin.Value : quickSlotLabelMargin.Value) : equipmentSlotLabelMargin.Value;
+            textComponent.textWrappingMode = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelWrappingMode.Value : quickSlotLabelWrappingMode.Value) : equipmentSlotLabelWrappingMode.Value;
+            textComponent.horizontalAlignment = slot.IsHotkeySlot ? (slot.IsAmmoSlot ? ammoSlotLabelAlignment.Value : quickSlotLabelAlignment.Value) : equipmentSlotLabelAlignment.Value;
+            textComponent.verticalAlignment = VerticalAlignmentOptions.Top;
         }
 
         internal static void SetSlotColor(Button button, bool useUnfitColor)
