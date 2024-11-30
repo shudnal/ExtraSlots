@@ -8,6 +8,8 @@ namespace ExtraSlots
 {
     public static class TombStoneInteraction
     {
+        private static readonly List<ItemDrop.ItemData> itemsToKeep = new List<ItemDrop.ItemData>();
+
         public static void EquipItemsInSlots()
         {
             ClearCachedItems();
@@ -30,6 +32,44 @@ namespace ExtraSlots
         public static void EquipWeaponShield()
         {
             PlayerInventory.GetAllItems().Where(IsWeaponShieldToEquip).Do(TryEquipItem);
+        }
+
+        public static void OnDeathPrefix(Player player)
+        {
+            itemsToKeep.Clear();
+            slots.DoIf(IsSlotToKeep, slot => KeepItem(slot.Item));
+            ClearCachedItems();
+
+            SaveLastEquippedSlotsToItems();
+
+            SaveLastEquippedWeaponShieldToItems(player);
+
+            void KeepItem(ItemDrop.ItemData item)
+            {
+                itemsToKeep.Add(item);
+                player.GetInventory().m_inventory.Remove(item);
+            }
+
+            bool IsSlotToKeep(Slot slot)
+            {
+                if (slot.IsFree)
+                    return false;
+
+                return slot.IsEquipmentSlot && keepOnDeathEquipmentSlots.Value ||
+                       slot.IsQuickSlot && keepOnDeathQuickSlots.Value ||
+                       slot.IsAmmoSlot && keepOnDeathAmmoSlots.Value ||
+                       slot.IsFoodSlot && keepOnDeathFoodSlots.Value ||
+                       slot.IsMiscSlot && keepOnDeathMiscSlots.Value;
+            }
+        }
+
+        public static void OnDeathPostfix(Player player)
+        {
+            if (itemsToKeep.Count == 0)
+                return;
+
+            player.GetInventory().m_inventory.AddRange(itemsToKeep);
+            itemsToKeep.Clear();
         }
 
         [HarmonyPatch(typeof(TombStone), nameof(TombStone.OnTakeAllSuccess))]
@@ -174,18 +214,29 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(Player), nameof(Player.CreateTombStone))]
-        private static class Player_CreateTombStone_SaveItemSlotsPosition
+        [HarmonyPatch(typeof(Character), nameof(Character.CheckDeath))]
+        private static class Character_CheckDeath_OnDeathWrapping
         {
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Player __instance)
+            private static void Prefix(Character __instance)
             {
                 if (!IsValidPlayer(__instance))
                     return;
 
-                SaveLastEquippedSlotsToItems();
+                if (!__instance.IsDead() && __instance.GetHealth() <= 0f)
+                    OnDeathPrefix(__instance as Player);
+            }
+        }
 
-                SaveLastEquippedWeaponShieldToItems(__instance);
+        [HarmonyPatch(typeof(Player), nameof(Player.OnDeath))]
+        private static class Player_OnDeath_RestoreItemsToKeep
+        {
+            private static void Postfix(Player __instance)
+            {
+                if (!IsValidPlayer(__instance))
+                    return;
+
+                OnDeathPostfix(__instance);
             }
         }
     }

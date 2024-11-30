@@ -305,7 +305,7 @@ namespace ExtraSlots
 
         public static int GetTargetInventoryHeight(int inventorySize, int inventoryWidth) => GetExtraRowsForItemsToFit(inventorySize, inventoryWidth);
         public static int GetExtraRowsForItemsToFit(int itemsAmount, int rowWidth) => ((itemsAmount - 1) / rowWidth) + 1;
-        public static bool IsValidPlayer(Humanoid human) => human != null && human.IsPlayer() && Player.m_localPlayer == human && human.m_nview.IsValid() && human.m_nview.IsOwner();
+        public static bool IsValidPlayer(Character character) => character != null && character.IsPlayer() && Player.m_localPlayer == character && character.m_nview && character.m_nview.IsValid() && character.m_nview.IsOwner();
 
         public static int GetEquipmentSlotsCount() => slots.Count(slot => slot.IsEquipmentSlot && slot.IsActive);
         public static int GetQuickSlotsCount() => slots.Count(slot => slot.IsQuickSlot && slot.IsActive);

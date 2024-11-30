@@ -54,6 +54,12 @@ namespace ExtraSlots
         public static ConfigEntry<bool> slotsTombstoneAutoEquipEnabled;
         public static ConfigEntry<bool> slotsTombstoneAutoEquipCarryWeightItemsEnabled;
 
+        public static ConfigEntry<bool> keepOnDeathEquipmentSlots;
+        public static ConfigEntry<bool> keepOnDeathQuickSlots;
+        public static ConfigEntry<bool> keepOnDeathFoodSlots;
+        public static ConfigEntry<bool> keepOnDeathAmmoSlots;
+        public static ConfigEntry<bool> keepOnDeathMiscSlots;
+
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
         public static ConfigEntry<Vector2> equipmentPanelOffset;
@@ -271,10 +277,6 @@ namespace ExtraSlots
             preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "$item_beltstrength:$belt_ymir_TW", "Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
                                                                                            "\nIf you just want one item to be unique-equipped just add its name without \":\"", synchronizedSetting: true);
 
-            slotsTombstoneAutoEquipEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip all equipment slots", defaultValue: false, "Auto equip items in equipment slots if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
-            slotsTombstoneAutoEquipCarryWeightItemsEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip items increasing carry weight", defaultValue: true, "Auto equip items in equipment slots that increase max carry weight (like Megingjord) if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
-            slotsTombstoneAutoEquipWeaponShield = config("Extra slots - Auto equip on tombstone pickup", "Equip previous weapon and shield", defaultValue: false, "Auto equip weapon and shield that was equipped on death. [Synced with Server]", synchronizedSetting: true);
-
             extraRows.SettingChanged += (s, e) => API.UpdateSlots();
             rowsProgressionEnabled.SettingChanged += (s, e) => API.UpdateSlots();
             
@@ -285,6 +287,16 @@ namespace ExtraSlots
             ammoSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             slotsProgressionEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             preventUniqueUtilityItemsEquip.SettingChanged += (s, e) => ExtraUtilitySlots.UpdateUniqueEquipped();
+
+            slotsTombstoneAutoEquipEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip all equipment slots", defaultValue: false, "Auto equip items in equipment slots if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
+            slotsTombstoneAutoEquipCarryWeightItemsEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip items increasing carry weight", defaultValue: true, "Auto equip items in equipment slots that increase max carry weight (like Megingjord) if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
+            slotsTombstoneAutoEquipWeaponShield = config("Extra slots - Auto equip on tombstone pickup", "Equip previous weapon and shield", defaultValue: false, "Auto equip weapon and shield that was equipped on death. [Synced with Server]", synchronizedSetting: true);
+
+            keepOnDeathEquipmentSlots = config("Extra slots - Death tweaks", "Keep items at equipment slots", defaultValue: false, "Keep items in equipment slots after death. [Synced with Server]", synchronizedSetting: true);
+            keepOnDeathQuickSlots = config("Extra slots - Death tweaks", "Keep items at quick slots", defaultValue: false, "Keep items in quick slots after death. [Synced with Server]", synchronizedSetting: true);
+            keepOnDeathFoodSlots = config("Extra slots - Death tweaks", "Keep items at food slots", defaultValue: false, "Keep items in food slots after death. [Synced with Server]", synchronizedSetting: true);
+            keepOnDeathAmmoSlots = config("Extra slots - Death tweaks", "Keep items at ammo slots", defaultValue: false, "Keep items in ammo slots after death. [Synced with Server]", synchronizedSetting: true);
+            keepOnDeathMiscSlots = config("Extra slots - Death tweaks", "Keep items at misc slots", defaultValue: false, "Keep items in misc slots after death. [Synced with Server]", synchronizedSetting: true);
 
             vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder, "Comma separated list defining order of vanilla equipment slots");
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalLeft, "Equipment slots alignment");
