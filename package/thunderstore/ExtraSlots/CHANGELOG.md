@@ -1,3 +1,7 @@
+# 1.0.13
+* ammo and quickslots hotbar made more configurable
+* options to keep items in slots after death (compatible with Death Tweaks)
+
 # 1.0.12
 * fix for error on new character creation
 

@@ -51,7 +51,14 @@ For backward migration you should clear all extra slots beforehand or you will l
 
 ### Custom slots API
 
-There is [ExtraSlotsCustomSlots](https://thunderstore.io/c/valheim/p/shudnal/ExtraSlotsCustomSlots/) mod that adds custom slots for various mods.
+There is [ExtraSlotsCustomSlots](https://thunderstore.io/c/valheim/p/shudnal/ExtraSlotsCustomSlots/) mod that adds custom slots for various mods:
+* [Backpacks](https://thunderstore.io/c/valheim/p/Smoothbrain/Backpacks/) (Backpack slot)
+* [AdventureBackpacks](https://thunderstore.io/c/valheim/p/Vapok/AdventureBackpacks/) (with option to equip cape and backpack at the same time)
+* [Jewelcrafting](https://thunderstore.io/c/valheim/p/Smoothbrain/Jewelcrafting/) (Neck and Ring slots)
+* [MagicPlugin](https://thunderstore.io/c/valheim/p/blacks7ar/MagicPlugin/) (Tome and Earring slots)
+* [BowsBeforeHoes](https://thunderstore.io/c/valheim/p/Azumatt/BowsBeforeHoes/) (Quiver slot)
+* [CircletExtended](https://thunderstore.io/c/valheim/p/shudnal/CircletExtended/) (Circlet slot)
+* [HipLantern](https://thunderstore.io/c/valheim/p/shudnal/HipLantern/) (Lantern slot)
 
 You can add/remove custom equipment slots on the fly but most stable way is to do it on Awake.
 
@@ -144,7 +151,7 @@ EaQS style
 
 Quick slot and Ammo slots could have corresponding hotkey bars similar to regular 1-8 hotkey bar.
 
-You can change its position and scale.
+You can change its position, orientation and scale.
 
 You can set any hotkey with the same key that is already in use by game and there will be no conflict.
 
@@ -198,6 +205,12 @@ Tombstone interaction has several configurable options of what items should be a
 You can enable gradual extra inventory rows progression to get it after meeting certain conditions.
 
 Rows obtaining depends on unique player keys or known items.
+
+## Keep items on death
+
+There is section in config where you can set items in which slots should be saved after death.
+
+It works along with DeathTweaks mod.
 
 ## Incompatibility
 

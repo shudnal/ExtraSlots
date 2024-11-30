@@ -202,5 +202,6 @@ public static class API
     {
         UpdateSlotsGridPosition();
         EquipmentPanel.UpdatePanel();
+        HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
     }
 }
