@@ -196,7 +196,7 @@ namespace ExtraSlots
                     if (item == null)
                         return;
 
-                    if (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility && __instance.m_utilityItem != null && !IsItemEquipped(item) && (__state = GetSlotForItem(item)) != -1)
+                    if (IsUtilitySlotItem(item) && __instance.m_utilityItem != null && !IsItemEquipped(item) && (__state = GetSlotForItem(item)) != -1)
                     {
                         item.m_shared.m_itemType = tempType;
                         if (__instance.m_visEquipment && __instance.m_visEquipment.m_isPlayer)

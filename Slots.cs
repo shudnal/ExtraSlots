@@ -547,18 +547,18 @@ namespace ExtraSlots
             AddHotkeySlot($"{foodSlotID}2", () => foodSlotsShowLabel.Value ? GetFoodSlot2Text() : "", IsFoodSlotItem, () => IsFoodSlotAvailable(), () => foodSlotHotKey2.Value, () => GetFoodSlot2Text());
             AddHotkeySlot($"{foodSlotID}3", () => foodSlotsShowLabel.Value ? GetFoodSlot3Text() : "", IsFoodSlotItem, () => IsFoodSlotAvailable(), () => foodSlotHotKey3.Value, () => GetFoodSlot3Text());
 
-            AddSlot($"{extraUtilitySlotID}1", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsExtraUtilitySlotAvailable(0));
-            AddSlot($"{extraUtilitySlotID}2", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsExtraUtilitySlotAvailable(1));
+            AddSlot($"{extraUtilitySlotID}1", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, () => IsExtraUtilitySlotAvailable(0));
+            AddSlot($"{extraUtilitySlotID}2", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, () => IsExtraUtilitySlotAvailable(1));
 
             // Third row
             AddSlot(helmetSlotID, () => "$exsl_slot_equipment_helmet_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet, () => IsHelmetSlotKnown());
             AddSlot(chestSlotID, () => "$exsl_slot_equipment_chest_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Chest, () => IsChestSlotKnown());
             AddSlot(legsSlotID, () => "$exsl_slot_equipment_legs_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Legs, () => IsLegsSlotKnown());
             AddSlot(shoulderSlotID, () => "$exsl_slot_equipment_shoulders_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Shoulder, () => IsShoulderSlotKnown());
-            AddSlot(utilitySlotID, () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsUtilitySlotKnown());
+            AddSlot(utilitySlotID, () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, () => IsUtilitySlotKnown());
 
-            AddSlot($"{extraUtilitySlotID}3", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsExtraUtilitySlotAvailable(2));
-            AddSlot($"{extraUtilitySlotID}4", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsExtraUtilitySlotAvailable(3));
+            AddSlot($"{extraUtilitySlotID}3", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, () => IsExtraUtilitySlotAvailable(2));
+            AddSlot($"{extraUtilitySlotID}4", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, () => IsExtraUtilitySlotAvailable(3));
 
             CustomSlot.customSlotStartingIndex = index;
 
@@ -650,6 +650,13 @@ namespace ExtraSlots
             return item != null && 
                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable &&
                    (item.m_shared.m_food > 0 || item.m_shared.m_foodStamina > 0 || item.m_shared.m_foodEitr > 0 || item.m_shared.m_isDrink);
+        }
+
+        public static bool IsUtilitySlotItem(ItemDrop.ItemData item)
+        {
+            return item != null &&
+                   item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility &&
+                   !Compatibility.MagicPluginCompat.IsMagicPluginCustomSlotItem(item);
         }
 
         public static bool IsGridPositionASlot(Vector2i gridPos)

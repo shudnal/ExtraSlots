@@ -1,3 +1,10 @@
+# 1.0.14
+* ok fine there is food slots hotbar now
+* and you can place potions in food slots
+* hotbar gamepad selection will now properly cycle through hotbars in order (top -> bottom, left -> right) if hotbars were repositioned
+* PlantEasily gamepad double selection fixed
+* MagicPlugin custom slot compatibility
+
 # 1.0.13
 * ammo and quickslots hotbar made more configurable
 * options to keep items in slots after death (compatible with Death Tweaks)
