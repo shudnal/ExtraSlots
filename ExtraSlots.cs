@@ -68,10 +68,25 @@ namespace ExtraSlots
         public static ConfigEntry<bool> equipmentSlotsShowTooltip;
         public static ConfigEntry<bool> fixContainerPosition;
 
+        public static ConfigEntry<bool> foodSlotsHotBarEnabled;
+        public static ConfigEntry<Vector2> foodSlotsHotBarOffset;
+        public static ConfigEntry<float> foodSlotsHotBarScale;
         public static ConfigEntry<bool> foodSlotsShowLabel;
         public static ConfigEntry<bool> foodSlotsShowHintImage;
         public static ConfigEntry<bool> foodSlotsShowTooltip;
-        
+        public static ConfigEntry<bool> foodSlotsHideStackSize;
+        public static ConfigEntry<int> foodSlotsWidthInElements;
+        public static ConfigEntry<bool> foodSlotsFillDirectionUp;
+        public static ConfigEntry<float> foodSlotsElementSpace;
+
+        public static ConfigEntry<KeyboardShortcut> foodSlotHotKey1;
+        public static ConfigEntry<KeyboardShortcut> foodSlotHotKey2;
+        public static ConfigEntry<KeyboardShortcut> foodSlotHotKey3;
+
+        public static ConfigEntry<string> foodSlotHotKey1Text;
+        public static ConfigEntry<string> foodSlotHotKey2Text;
+        public static ConfigEntry<string> foodSlotHotKey3Text;
+
         public static ConfigEntry<bool> miscSlotsShowLabel;
         public static ConfigEntry<bool> miscSlotsShowHintImage;
         public static ConfigEntry<bool> miscSlotsShowTooltip;
@@ -310,9 +325,30 @@ namespace ExtraSlots
             equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentPanelTooltipOffset.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
 
+            foodSlotsHotBarEnabled = config("Panels - Food slots", "Enabled", defaultValue: true, "Enable hotbar with Food slots");
+            foodSlotsHotBarOffset = config("Panels - Food slots", "Offset", defaultValue: new Vector2(230f, 996f), "On screen position of Food slots hotbar panel");
+            foodSlotsHotBarScale = config("Panels - Food slots", "Scale", defaultValue: 1f, "Relative size");
             foodSlotsShowLabel = config("Panels - Food slots", "Show label", defaultValue: false, "Show slot label");
             foodSlotsShowHintImage = config("Panels - Food slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             foodSlotsShowTooltip = config("Panels - Food slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
+            foodSlotsHideStackSize = config("Panels - Food slots", "Hide stack size in hotbar", defaultValue: false, "Hide stack size and left only current amount for consumable and equipable items in hotbar");
+            foodSlotsWidthInElements = config("Panels - Food slots", "Hotbar width in elements", defaultValue: 3, new ConfigDescription("How much Food slots should be displayed in one line", new AcceptableValueRange<int>(1, 3)));
+            foodSlotsFillDirectionUp = config("Panels - Food slots", "Hotbar fill direction is up", defaultValue: false, "Food slots hotbar will fill from bottom to top");
+            foodSlotsElementSpace = config("Panels - Food slots", "Hotbar element space", defaultValue: 70f, "Food slots hotbar element size. Defines space between elements as well.");
+            
+            foodSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
+
+            foodSlotHotKey1 = config("Hotkeys", "Food 1", new KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftControl), "Use configuration manager to set shortcuts.");
+            foodSlotHotKey2 = config("Hotkeys", "Food 2", new KeyboardShortcut(KeyCode.Alpha2, KeyCode.LeftControl), "Use configuration manager to set shortcuts.");
+            foodSlotHotKey3 = config("Hotkeys", "Food 3", new KeyboardShortcut(KeyCode.Alpha3, KeyCode.LeftControl), "Use configuration manager to set shortcuts.");
+
+            foodSlotHotKey1Text = config("Hotkeys", "Food 1 Text", "Ctrl + 1", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
+            foodSlotHotKey2Text = config("Hotkeys", "Food 2 Text", "Ctrl + 2", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
+            foodSlotHotKey3Text = config("Hotkeys", "Food 3 Text", "Ctrl + 3", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
+
+            foodSlotHotKey1.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+            foodSlotHotKey2.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+            foodSlotHotKey3.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
 
             miscSlotsShowLabel = config("Panels - Misc slots", "Show label", defaultValue: false, "Show slot label");
             miscSlotsShowHintImage = config("Panels - Misc slots", "Show hint image", defaultValue: true, "Show slot background hint image");

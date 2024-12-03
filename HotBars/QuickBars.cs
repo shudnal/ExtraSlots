@@ -18,7 +18,8 @@ public static class QuickBars
     private static readonly HashSet<string> barNames = new HashSet<string>(){
             vanillaBarName,
             QuickSlotsHotBar.barName,
-            AmmoSlotsHotBar.barName
+            AmmoSlotsHotBar.barName,
+            FoodSlotsHotBar.barName,
         };
     private static readonly Dictionary<GameObject, Tuple<RectTransform, TMP_Text>> elementsExtraData = new Dictionary<GameObject, Tuple<RectTransform, TMP_Text>>();
 
@@ -37,7 +38,9 @@ public static class QuickBars
         // Patch this method to use selected item from your hotbar
     }
 
-    private static List<HotkeyBar> GetHotKeyBarsToControl() => Hud.instance ? Hud.instance.transform.parent.GetComponentsInChildren<HotkeyBar>().Where(IsBarToControl).ToList() : null;
+    private static Vector3 LeftTopPoint => Hud.instance ? new Vector3(-Hud.instance.m_rootObject.transform.position.x, Hud.instance.m_rootObject.transform.position.y, 0) : new Vector3(-1280, 720, 0);
+
+    private static List<HotkeyBar> GetHotKeyBarsToControl() => Hud.instance ? Hud.instance.m_rootObject.GetComponentsInChildren<HotkeyBar>().Where(IsBarToControl).OrderBy(bar => Vector3.Distance(bar.transform.localPosition, LeftTopPoint)).ToList() : null;
 
     private static bool UpdateCurrentHotkeyBar()
     {
@@ -57,6 +60,8 @@ public static class QuickBars
                 Player.m_localPlayer.UseItem(Player.m_localPlayer.GetInventory(), QuickSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), fromInventoryGui: false);
             else if (hotkeyBar.name == AmmoSlotsHotBar.barName)
                 Player.m_localPlayer.UseItem(Player.m_localPlayer.GetInventory(), AmmoSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), fromInventoryGui: false);
+            else if (hotkeyBar.name == FoodSlotsHotBar.barName)
+                Player.m_localPlayer.UseItem(Player.m_localPlayer.GetInventory(), FoodSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), fromInventoryGui: false);
             else if (hotkeyBar.name == vanillaBarName)
                 Player.m_localPlayer.UseHotbarItem(hotkeyBar.m_selected + 1);
             else
@@ -100,6 +105,7 @@ public static class QuickBars
     {
         Slot quickSlotUsed = QuickSlotsHotBar.GetSlotWithShortcutDown();
         Slot ammoSlotUsed = AmmoSlotsHotBar.GetSlotWithShortcutDown();
+        Slot foodSlotUsed = FoodSlotsHotBar.GetSlotWithShortcutDown();
 
         if (quickSlotUsed != null && ammoSlotUsed != null)
         {
@@ -112,6 +118,8 @@ public static class QuickBars
             return quickSlotUsed.Item;
         else if (ammoSlotUsed != null)
             return ammoSlotUsed.Item;
+        else if (foodSlotUsed != null)
+            return foodSlotUsed.Item;
 
         return null;
     }
@@ -126,7 +134,7 @@ public static class QuickBars
             if (!Player.m_localPlayer)
                 return;
 
-            if (AmmoSlotsHotBar.Refresh() || QuickSlotsHotBar.Refresh())
+            if (AmmoSlotsHotBar.Refresh() || QuickSlotsHotBar.Refresh() || FoodSlotsHotBar.Refresh())
                 ResetBars();
             else 
                 bars ??= GetHotKeyBarsToControl();
@@ -178,7 +186,7 @@ public static class QuickBars
 
         public static void Prefix(HotkeyBar __instance)
         {
-            if (__instance.name != QuickSlotsHotBar.barName && __instance.name != AmmoSlotsHotBar.barName)
+            if (__instance.name != QuickSlotsHotBar.barName && __instance.name != AmmoSlotsHotBar.barName && __instance.name != FoodSlotsHotBar.barName)
                 return;
 
             barName = __instance.name;
@@ -193,7 +201,7 @@ public static class QuickBars
 
             inCall = false;
 
-            if (__instance.name == QuickSlotsHotBar.barName || __instance.name == AmmoSlotsHotBar.barName)
+            if (__instance.name == QuickSlotsHotBar.barName || __instance.name == AmmoSlotsHotBar.barName || __instance.name == FoodSlotsHotBar.barName)
                 for (int index = 0; index < __instance.m_elements.Count; index++)
                 {
                     HotkeyBar.ElementData elementData = __instance.m_elements[index];
@@ -205,18 +213,21 @@ public static class QuickBars
 
                     Tuple<RectTransform, TMP_Text> extraData = elementsExtraData[elementData.m_go];
 
-                    Slot slot = slots[index + (__instance.name == AmmoSlotsHotBar.barName ? 8 : 0)];
+                    Slot slot = slots[index + (__instance.name == FoodSlotsHotBar.barName ? FoodSlotsHotBar.barSlotIndex : __instance.name == AmmoSlotsHotBar.barName ? AmmoSlotsHotBar.barSlotIndex : QuickSlotsHotBar.barSlotIndex)];
                     EquipmentPanel.SetSlotLabel(extraData.Item1, extraData.Item2, slot, hotbarElement: true);
 
-                    bool hideStackSize = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsHideStackSize.Value : ExtraSlots.ammoSlotsHideStackSize.Value;
+                    bool hideStackSize = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsHideStackSize.Value : __instance.name == AmmoSlotsHotBar.barName ? ExtraSlots.ammoSlotsHideStackSize.Value : ExtraSlots.foodSlotsHideStackSize.Value;
                     if (hideStackSize && elementData.m_amount.gameObject.activeInHierarchy && (slot.Item is ItemDrop.ItemData item) && (item.IsEquipable() || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable))
                         elementData.m_amount.SetText(elementData.m_stackText.ToFastString());
                     
-                    int widthInElements = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsWidthInElements.Value : ExtraSlots.ammoSlotsWidthInElements.Value;
-                    bool fillUp = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsFillDirectionUp.Value : ExtraSlots.ammoSlotsFillDirectionUp.Value;
-                    float elementSpace = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsElementSpace.Value : ExtraSlots.ammoSlotsElementSpace.Value;
+                    int widthInElements = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsWidthInElements.Value : __instance.name == AmmoSlotsHotBar.barName ? ExtraSlots.ammoSlotsWidthInElements.Value : ExtraSlots.foodSlotsWidthInElements.Value;
+                    bool fillUp = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsFillDirectionUp.Value : __instance.name == AmmoSlotsHotBar.barName ? ExtraSlots.ammoSlotsFillDirectionUp.Value : ExtraSlots.foodSlotsFillDirectionUp.Value;
+                    float elementSpace = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsElementSpace.Value : __instance.name == AmmoSlotsHotBar.barName ? ExtraSlots.ammoSlotsElementSpace.Value : ExtraSlots.foodSlotsElementSpace.Value;
                     elementData.m_go.transform.localPosition = new Vector3(index % widthInElements, (fillUp ? 1 : -1) * index / widthInElements, 0f) * elementSpace;
                 }
+
+            if (__instance.name == FoodSlotsHotBar.barName)
+                FoodSlotsHotBar.RestoreGridPos();
         }
     }
 
@@ -232,6 +243,8 @@ public static class QuickBars
                     QuickSlotsHotBar.GetItems(bound);
                 else if (HotkeyBar_UpdateIcons_QuickBarsUpdate.barName == AmmoSlotsHotBar.barName)
                     AmmoSlotsHotBar.GetItems(bound);
+                else if (HotkeyBar_UpdateIcons_QuickBarsUpdate.barName == FoodSlotsHotBar.barName)
+                    FoodSlotsHotBar.GetItems(bound);
             }
         }
     }
@@ -243,6 +256,7 @@ public static class QuickBars
         {
             QuickSlotsHotBar.MarkDirty();
             AmmoSlotsHotBar.MarkDirty();
+            FoodSlotsHotBar.MarkDirty();
         }
     }
 
@@ -253,6 +267,7 @@ public static class QuickBars
         {
             QuickSlotsHotBar.ClearBar();
             AmmoSlotsHotBar.ClearBar();
+            FoodSlotsHotBar.ClearBar();
         }
     }
 
@@ -267,5 +282,4 @@ public static class QuickBars
             UpdateItemUse();
         }
     }
-
 }

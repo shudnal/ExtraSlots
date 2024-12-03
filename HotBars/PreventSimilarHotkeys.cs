@@ -9,19 +9,19 @@ namespace ExtraSlots.HotBars;
 
 public static class PreventSimilarHotkeys
 {
-    private static readonly Dictionary<string, Slot> similarHotkey = new Dictionary<string, Slot>();
+    private static readonly Dictionary<string, List<Slot>> similarHotkey = new Dictionary<string, List<Slot>>();
 
     public static void FillSimilarHotkey() => FillSimilarHotkey(ZInput.instance);
 
     internal static void FillSimilarHotkey(ZInput __instance)
     {
+        similarHotkey.Clear();
         if (__instance == null)
             return;
 
         if (__instance.m_buttons == null)
             return;
 
-        similarHotkey.Clear();
         foreach (Slot slot in slots.Where(slot => slot.IsHotkeySlot))
         {
             if (!ZInput.TryKeyCodeToKey(slot.GetShortcut().MainKey, out Key key))
@@ -31,14 +31,17 @@ public static class PreventSimilarHotkeys
             if (button.Key == null)
                 continue;
 
-            similarHotkey[button.Key] = slot;
+            if (similarHotkey.TryGetValue(button.Key, out List<Slot> slotsWithHotkey))
+                slotsWithHotkey.Add(slot);
+            else
+                similarHotkey[button.Key] = new List<Slot>() { slot };
         }
     }
 
     [HarmonyPatch(typeof(ZInput), nameof(ZInput.TryGetButtonState))]
     private static class ZInput_TryGetButtonState_PreventSimilarHotkeys
     {
-        private static bool Prefix(string name) => !(similarHotkey.TryGetValue(name, out Slot slot) && slot.IsShortcutDown() && slot.IsActive && !slot.IsFree);
+        private static bool Prefix(string name) => ZInput.IsGamepadActive() || !(similarHotkey.TryGetValue(name, out List<Slot> slotsWithHotkey) && slotsWithHotkey.Any(slot => slot.IsShortcutDown() && slot.IsActive && !slot.IsFree));
     }
 
     [HarmonyPatch]

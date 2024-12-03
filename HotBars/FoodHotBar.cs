@@ -8,16 +8,17 @@ using static ExtraSlots.Slots;
 
 namespace ExtraSlots.HotBars;
 
-public static class QuickSlotsHotBar
+public static class FoodSlotsHotBar
 {
-    public const string barName = "ExtraSlotsQuickSlotsHotBar";
-    public const int barSlotIndex = 0;
+    public const string barName = "ExtraSlotsFoodHotBar";
+    public const int barSlotIndex = 11;
     public static bool isDirty = true;
     private static HotkeyBar hotBar = null;
     private static RectTransform hotBarRect = null;
     private static Slot[] hotBarSlots = Array.Empty<Slot>();
+    private static Dictionary<ItemDrop.ItemData, Vector2i> realPositions = new Dictionary<ItemDrop.ItemData, Vector2i>();
 
-    internal static void UpdateSlots() => hotBarSlots = GetQuickSlots();
+    internal static void UpdateSlots() => hotBarSlots = GetFoodSlots();
 
     public static void GetItems(List<ItemDrop.ItemData> bound)
     {
@@ -25,6 +26,29 @@ public static class QuickSlotsHotBar
             return;
 
         bound.AddRange(GetItems());
+
+        AdaptGridPos(bound);
+    }
+
+    private static void AdaptGridPos(List<ItemDrop.ItemData> items)
+    {
+        int offsetX = barSlotIndex % InventoryWidth;
+        if (offsetX == 0)
+            return;
+
+        realPositions.Clear();
+
+        foreach (ItemDrop.ItemData item in items)
+        {
+            realPositions[item] = item.m_gridPos;
+            item.m_gridPos.x -= offsetX;
+        }
+    }
+
+    public static void RestoreGridPos()
+    {
+        realPositions.Do(item => item.Key.m_gridPos = item.Value);
+        realPositions.Clear();
     }
 
     public static List<ItemDrop.ItemData> GetItems()
@@ -62,9 +86,9 @@ public static class QuickSlotsHotBar
         if (!isDirty)
             return false;
 
-        if (quickSlotsHotBarEnabled.Value && hotBarRect == null)
+        if (foodSlotsHotBarEnabled.Value && hotBarRect == null)
             CreateBar();
-        else if (!quickSlotsHotBarEnabled.Value && hotBarRect != null)
+        else if (!foodSlotsHotBarEnabled.Value && hotBarRect != null)
             ClearBar();
 
         isDirty = false;
@@ -81,7 +105,7 @@ public static class QuickSlotsHotBar
         hotBarRect = null;
     }
 
-    internal static Slot GetSlotWithShortcutDown() => hotBarSlots.FirstOrDefault(slot => slot.IsShortcutDown() && slot.Item != null);
+    internal static Slot GetSlotWithShortcutDown() => hotBarSlots.FirstOrDefault(slot => slot.IsShortcutDown());
 
     // Runs every frame Hud.Update
     internal static void UpdatePosition()
@@ -89,8 +113,9 @@ public static class QuickSlotsHotBar
         if (!hotBar)
             return;
 
-        hotBarRect.anchoredPosition = new Vector2(quickSlotsHotBarOffset.Value.x, -quickSlotsHotBarOffset.Value.y);
-        hotBarRect.localScale = Vector3.one * quickSlotsHotBarScale.Value;
+        hotBarRect.localScale = Vector3.one * foodSlotsHotBarScale.Value;
+        if (hotBarRect.anchoredPosition != (hotBarRect.anchoredPosition = new Vector2(foodSlotsHotBarOffset.Value.x, -foodSlotsHotBarOffset.Value.y)))
+            QuickBars.ResetBars();
     }
 
     [HarmonyPatch(typeof(Hud), nameof(Hud.Update))]

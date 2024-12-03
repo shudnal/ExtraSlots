@@ -39,6 +39,7 @@
     <Compile Include="Compatibility\PlantEasilyCompat.cs" />
     <Compile Include="EquipmentPanel.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="HotBars\FoodHotBar.cs" />
     <Compile Include="InventoryInteraction.cs" />
     <Compile Include="HotBars\AmmoHotBar.cs" />
     <Compile Include="HotBars\PreventSimilarHotkeys.cs" />

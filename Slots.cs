@@ -519,6 +519,10 @@ namespace ExtraSlots
         public static string GetAmmoSlot2Text() => ammoSlotHotKey2Text.Value == "" ? (ammoSlotHotKey2.Value.Equals(KeyboardShortcut.Empty) ? "$exsl_slot_ammo_label" : ammoSlotHotKey2.Value.ToString()) : ammoSlotHotKey2Text.Value;
         public static string GetAmmoSlot3Text() => ammoSlotHotKey3Text.Value == "" ? (ammoSlotHotKey3.Value.Equals(KeyboardShortcut.Empty) ? "$exsl_slot_ammo_label" : ammoSlotHotKey3.Value.ToString()) : ammoSlotHotKey3Text.Value;
 
+        public static string GetFoodSlot1Text() => foodSlotHotKey1Text.Value == "" ? (foodSlotHotKey1.Value.Equals(KeyboardShortcut.Empty) ? "$exsl_slot_food_label" : foodSlotHotKey1.Value.ToString()) : foodSlotHotKey1Text.Value;
+        public static string GetFoodSlot2Text() => foodSlotHotKey2Text.Value == "" ? (foodSlotHotKey2.Value.Equals(KeyboardShortcut.Empty) ? "$exsl_slot_food_label" : foodSlotHotKey2.Value.ToString()) : foodSlotHotKey2Text.Value;
+        public static string GetFoodSlot3Text() => foodSlotHotKey3Text.Value == "" ? (foodSlotHotKey3.Value.Equals(KeyboardShortcut.Empty) ? "$exsl_slot_food_label" : foodSlotHotKey3.Value.ToString()) : foodSlotHotKey3Text.Value;
+
         internal static void InitializeSlots()
         {
             int index = 0;
@@ -539,9 +543,9 @@ namespace ExtraSlots
             AddHotkeySlot($"{ammoSlotID}2", () => ammoSlotsShowLabel.Value ? GetAmmoSlot2Text() : "", IsAmmoSlotItem, () => IsAmmoSlotAvailable(), () => ammoSlotHotKey2.Value, () => GetAmmoSlot2Text());
             AddHotkeySlot($"{ammoSlotID}3", () => ammoSlotsShowLabel.Value ? GetAmmoSlot3Text() : "", IsAmmoSlotItem, () => IsAmmoSlotAvailable(), () => ammoSlotHotKey3.Value, () => GetAmmoSlot3Text());
 
-            AddSlot($"{foodSlotID}1", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => IsFoodSlotAvailable());
-            AddSlot($"{foodSlotID}2", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => IsFoodSlotAvailable());
-            AddSlot($"{foodSlotID}3", () => foodSlotsShowLabel.Value ? "$exsl_slot_food_label" : "", IsFoodSlotItem, () => IsFoodSlotAvailable());
+            AddHotkeySlot($"{foodSlotID}1", () => foodSlotsShowLabel.Value ? GetFoodSlot1Text() : "", IsFoodSlotItem, () => IsFoodSlotAvailable(), () => foodSlotHotKey1.Value, () => GetFoodSlot1Text());
+            AddHotkeySlot($"{foodSlotID}2", () => foodSlotsShowLabel.Value ? GetFoodSlot2Text() : "", IsFoodSlotItem, () => IsFoodSlotAvailable(), () => foodSlotHotKey2.Value, () => GetFoodSlot2Text());
+            AddHotkeySlot($"{foodSlotID}3", () => foodSlotsShowLabel.Value ? GetFoodSlot3Text() : "", IsFoodSlotItem, () => IsFoodSlotAvailable(), () => foodSlotHotKey3.Value, () => GetFoodSlot3Text());
 
             AddSlot($"{extraUtilitySlotID}1", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsExtraUtilitySlotAvailable(0));
             AddSlot($"{extraUtilitySlotID}2", () => "$exsl_slot_equipment_utility_label", (item) => item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility, () => IsExtraUtilitySlotAvailable(1));
@@ -565,6 +569,7 @@ namespace ExtraSlots
 
             HotBars.QuickSlotsHotBar.UpdateSlots();
             HotBars.AmmoSlotsHotBar.UpdateSlots();
+            HotBars.FoodSlotsHotBar.UpdateSlots();
             EquipmentPanel.UpdateSlotsCount();
 
             void AddSlot(string id, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive)
@@ -644,7 +649,7 @@ namespace ExtraSlots
         {
             return item != null && 
                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable &&
-                   (item.m_shared.m_food > 0 || item.m_shared.m_foodStamina > 0 || item.m_shared.m_foodEitr > 0);
+                   (item.m_shared.m_food > 0 || item.m_shared.m_foodStamina > 0 || item.m_shared.m_foodEitr > 0 || item.m_shared.m_isDrink);
         }
 
         public static bool IsGridPositionASlot(Vector2i gridPos)

@@ -11,6 +11,7 @@ namespace ExtraSlots.HotBars;
 public static class AmmoSlotsHotBar
 {
     public const string barName = "ExtraSlotsAmmoHotBar";
+    public const int barSlotIndex = 8;
     public static bool isDirty = true;
     private static HotkeyBar hotBar = null;
     private static RectTransform hotBarRect = null;
@@ -31,7 +32,7 @@ public static class AmmoSlotsHotBar
         return hotBarSlots.Where(slot => slot.IsActive).Select(slot => slot.Item).Where(item => item != null).ToList();
     }
 
-    public static ItemDrop.ItemData GetItemInSlot(int slotIndex) => slots[slotIndex + 8].Item;
+    public static ItemDrop.ItemData GetItemInSlot(int slotIndex) => slots[slotIndex + barSlotIndex].Item;
 
     internal static void MarkDirty() => isDirty = true;
 
