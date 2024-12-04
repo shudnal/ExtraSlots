@@ -33,6 +33,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Compatibility\QuickStackStore.cs" />
+    <Compile Include="Compatibility\AzuAutoStore.cs" />
     <Compile Include="Compatibility\MagicPluginCompat.cs" />
     <Compile Include="Compatibility\BetterProgressionCompat.cs" />
     <Compile Include="Compatibility\BetterArcheryCompat.cs" />

@@ -25,12 +25,14 @@ namespace ExtraSlots
     [BepInDependency(Compatibility.PlantEasilyCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.BetterProgressionCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.MagicPluginCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.AzuAutoStore.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.QuickStackStore.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     public class ExtraSlots : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.14";
+        public const string pluginVersion = "1.0.15";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 

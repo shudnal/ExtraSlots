@@ -1,3 +1,7 @@
+# 1.0.15
+* AzuAutoStore compatibility to ignore items in extra slots
+* Quick Stack Store Sort Trash Restock compatibility to ignore items in extra slots
+
 # 1.0.14
 * ok fine there is food slots hotbar now
 * and you can place potions in food slots
