@@ -16,7 +16,8 @@ internal static class ValheimPlusCompat
         {
             assembly ??= Assembly.GetAssembly(vplusPlugin.Instance.GetType());
 
-            // Unpatch redundant method that change inventory gui
+            // Unpatch redundant methods that change inventory gui
+
             MethodInfo method = AccessTools.Method(typeof(InventoryGui), nameof(InventoryGui.Show));
             MethodInfo patch = AccessTools.Method(assembly.GetType("ValheimPlus.GameClasses.InventoryGui_Show_Patch"), "Postfix");
             if (method != null && patch != null)
@@ -41,5 +42,32 @@ internal static class ValheimPlusCompat
                 ExtraSlots.LogInfo("ValheimPlus.GameClasses.Inventory_Constructor_Patch:Prefix was unpatched to prevent inventory GUI mess.");
             }
         }
+    }
+
+    [HarmonyPatch]
+    public static class ValheimPlus_ValheimPlusPlugin_PatchAll_Unpatch
+    {
+        public static MethodBase target;
+
+        public static bool Prepare(MethodBase original)
+        {
+            if (!Chainloader.PluginInfos.TryGetValue(GUID, out PluginInfo vplusPlugin))
+                return false;
+
+            assembly ??= Assembly.GetAssembly(vplusPlugin.Instance.GetType());
+
+            target ??= AccessTools.Method(assembly.GetType("ValheimPlus.ValheimPlusPlugin"), "PatchAll");
+            if (target == null)
+                return false;
+
+            if (original == null)
+                ExtraSlots.LogInfo("ValheimPlus.ValheimPlusPlugin:PatchAll method is patched to unpatch inventory related patches");
+
+            return true;
+        }
+
+        public static MethodBase TargetMethod() => target;
+
+        public static void Postfix() => CheckForCompatibility();
     }
 }
