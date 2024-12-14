@@ -1,3 +1,7 @@
+# 1.0.16
+* ValheimPlus multiplayer compatibility
+* tooltip names format for hotkey slots made configurable
+
 # 1.0.15
 * AzuAutoStore compatibility to ignore items in extra slots
 * Quick Stack Store Sort Trash Restock compatibility to ignore items in extra slots

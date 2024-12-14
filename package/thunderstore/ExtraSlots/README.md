@@ -59,6 +59,7 @@ There is [ExtraSlotsCustomSlots](https://thunderstore.io/c/valheim/p/shudnal/Ext
 * [BowsBeforeHoes](https://thunderstore.io/c/valheim/p/Azumatt/BowsBeforeHoes/) (Quiver slot)
 * [CircletExtended](https://thunderstore.io/c/valheim/p/shudnal/CircletExtended/) (Circlet slot)
 * [HipLantern](https://thunderstore.io/c/valheim/p/shudnal/HipLantern/) (Lantern slot)
+* [Judes Equipment](https://thunderstore.io/c/valheim/p/GoldenJude/Judes_Equipment/) (Backpack slot)
 
 You can add/remove custom equipment slots on the fly but most stable way is to do it on Awake.
 
