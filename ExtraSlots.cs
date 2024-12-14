@@ -81,6 +81,7 @@ namespace ExtraSlots
         public static ConfigEntry<int> foodSlotsWidthInElements;
         public static ConfigEntry<bool> foodSlotsFillDirectionUp;
         public static ConfigEntry<float> foodSlotsElementSpace;
+        public static ConfigEntry<string> foodSlotsTooltipNameFormat;
 
         public static ConfigEntry<KeyboardShortcut> foodSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> foodSlotHotKey2;
@@ -104,6 +105,7 @@ namespace ExtraSlots
         public static ConfigEntry<int> ammoSlotsWidthInElements;
         public static ConfigEntry<bool> ammoSlotsFillDirectionUp;
         public static ConfigEntry<float> ammoSlotsElementSpace;
+        public static ConfigEntry<string> ammoSlotsTooltipNameFormat;
 
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey2;
@@ -123,6 +125,7 @@ namespace ExtraSlots
         public static ConfigEntry<int> quickSlotsWidthInElements;
         public static ConfigEntry<bool> quickSlotsFillDirectionUp;
         public static ConfigEntry<float> quickSlotsElementSpace;
+        public static ConfigEntry<string> quickSlotsTooltipNameFormat;
 
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey2;
@@ -340,7 +343,8 @@ namespace ExtraSlots
             foodSlotsWidthInElements = config("Panels - Food slots", "Hotbar width in elements", defaultValue: 3, new ConfigDescription("How much Food slots should be displayed in one line", new AcceptableValueRange<int>(1, 3)));
             foodSlotsFillDirectionUp = config("Panels - Food slots", "Hotbar fill direction is up", defaultValue: false, "Food slots hotbar will fill from bottom to top");
             foodSlotsElementSpace = config("Panels - Food slots", "Hotbar element space", defaultValue: 70f, "Food slots hotbar element size. Defines space between elements as well.");
-            
+            foodSlotsTooltipNameFormat = config("Panels - Food slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
+
             foodSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
 
             foodSlotHotKey1 = config("Hotkeys", "Food 1", new KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftControl), "Use configuration manager to set shortcuts.");
@@ -369,6 +373,7 @@ namespace ExtraSlots
             ammoSlotsWidthInElements = config("Panels - Ammo slots", "Hotbar width in elements", defaultValue: 3, new ConfigDescription("How much ammo slots should be displayed in one line", new AcceptableValueRange<int>(1, 3)));
             ammoSlotsFillDirectionUp = config("Panels - Ammo slots", "Hotbar fill direction is up", defaultValue: false, "Ammo slots hotbar will fill from bottom to top");
             ammoSlotsElementSpace = config("Panels - Ammo slots", "Hotbar element space", defaultValue: 70f, "Ammo slots hotbar element size. Defines space between elements as well.");
+            ammoSlotsTooltipNameFormat = config("Panels - Ammo slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
 
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
 
@@ -394,6 +399,7 @@ namespace ExtraSlots
             quickSlotsWidthInElements = config("Panels - Quick slots", "Hotbar width in elements", defaultValue: 6, new ConfigDescription("How much quick slots should be displayed in one line", new AcceptableValueRange<int>(1, 6)));
             quickSlotsFillDirectionUp = config("Panels - Quick slots", "Hotbar fill direction is up", defaultValue: false, "Quickslots hotbar will fill from bottom to top");
             quickSlotsElementSpace = config("Panels - Quick slots", "Hotbar element space", defaultValue: 70f, "Quickslots hotbar element size. Defines space between elements as well.");
+            quickSlotsTooltipNameFormat = config("Panels - Quick slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
 
             quickSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
 

@@ -22,7 +22,7 @@ namespace ExtraSlots
         public const string ammoSlotID = "Ammo";
         public const string miscSlotID = "Misc";
         public const string customSlotID = "Custom";
-        public const string emptySlotID = "Empty";
+        public const string emptySlotID = "Empty"; 
 
         public static readonly Vector2i emptyPosition = new Vector2i(-1, -1);
 
