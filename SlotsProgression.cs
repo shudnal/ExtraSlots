@@ -75,7 +75,7 @@ namespace ExtraSlots
             }
         }
 
-        internal static bool IsQuickSlotKnown(int index) => IsAnyGlobalKeyActive(QuickSlotGlobalKey(index)) || IsAnyMaterialDiscovered(QuickSlotItemDiscovered(index));
+        internal static bool IsQuickSlotKnown(int index) => IsSlotActive(QuickSlotGlobalKey(index), QuickSlotItemDiscovered(index));
 
         private static string QuickSlotGlobalKey(int index)
         {
@@ -105,7 +105,7 @@ namespace ExtraSlots
             };
         }
 
-        internal static bool IsExtraUtilitySlotKnown(int index) => IsAnyGlobalKeyActive(UtilitySlotGlobalKey(index)) || IsAnyMaterialDiscovered(UtilitySlotItemDiscovered(index));
+        internal static bool IsExtraUtilitySlotKnown(int index) => IsSlotActive(UtilitySlotGlobalKey(index), UtilitySlotItemDiscovered(index));
 
         internal static string UtilitySlotGlobalKey(int index)
         {
@@ -129,6 +129,23 @@ namespace ExtraSlots
                 3 => utilitySlotItemDiscovered4.Value,
                 _ => ""
             };
+        }
+
+        public static bool IsSlotActive(string globalKey, string itemDiscovered)
+        {
+            bool globalKeyIsSet = !globalKey.IsNullOrWhiteSpace();
+            bool itemIsSet = !itemDiscovered.IsNullOrWhiteSpace();
+
+            // If nothing is set - slot is always active
+            if (!globalKeyIsSet && !itemIsSet)
+                return true;
+
+            // If both are set - one of both should work
+            if (globalKeyIsSet && itemIsSet)
+                return IsAnyGlobalKeyActive(globalKey) || IsAnyMaterialDiscovered(itemDiscovered);
+
+            // If global is set, item is not - check only global, otherwise check item
+            return globalKeyIsSet ? IsAnyGlobalKeyActive(globalKey) : IsAnyMaterialDiscovered(itemDiscovered);
         }
 
         public static readonly HashSet<string> m_knownMaterialCache = new HashSet<string>();
@@ -166,7 +183,28 @@ namespace ExtraSlots
 
         internal static bool IsRowProgressionActive() => rowsProgressionEnabled.Value && (CurrentPlayer && !CurrentPlayer.m_isLoading || m_knownMaterialCache.Count + m_uniquesCache.Count > 0);
 
-        internal static bool IsExtraRowKnown(int index) => !IsRowProgressionActive() || IsAnyPlayerKeyActiveCached(ExtraRowPlayerKey(index)) || IsAnyItemDiscoveredCached(ExtraRowItemDiscovered(index));
+        internal static bool IsExtraRowKnown(int index)
+        {
+            if (!IsRowProgressionActive())
+                return true;
+
+            string playerKey = ExtraRowPlayerKey(index);
+            string itemDiscovered = ExtraRowItemDiscovered(index);
+
+            bool globalKeyIsSet = !playerKey.IsNullOrWhiteSpace();
+            bool itemIsSet = !itemDiscovered.IsNullOrWhiteSpace();
+
+            // If nothing is set - slot is always active
+            if (!globalKeyIsSet && !itemIsSet)
+                return true;
+
+            // If both are set - one of both should work
+            if (globalKeyIsSet && itemIsSet)
+                return IsAnyPlayerKeyActiveCached(playerKey) || IsAnyItemDiscoveredCached(itemDiscovered);
+
+            // If global is set, item is not - check only global, otherwise check item
+            return globalKeyIsSet ? IsAnyPlayerKeyActiveCached(playerKey) : IsAnyItemDiscoveredCached(itemDiscovered);
+        }
 
         private static string ExtraRowPlayerKey(int index)
         {

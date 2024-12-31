@@ -97,7 +97,9 @@ public static class QuickBars
         if (!Player.m_localPlayer.TakeInput())
             return;
 
-        if (GetItemToUse() is ItemDrop.ItemData item)
+        if (!ExtraSlots.useSingleHotbarItem.Value)
+            GetItemsToUse().Do(item => Player.m_localPlayer.UseItem(PlayerInventory, item, fromInventoryGui: false));
+        else if (GetItemToUse() is ItemDrop.ItemData item)
             Player.m_localPlayer.UseItem(PlayerInventory, item, fromInventoryGui: false);
     }
 
@@ -123,6 +125,8 @@ public static class QuickBars
 
         return null;
     }
+
+    private static IEnumerable<ItemDrop.ItemData> GetItemsToUse() => QuickSlotsHotBar.GetSlotsWithShortcutDown().Concat(AmmoSlotsHotBar.GetSlotsWithShortcutDown()).Concat(FoodSlotsHotBar.GetSlotsWithShortcutDown()).Select(slot => slot.Item);
 
     private static bool GetButtonDown(string name) => !Compatibility.PlantEasilyCompat.DisableGamepadInput && ZInput.GetButtonDown(name);
 

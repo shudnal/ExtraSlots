@@ -32,7 +32,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.16";
+        public const string pluginVersion = "1.0.17";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -52,6 +52,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> ammoSlotsEnabled;
         public static ConfigEntry<bool> backupEnabled;
         public static ConfigEntry<string> preventUniqueUtilityItemsEquip;
+        public static ConfigEntry<bool> useSingleHotbarItem;
 
         public static ConfigEntry<bool> slotsTombstoneAutoEquipWeaponShield;
         public static ConfigEntry<bool> slotsTombstoneAutoEquipEnabled;
@@ -299,6 +300,8 @@ namespace ExtraSlots
             rowsProgressionEnabled = config("Extra slots", "Inventory rows progression enabled", defaultValue: false, "Enabled inventory rows obtaining progression.  Use with caution and report bugs. [Synced with Server]", synchronizedSetting: true);
             preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "$item_beltstrength:$belt_ymir_TW", "Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
                                                                                            "\nIf you just want one item to be unique-equipped just add its name without \":\"", synchronizedSetting: true);
+            useSingleHotbarItem = config("Extra slots", "Use single hotbar item", defaultValue: true, "Enabled - only item from the first slot will be used with slots priority (Quick -> Ammo -> Food)\n" +
+                                                                                                      "Disabled - all items with similar hotkey will be used at once. [Synced with Server]", synchronizedSetting: true);
 
             extraRows.SettingChanged += (s, e) => API.UpdateSlots();
             rowsProgressionEnabled.SettingChanged += (s, e) => API.UpdateSlots();

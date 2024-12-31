@@ -107,6 +107,8 @@ public static class FoodSlotsHotBar
 
     internal static Slot GetSlotWithShortcutDown() => hotBarSlots.FirstOrDefault(slot => slot.IsShortcutDown());
 
+    internal static IEnumerable<Slot> GetSlotsWithShortcutDown() => hotBarSlots.Where(slot => slot.IsShortcutDown() && slot.Item != null);
+
     // Runs every frame Hud.Update
     internal static void UpdatePosition()
     {

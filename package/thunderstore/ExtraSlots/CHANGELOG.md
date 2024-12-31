@@ -1,3 +1,8 @@
+# 1.0.17
+* new config option to use several hotbar items at once
+* changed the logic of checking quick slots and utility slots activity. If only one of the values ​​(global key or discovered item) is specified - checking for the unfilled one will not be performed
+* keyboard shortcuts will be ordered in similar manner to prevent potential issues with button order and to be more homogenous for similar hotkeys usage
+
 # 1.0.16
 * ValheimPlus multiplayer compatibility
 * tooltip names format for hotkey slots made configurable

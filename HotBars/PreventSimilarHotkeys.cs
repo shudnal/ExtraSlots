@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using static ExtraSlots.Slots;
 using UnityEngine.InputSystem;
+using BepInEx.Configuration;
 
 namespace ExtraSlots.HotBars;
 
@@ -15,6 +16,8 @@ public static class PreventSimilarHotkeys
 
     internal static void FillSimilarHotkey(ZInput __instance)
     {
+        ReorderShortcutsKeys();
+
         similarHotkey.Clear();
         if (__instance == null)
             return;
@@ -36,6 +39,51 @@ public static class PreventSimilarHotkeys
             else
                 similarHotkey[button.Key] = new List<Slot>() { slot };
         }
+    }
+
+    private static void ReorderShortcutsKeys()
+    {
+        ReorderKeys(ExtraSlots.foodSlotHotKey1);
+        ReorderKeys(ExtraSlots.foodSlotHotKey2);
+        ReorderKeys(ExtraSlots.foodSlotHotKey3);
+        ReorderKeys(ExtraSlots.ammoSlotHotKey1);
+        ReorderKeys(ExtraSlots.ammoSlotHotKey2);
+        ReorderKeys(ExtraSlots.ammoSlotHotKey3);
+        ReorderKeys(ExtraSlots.quickSlotHotKey1);
+        ReorderKeys(ExtraSlots.quickSlotHotKey2);
+        ReorderKeys(ExtraSlots.quickSlotHotKey3);
+        ReorderKeys(ExtraSlots.quickSlotHotKey4);
+        ReorderKeys(ExtraSlots.quickSlotHotKey5);
+        ReorderKeys(ExtraSlots.quickSlotHotKey6);
+    }
+
+    private static void ReorderKeys(ConfigEntry<KeyboardShortcut> keyboardShortcut)
+    {
+        if (!IsModifier(keyboardShortcut.Value.MainKey))
+            return;
+
+        UnityEngine.KeyCode key = keyboardShortcut.Value.Modifiers.FirstOrDefault(key => !IsModifier(key));
+        if (key == UnityEngine.KeyCode.None)
+            return;
+
+        keyboardShortcut.Value = new KeyboardShortcut(key, keyboardShortcut.Value.Modifiers.Where(k => k != key).AddItem(keyboardShortcut.Value.MainKey).ToArray());
+    }
+
+    private static bool IsModifier(UnityEngine.KeyCode key)
+    {
+        return key == UnityEngine.KeyCode.AltGr ||
+               key == UnityEngine.KeyCode.LeftAlt ||
+               key == UnityEngine.KeyCode.RightAlt ||
+               key == UnityEngine.KeyCode.LeftShift ||
+               key == UnityEngine.KeyCode.RightShift ||
+               key == UnityEngine.KeyCode.LeftControl ||
+               key == UnityEngine.KeyCode.RightControl ||
+               key == UnityEngine.KeyCode.LeftApple ||
+               key == UnityEngine.KeyCode.RightApple ||
+               key == UnityEngine.KeyCode.LeftCommand ||
+               key == UnityEngine.KeyCode.RightCommand ||
+               key == UnityEngine.KeyCode.LeftWindows ||
+               key == UnityEngine.KeyCode.RightWindows;
     }
 
     [HarmonyPatch(typeof(ZInput), nameof(ZInput.TryGetButtonState))]

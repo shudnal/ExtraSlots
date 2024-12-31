@@ -1,6 +1,6 @@
 {
   "name": "ExtraSlots",
-  "version_number": "1.0.16",
+  "version_number": "1.0.17",
   "website_url": "https://github.com/shudnal/ExtraSlots",
   "description": "More inventory slots dedicated for equipment, food, ammo and misc items. Extra utility slots. Quick slots. Custom slots API. Player inventory resize. Gamepad friendly. Slot obtaining progression.",
   "dependencies": ["denikson-BepInExPack_Valheim-5.4.2202"]

@@ -83,6 +83,8 @@ public static class QuickSlotsHotBar
 
     internal static Slot GetSlotWithShortcutDown() => hotBarSlots.FirstOrDefault(slot => slot.IsShortcutDown() && slot.Item != null);
 
+    internal static IEnumerable<Slot> GetSlotsWithShortcutDown() => hotBarSlots.Where(slot => slot.IsShortcutDown() && slot.Item != null);
+
     // Runs every frame Hud.Update
     internal static void UpdatePosition()
     {
