@@ -23,6 +23,17 @@ public static class QuickBars
         };
     private static readonly Dictionary<GameObject, Tuple<RectTransform, TMP_Text>> elementsExtraData = new Dictionary<GameObject, Tuple<RectTransform, TMP_Text>>();
 
+    public static RectTransform InstantiateHotKeyBar(string barName)
+    {
+        RectTransform vanillaBar = Hud.instance.m_rootObject.transform.Find(vanillaBarName).GetComponent<RectTransform>();
+        RectTransform result = UnityEngine.Object.Instantiate(vanillaBar, Hud.instance.m_rootObject.transform, true);
+        result.name = barName;
+        result.localPosition = Vector3.zero;
+        result.SetSiblingIndex(vanillaBar.GetSiblingIndex() + 1);
+
+        return result;
+    }
+
     public static void ResetBars()
     {
         elementsExtraData.Clear();
@@ -138,7 +149,7 @@ public static class QuickBars
             if (!Player.m_localPlayer)
                 return;
 
-            if (AmmoSlotsHotBar.Refresh() || QuickSlotsHotBar.Refresh() || FoodSlotsHotBar.Refresh())
+            if (QuickSlotsHotBar.Refresh() || AmmoSlotsHotBar.Refresh() || FoodSlotsHotBar.Refresh())
                 ResetBars();
             else 
                 bars ??= GetHotKeyBarsToControl();

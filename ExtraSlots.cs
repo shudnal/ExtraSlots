@@ -32,7 +32,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.17";
+        public const string pluginVersion = "1.0.18";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -83,6 +83,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> foodSlotsFillDirectionUp;
         public static ConfigEntry<float> foodSlotsElementSpace;
         public static ConfigEntry<string> foodSlotsTooltipNameFormat;
+        public static ConfigEntry<Color> foodSlotsStackColor;
 
         public static ConfigEntry<KeyboardShortcut> foodSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> foodSlotHotKey2;
@@ -95,6 +96,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> miscSlotsShowLabel;
         public static ConfigEntry<bool> miscSlotsShowHintImage;
         public static ConfigEntry<bool> miscSlotsShowTooltip;
+        public static ConfigEntry<Color> miscSlotsStackColor;
 
         public static ConfigEntry<bool> ammoSlotsHotBarEnabled;
         public static ConfigEntry<Vector2> ammoSlotsHotBarOffset;
@@ -107,6 +109,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> ammoSlotsFillDirectionUp;
         public static ConfigEntry<float> ammoSlotsElementSpace;
         public static ConfigEntry<string> ammoSlotsTooltipNameFormat;
+        public static ConfigEntry<Color> ammoSlotsStackColor;
 
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey2;
@@ -127,6 +130,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> quickSlotsFillDirectionUp;
         public static ConfigEntry<float> quickSlotsElementSpace;
         public static ConfigEntry<string> quickSlotsTooltipNameFormat;
+        public static ConfigEntry<Color> quickSlotsStackColor;
 
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey2;
@@ -347,6 +351,7 @@ namespace ExtraSlots
             foodSlotsFillDirectionUp = config("Panels - Food slots", "Hotbar fill direction is up", defaultValue: false, "Food slots hotbar will fill from bottom to top");
             foodSlotsElementSpace = config("Panels - Food slots", "Hotbar element space", defaultValue: 70f, "Food slots hotbar element size. Defines space between elements as well.");
             foodSlotsTooltipNameFormat = config("Panels - Food slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
+            foodSlotsStackColor = config("Panels - Food slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
 
             foodSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
 
@@ -365,6 +370,7 @@ namespace ExtraSlots
             miscSlotsShowLabel = config("Panels - Misc slots", "Show label", defaultValue: false, "Show slot label");
             miscSlotsShowHintImage = config("Panels - Misc slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             miscSlotsShowTooltip = config("Panels - Misc slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
+            miscSlotsStackColor = config("Panels - Misc slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
 
             ammoSlotsHotBarEnabled = config("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots");
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 850f), "On screen position of ammo slots hotbar panel");
@@ -377,6 +383,7 @@ namespace ExtraSlots
             ammoSlotsFillDirectionUp = config("Panels - Ammo slots", "Hotbar fill direction is up", defaultValue: false, "Ammo slots hotbar will fill from bottom to top");
             ammoSlotsElementSpace = config("Panels - Ammo slots", "Hotbar element space", defaultValue: 70f, "Ammo slots hotbar element size. Defines space between elements as well.");
             ammoSlotsTooltipNameFormat = config("Panels - Ammo slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
+            ammoSlotsStackColor = config("Panels - Ammo slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
 
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
 
@@ -403,6 +410,7 @@ namespace ExtraSlots
             quickSlotsFillDirectionUp = config("Panels - Quick slots", "Hotbar fill direction is up", defaultValue: false, "Quickslots hotbar will fill from bottom to top");
             quickSlotsElementSpace = config("Panels - Quick slots", "Hotbar element space", defaultValue: 70f, "Quickslots hotbar element size. Defines space between elements as well.");
             quickSlotsTooltipNameFormat = config("Panels - Quick slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
+            quickSlotsStackColor = config("Panels - Quick slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
 
             quickSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
 

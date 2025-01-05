@@ -156,6 +156,7 @@ namespace ExtraSlots
             SetSlotColor(currentChild.GetComponent<Button>(), InventoryGui.instance.m_dragItem != null && 
                                                               slot.IsActive && 
                                                               (!slot.ItemFits(InventoryGui.instance.m_dragItem) || !slot.IsEquipmentSlot && regularInventoryUnfitsForDragItem));
+            SetSlotStackColor(element.m_amount, slot);
         }
 
         internal static void SetSlotLabel(Transform binding, Slot slot, bool hotbarElement = false)
@@ -276,6 +277,13 @@ namespace ExtraSlots
             }
         }
 
+        private static void SetSlotStackColor(TMP_Text text, Slot slot)
+        {
+            Color color = GetSlotStackSizeColor(slot);
+            if (color != Color.clear)
+                text.color = color;
+        }
+
         internal static void SetSlotsPositions()
         {
             SetPosition(GetEquipmentSlots(), SlotPositions.GetEquipmentTileOffset);
@@ -289,6 +297,20 @@ namespace ExtraSlots
                 for (int i = 0; i < collection.Length; i++)
                     collection[i].SetPosition(offsetFunc(i));
             }
+        }
+
+        private static Color GetSlotStackSizeColor(Slot slot)
+        {
+            if (slot.IsMiscSlot)
+                return miscSlotsStackColor.Value;
+            else if (slot.IsFoodSlot)
+                return foodSlotsStackColor.Value;
+            else if (slot.IsAmmoSlot)
+                return ammoSlotsStackColor.Value;
+            else if (slot.IsQuickSlot)
+                return quickSlotsStackColor.Value;
+            else
+                return Color.clear;
         }
 
         private static class SlotPositions

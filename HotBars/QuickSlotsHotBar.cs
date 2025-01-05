@@ -38,9 +38,7 @@ public static class QuickSlotsHotBar
 
     internal static void CreateBar()
     {
-        hotBarRect = UnityEngine.Object.Instantiate(Hud.instance.m_rootObject.transform.Find("HotKeyBar"), Hud.instance.m_rootObject.transform, true).GetComponent<RectTransform>();
-        hotBarRect.name = barName;
-        hotBarRect.localPosition = Vector3.zero;
+        hotBarRect = QuickBars.InstantiateHotKeyBar(barName);
 
         if (hotBar = hotBarRect.GetComponent<HotkeyBar>())
         {
