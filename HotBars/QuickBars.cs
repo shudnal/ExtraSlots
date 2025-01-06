@@ -120,12 +120,39 @@ public static class QuickBars
         Slot ammoSlotUsed = AmmoSlotsHotBar.GetSlotWithShortcutDown();
         Slot foodSlotUsed = FoodSlotsHotBar.GetSlotWithShortcutDown();
 
-        if (quickSlotUsed != null && ammoSlotUsed != null)
+        if (quickSlotUsed != null && ammoSlotUsed != null && foodSlotUsed != null)
+        {
+            int quickModifiers = quickSlotUsed.GetShortcut().Modifiers.Count();
+            int ammoModifiers = ammoSlotUsed.GetShortcut().Modifiers.Count();
+            int foodModifiers = foodSlotUsed.GetShortcut().Modifiers.Count();
+
+            if (quickModifiers >= ammoModifiers && quickModifiers >= foodModifiers)
+                return quickSlotUsed.Item;
+            else if (ammoModifiers >= quickModifiers && ammoModifiers >= foodModifiers)
+                return ammoSlotUsed.Item;
+            else
+                return foodSlotUsed.Item;
+        }
+        else if (quickSlotUsed != null && ammoSlotUsed != null)
         {
             if (quickSlotUsed.GetShortcut().Modifiers.Count() >= ammoSlotUsed.GetShortcut().Modifiers.Count())
                 return quickSlotUsed.Item;
             else
                 return ammoSlotUsed.Item;
+        }
+        else if (quickSlotUsed != null && foodSlotUsed != null)
+        {
+            if (quickSlotUsed.GetShortcut().Modifiers.Count() >= foodSlotUsed.GetShortcut().Modifiers.Count())
+                return quickSlotUsed.Item;
+            else
+                return foodSlotUsed.Item;
+        }
+        else if (ammoSlotUsed != null && foodSlotUsed != null)
+        {
+            if (ammoSlotUsed.GetShortcut().Modifiers.Count() >= foodSlotUsed.GetShortcut().Modifiers.Count())
+                return ammoSlotUsed.Item;
+            else
+                return foodSlotUsed.Item;
         }
         else if (quickSlotUsed != null)
             return quickSlotUsed.Item;

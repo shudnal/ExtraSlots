@@ -1,3 +1,6 @@
+# 1.0.19
+* more intuitive handling for similar hotkeys use in quick bars
+
 # 1.0.18
 * new config option for stack size Color of slots in equipment panel
 * quick slots hotbars will no longer overlap map window
