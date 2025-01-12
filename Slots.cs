@@ -649,7 +649,11 @@ namespace ExtraSlots
         {
             return item != null && 
                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable &&
-                   (item.m_shared.m_food > 0 || item.m_shared.m_foodStamina > 0 || item.m_shared.m_foodEitr > 0 || item.m_shared.m_isDrink);
+                   (item.m_shared.m_food > 0 
+                   || item.m_shared.m_foodStamina > 0 
+                   || item.m_shared.m_foodEitr > 0 
+                   || item.m_shared.m_isDrink
+                   || item.m_shared.m_consumeStatusEffect is SE_Stats se && se.m_healthOverTime + se.m_staminaOverTime + se.m_eitrOverTime > 0);
         }
 
         public static bool IsUtilitySlotItem(ItemDrop.ItemData item)

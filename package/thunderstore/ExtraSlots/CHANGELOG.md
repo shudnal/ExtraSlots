@@ -1,3 +1,9 @@
+# 1.0.20
+* new configs for slot groups to prevent "Stack All" from pulling items from configured slot types
+* new config to prevent "Stack All" from pulling items from hotbar
+* rare issue: some outdated custom meads now will properly go into Food slots
+* default hotkeys for Food slots now: Alt + Q, Alt + E, Alt + R
+
 # 1.0.19
 * more intuitive handling for similar hotkeys use in quick bars
 

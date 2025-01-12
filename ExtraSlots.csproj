@@ -46,6 +46,7 @@
     <Compile Include="InventoryInteraction.cs" />
     <Compile Include="HotBars\AmmoHotBar.cs" />
     <Compile Include="HotBars\PreventSimilarHotkeys.cs" />
+    <Compile Include="InventoryPreventStackAll.cs" />
     <Compile Include="TombStoneInteraction.cs" />
     <Compile Include="HotBars\QuickSlotsHotBar.cs" />
     <Compile Include="ExtraUtilitySlots.cs" />

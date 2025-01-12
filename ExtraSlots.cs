@@ -32,7 +32,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.19";
+        public const string pluginVersion = "1.0.20";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -43,6 +43,9 @@ namespace ExtraSlots
         internal static ConfigEntry<bool> configLocked;
         internal static ConfigEntry<bool> loggingEnabled;
         internal static ConfigEntry<bool> loggingDebugEnabled;
+
+        public static ConfigEntry<bool> fixContainerPosition;
+        public static ConfigEntry<bool> hotbarPreventStackAll;
 
         public static ConfigEntry<int> extraRows;
         public static ConfigEntry<int> quickSlotsAmount;
@@ -70,7 +73,7 @@ namespace ExtraSlots
         public static ConfigEntry<Vector2> equipmentPanelTooltipOffset;
         public static ConfigEntry<bool> quickSlotsAlignmentCenter;
         public static ConfigEntry<bool> equipmentSlotsShowTooltip;
-        public static ConfigEntry<bool> fixContainerPosition;
+        public static ConfigEntry<bool> equipmentSlotsPreventStackAll;
 
         public static ConfigEntry<bool> foodSlotsHotBarEnabled;
         public static ConfigEntry<Vector2> foodSlotsHotBarOffset;
@@ -84,6 +87,7 @@ namespace ExtraSlots
         public static ConfigEntry<float> foodSlotsElementSpace;
         public static ConfigEntry<string> foodSlotsTooltipNameFormat;
         public static ConfigEntry<Color> foodSlotsStackColor;
+        public static ConfigEntry<bool> foodSlotsPreventStackAll;
 
         public static ConfigEntry<KeyboardShortcut> foodSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> foodSlotHotKey2;
@@ -97,6 +101,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> miscSlotsShowHintImage;
         public static ConfigEntry<bool> miscSlotsShowTooltip;
         public static ConfigEntry<Color> miscSlotsStackColor;
+        public static ConfigEntry<bool> miscSlotsPreventStackAll;
 
         public static ConfigEntry<bool> ammoSlotsHotBarEnabled;
         public static ConfigEntry<Vector2> ammoSlotsHotBarOffset;
@@ -110,6 +115,7 @@ namespace ExtraSlots
         public static ConfigEntry<float> ammoSlotsElementSpace;
         public static ConfigEntry<string> ammoSlotsTooltipNameFormat;
         public static ConfigEntry<Color> ammoSlotsStackColor;
+        public static ConfigEntry<bool> ammoSlotsPreventStackAll;
 
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey2;
@@ -131,6 +137,7 @@ namespace ExtraSlots
         public static ConfigEntry<float> quickSlotsElementSpace;
         public static ConfigEntry<string> quickSlotsTooltipNameFormat;
         public static ConfigEntry<Color> quickSlotsStackColor;
+        public static ConfigEntry<bool> quickSlotsPreventStackAll;
 
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> quickSlotHotKey2;
@@ -284,6 +291,7 @@ namespace ExtraSlots
             loggingDebugEnabled = config("General", "Logging debug enabled", defaultValue: false, "Enable debug logging.");
             fixContainerPosition = config("General", "Fix container position for extra rows", defaultValue: true, "Moves container lower if there are extra inventory rows." +
                                                                                                                 "\nDisable this if you have other mods repositioning the container grid element");
+            hotbarPreventStackAll = config("General", "Prevent Stack All of hotbar items", defaultValue: true, "Prevent items from hotbar slots (1-8) to be placed into container when Stack All feature is used.");
 
             loggingEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
             loggingDebugEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
@@ -334,6 +342,7 @@ namespace ExtraSlots
             quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle under equipment slots");
             equipmentSlotsShowTooltip = config("Panels - Equipment slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             equipmentPanelTooltipOffset = config("Panels - Equipment slots", "Gamepad Tooltip Offset", Vector2.zero, "Offset relative to original position of tooltip at upper right corner of the inventory (side elements included)");
+            equipmentSlotsPreventStackAll = config("Panels - Equipment slots", "Prevent Stack All", defaultValue: true, "Prevent items from equipment slots to be placed into container when Stack All feature is used.");
 
             vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
             equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
@@ -352,16 +361,17 @@ namespace ExtraSlots
             foodSlotsElementSpace = config("Panels - Food slots", "Hotbar element space", defaultValue: 70f, "Food slots hotbar element size. Defines space between elements as well.");
             foodSlotsTooltipNameFormat = config("Panels - Food slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
             foodSlotsStackColor = config("Panels - Food slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
+            foodSlotsPreventStackAll = config("Panels - Food slots", "Prevent Stack All", defaultValue: true, "Prevent items from food slots to be placed into container when Stack All feature is used.");
 
             foodSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
 
-            foodSlotHotKey1 = config("Hotkeys", "Food 1", new KeyboardShortcut(KeyCode.Alpha1, KeyCode.LeftControl), "Use configuration manager to set shortcuts.");
-            foodSlotHotKey2 = config("Hotkeys", "Food 2", new KeyboardShortcut(KeyCode.Alpha2, KeyCode.LeftControl), "Use configuration manager to set shortcuts.");
-            foodSlotHotKey3 = config("Hotkeys", "Food 3", new KeyboardShortcut(KeyCode.Alpha3, KeyCode.LeftControl), "Use configuration manager to set shortcuts.");
+            foodSlotHotKey1 = config("Hotkeys", "Food 1", new KeyboardShortcut(KeyCode.Q, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
+            foodSlotHotKey2 = config("Hotkeys", "Food 2", new KeyboardShortcut(KeyCode.E, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
+            foodSlotHotKey3 = config("Hotkeys", "Food 3", new KeyboardShortcut(KeyCode.R, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
 
-            foodSlotHotKey1Text = config("Hotkeys", "Food 1 Text", "Ctrl + 1", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
-            foodSlotHotKey2Text = config("Hotkeys", "Food 2 Text", "Ctrl + 2", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
-            foodSlotHotKey3Text = config("Hotkeys", "Food 3 Text", "Ctrl + 3", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
+            foodSlotHotKey1Text = config("Hotkeys", "Food 1 Text", "Alt + Q", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
+            foodSlotHotKey2Text = config("Hotkeys", "Food 2 Text", "Alt + E", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
+            foodSlotHotKey3Text = config("Hotkeys", "Food 3 Text", "Alt + R", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
 
             foodSlotHotKey1.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
             foodSlotHotKey2.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
@@ -371,6 +381,7 @@ namespace ExtraSlots
             miscSlotsShowHintImage = config("Panels - Misc slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             miscSlotsShowTooltip = config("Panels - Misc slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             miscSlotsStackColor = config("Panels - Misc slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
+            miscSlotsPreventStackAll = config("Panels - Misc slots", "Prevent Stack All", defaultValue: true, "Prevent items from misc slots to be placed into container when Stack All feature is used.");
 
             ammoSlotsHotBarEnabled = config("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots");
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 850f), "On screen position of ammo slots hotbar panel");
@@ -384,6 +395,7 @@ namespace ExtraSlots
             ammoSlotsElementSpace = config("Panels - Ammo slots", "Hotbar element space", defaultValue: 70f, "Ammo slots hotbar element size. Defines space between elements as well.");
             ammoSlotsTooltipNameFormat = config("Panels - Ammo slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
             ammoSlotsStackColor = config("Panels - Ammo slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
+            ammoSlotsPreventStackAll = config("Panels - Ammo slots", "Prevent Stack All", defaultValue: true, "Prevent items from ammo slots to be placed into container when Stack All feature is used.");
 
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
 
@@ -411,6 +423,7 @@ namespace ExtraSlots
             quickSlotsElementSpace = config("Panels - Quick slots", "Hotbar element space", defaultValue: 70f, "Quickslots hotbar element size. Defines space between elements as well.");
             quickSlotsTooltipNameFormat = config("Panels - Quick slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
             quickSlotsStackColor = config("Panels - Quick slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
+            quickSlotsPreventStackAll = config("Panels - Quick slots", "Prevent Stack All", defaultValue: true, "Prevent items from quick slots to be placed into container when Stack All feature is used.");
 
             quickSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
 
