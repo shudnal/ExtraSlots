@@ -250,8 +250,8 @@ namespace ExtraSlots
                 if (__instance != PlayerInventory)
                     return;
 
-                // Known materials and player keys are not yet loaded, skip validation
-                if (rowsProgressionEnabled.Value && Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall && CurrentPlayer.m_isLoading)
+                // Known materials and player keys are not yet loaded, custom components are not initialized, skip validation
+                if (Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall && CurrentPlayer.m_isLoading)
                     return;
 
                 if (item == null)

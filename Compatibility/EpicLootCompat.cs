@@ -21,9 +21,7 @@ public static class EpicLootCompat
 
     public static void CheckForCompatibility()
     {
-        isEnabled = Chainloader.PluginInfos.TryGetValue(GUID, out epicLootPlugin);
-
-        if (isEnabled)
+        if (isEnabled = Chainloader.PluginInfos.TryGetValue(GUID, out epicLootPlugin))
         {
             assembly ??= Assembly.GetAssembly(epicLootPlugin.Instance.GetType());
             epicLootPlugin.Instance.Config.TryGetEntry("Crafting UI", "ShowEquippedAndHotbarItemsInSacrificeTab", out ShowEquippedAndHotbarItemsInSacrificeTab);

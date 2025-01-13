@@ -1,3 +1,6 @@
+# 1.0.21
+* fixed Backpacks and BBH's Quiver pushing some items to quick slots on player load
+
 # 1.0.20
 * new configs for slot groups to prevent "Stack All" from pulling items from configured slot types
 * new config to prevent "Stack All" from pulling items from hotbar
