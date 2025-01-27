@@ -1,3 +1,6 @@
+# 1.0.22
+* more compatibility for Valheim+ inventory
+
 # 1.0.21
 * fixed Backpacks and BBH's Quiver pushing some items to quick slots on player load
 

@@ -68,6 +68,33 @@ internal static class ValheimPlusCompat
 
         public static MethodBase TargetMethod() => target;
 
-        public static void Postfix() => CheckForCompatibility();
+        public static void Finalizer() => CheckForCompatibility();
+    }
+
+    [HarmonyPatch]
+    public static class ValheimPlus_ValheimPlusPlugin_InventoryHeightOverride
+    {
+        public static MethodBase target;
+
+        public static bool Prepare(MethodBase original)
+        {
+            if (!Chainloader.PluginInfos.TryGetValue(GUID, out PluginInfo vplusPlugin))
+                return false;
+
+            assembly ??= Assembly.GetAssembly(vplusPlugin.Instance.GetType());
+
+            target ??= AccessTools.PropertyGetter(assembly.GetType("ValheimPlus.Configurations.Sections.InventoryConfiguration"), "playerInventoryRows");
+            if (target == null)
+                return false;
+
+            if (original == null)
+                ExtraSlots.LogInfo("ValheimPlus.Configurations.Sections.InventoryConfiguration:playerInventoryRows property getter is patched to return current rows");
+
+            return true;
+        }
+
+        public static MethodBase TargetMethod() => target;
+
+        public static void Postfix(ref int __result) => __result = Slots.InventoryHeightFull;
     }
 }
