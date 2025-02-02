@@ -76,6 +76,18 @@ namespace ExtraSlots
             }
         }
 
+        [HarmonyPatch(typeof(Player), nameof(Player.AutoPickup))]
+        public static class Player_AutoPickup_PreventAutoPickupInExtraSlots
+        {
+            public static bool preventAddItem = false;
+
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(Player __instance) => preventAddItem = preventAutoPickup.Value && __instance == CurrentPlayer;
+
+            [HarmonyPriority(Priority.First)]
+            private static void Postfix() => preventAddItem = false;
+        }
+
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.SlotsUsedPercentage))]
         private static class Inventory_SlotsUsedPercentage_ExcludeRedundantSlots
         {
@@ -98,8 +110,8 @@ namespace ExtraSlots
                 if (__instance != PlayerInventory)
                     return;
 
-                __result = InventoryHeightPlayer * __instance.m_width - __instance.m_inventory.Count(item => !API.IsItemInSlot(item)) + GetEmptyQuickSlots();
-                LogDebug($"Inventory.GetEmptySlots: {__result}");
+                __result = InventoryHeightPlayer * __instance.m_width - __instance.m_inventory.Count(item => !API.IsItemInSlot(item)) + (Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem ? 0 :GetEmptyQuickSlots());
+                LogDebug($"Inventory.GetEmptySlots: {__result}, AutoPickup: {Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem}");
             }
         }
 
@@ -123,7 +135,6 @@ namespace ExtraSlots
 
                 __instance.m_height = InventoryHeightFull;
 
-                // TODO Make it more clear upgrading item crafting case
                 if (__result == emptyPosition
                     && InventoryGui.instance.m_craftTimer >= InventoryGui.instance.m_craftDuration
                     && InventoryGui.instance.m_craftUpgradeItem is ItemDrop.ItemData item
@@ -145,7 +156,7 @@ namespace ExtraSlots
                     LogDebug($"Inventory.FindEmptySlot free slot for AddItem_ByName item {Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot.m_shared.m_name} {__result}");
                 }
 
-                if (__result == emptyPosition)
+                if (__result == emptyPosition && !Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem)
                 {
                     __result = FindEmptyQuickSlot();
                     LogDebug($"Inventory.FindEmptySlot free quick slot {__result}");
@@ -163,11 +174,8 @@ namespace ExtraSlots
         private static class Inventory_HaveEmptySlot_CheckRegularInventoryAndQuickSlots
         {
             [HarmonyPriority(Priority.First)]
-            private static void Postfix(Inventory __instance, ref bool __result, bool __state)
+            private static void Postfix(Inventory __instance, ref bool __result)
             {
-                if (!__state)
-                    return;
-
                 __result = __instance.GetEmptySlots() > 0;
             }
         }
@@ -355,14 +363,14 @@ namespace ExtraSlots
 
                 if (__result = freeStackSpace + freeQuickSlotStackSpace >= stack)
                     LogDebug($"Inventory.CanAddItem_ItemData_int item {item.m_shared.m_name} result {__result}, free stack space: {freeStackSpace}, free quick slot stack space: {freeQuickSlotStackSpace}, have free stack space");
-                else if (stack <= item.m_shared.m_maxStackSize)
+                else if (stack <= item.m_shared.m_maxStackSize && !Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem)
                 {
                     if (__result = TryFindFreeSlotForItem(item, out Slot slot))
                         LogDebug($"Inventory.CanAddItem_ItemData_int item {item.m_shared.m_name} result {__result}, free stack space: {freeStackSpace}, free quick slot stack space: {freeQuickSlotStackSpace}, no free stack space, free single slot found {slot} {slot.GridPosition}");
                 }
             }
         }
-
+        
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(ItemDrop.ItemData))]
         private static class Inventory_AddItem_ItemData_TryFindAppropriateExtraSlot
         {
@@ -373,6 +381,9 @@ namespace ExtraSlots
                     return;
 
                 if (__result)
+                    return;
+
+                if (Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem)
                     return;
 
                 if (!TryFindFreeSlotForItem(item, out Slot slot))

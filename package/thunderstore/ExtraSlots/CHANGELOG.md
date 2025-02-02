@@ -1,3 +1,6 @@
+# 1.0.23
+* new config option to prevent auto pickup items to extra slots
+
 # 1.0.22
 * more compatibility for Valheim+ inventory
 

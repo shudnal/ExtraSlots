@@ -32,7 +32,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.22";
+        public const string pluginVersion = "1.0.23";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -46,6 +46,7 @@ namespace ExtraSlots
 
         public static ConfigEntry<bool> fixContainerPosition;
         public static ConfigEntry<bool> hotbarPreventStackAll;
+        public static ConfigEntry<bool> preventAutoPickup;
 
         public static ConfigEntry<int> extraRows;
         public static ConfigEntry<int> quickSlotsAmount;
@@ -292,6 +293,8 @@ namespace ExtraSlots
             fixContainerPosition = config("General", "Fix container position for extra rows", defaultValue: true, "Moves container lower if there are extra inventory rows." +
                                                                                                                 "\nDisable this if you have other mods repositioning the container grid element");
             hotbarPreventStackAll = config("General", "Prevent Stack All of hotbar items", defaultValue: true, "Prevent items from hotbar slots (1-8) to be placed into container when Stack All feature is used.");
+            preventAutoPickup = config("General", "Prevent items auto pickup in extra slots", defaultValue: false, "Should extra slots be used for items auto pickup. If enabled - item from ground will not be put into extra slots." +
+                                                                                                                   "\nIt will not prevent autostacking similar items.");
 
             loggingEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
             loggingDebugEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
