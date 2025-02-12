@@ -1,3 +1,6 @@
+# 1.0.25
+* Ukrainian translation
+
 # 1.0.24
 * hotbars now has configurable anchor to make it work the same on clients with different resolutions and GUI scales (if you moved panels you may need to reposition it again)
 * new config options to change weight of items in corresponding slots
