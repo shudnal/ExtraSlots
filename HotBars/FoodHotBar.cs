@@ -114,7 +114,8 @@ public static class FoodSlotsHotBar
             return;
 
         hotBarRect.localScale = Vector3.one * foodSlotsHotBarScale.Value;
-        if (hotBarRect.anchoredPosition != (hotBarRect.anchoredPosition = new Vector2(foodSlotsHotBarOffset.Value.x, -foodSlotsHotBarOffset.Value.y)))
+        hotBarRect.SetAnchor(foodSlotsHotBarAnchor.Value);
+        if (hotBarRect.anchoredPosition != (hotBarRect.anchoredPosition = foodSlotsHotBarOffset.Value))
             QuickBars.ResetBars();
     }
 

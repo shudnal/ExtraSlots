@@ -1,3 +1,6 @@
+# 1.0.24
+* hotbars now has configurable anchor to make it work the same on clients with different resolutions and GUI scales (if you moved panels you may need to reposition it again)
+
 # 1.0.23
 * new config option to prevent auto pickup items to extra slots
 

@@ -89,8 +89,10 @@ public static class QuickSlotsHotBar
         if (!hotBar)
             return;
 
-        hotBarRect.anchoredPosition = new Vector2(quickSlotsHotBarOffset.Value.x, -quickSlotsHotBarOffset.Value.y);
         hotBarRect.localScale = Vector3.one * quickSlotsHotBarScale.Value;
+        hotBarRect.SetAnchor(quickSlotsHotBarAnchor.Value);
+        if (hotBarRect.anchoredPosition != (hotBarRect.anchoredPosition = quickSlotsHotBarOffset.Value))
+            QuickBars.ResetBars();
     }
 
     [HarmonyPatch(typeof(Hud), nameof(Hud.Update))]
