@@ -492,5 +492,50 @@ namespace ExtraSlots
                 original.m_height = InventoryHeightFull;
             }
         }
+
+        internal static void UpdateTotalWeight() => PlayerInventory?.UpdateTotalWeight();
+
+        [HarmonyPatch(typeof(Inventory), nameof(Inventory.UpdateTotalWeight))]
+        public static class Inventory_UpdateTotalWeight_UpdateGraveInventory
+        {
+            public static bool inCall = false;
+
+            private static void Prefix(Inventory __instance) => inCall = __instance == PlayerInventory;
+
+            private static void Postfix() => inCall = false;
+        }
+
+        [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetWeight))]
+        public static class ItemDrop_ItemData_GetWeight_UpdateGraveInventory
+        {
+            private static float GetItemWeightFactor(Slot slot)
+            {
+                if (slot.IsEquipmentSlot)
+                    return itemWeightFactorEquipmentSlots.Value;
+
+                if (slot.IsQuickSlot)
+                    return itemWeightFactorQuickSlots.Value;
+
+                if (slot.IsAmmoSlot)
+                    return itemWeightFactorAmmoSlots.Value;
+
+                if (slot.IsFoodSlot)
+                    return itemWeightFactorFoodSlots.Value;
+                
+                if (slot.IsMiscSlot)
+                    return itemWeightFactorMiscSlots.Value;
+
+                return 1f;
+            }
+
+            private static void Postfix(ItemDrop.ItemData __instance, ref float __result)
+            {
+                if (!Inventory_UpdateTotalWeight_UpdateGraveInventory.inCall)
+                    return;
+
+                if (GetItemSlot(__instance) is Slot slot)
+                    __result *= GetItemWeightFactor(slot);
+            }
+        }
     }
 }

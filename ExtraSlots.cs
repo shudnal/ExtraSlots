@@ -68,6 +68,12 @@ namespace ExtraSlots
         public static ConfigEntry<bool> keepOnDeathAmmoSlots;
         public static ConfigEntry<bool> keepOnDeathMiscSlots;
 
+        public static ConfigEntry<float> itemWeightFactorEquipmentSlots;
+        public static ConfigEntry<float> itemWeightFactorQuickSlots;
+        public static ConfigEntry<float> itemWeightFactorFoodSlots;
+        public static ConfigEntry<float> itemWeightFactorAmmoSlots;
+        public static ConfigEntry<float> itemWeightFactorMiscSlots;
+
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
         public static ConfigEntry<Vector2> equipmentPanelOffset;
@@ -341,6 +347,18 @@ namespace ExtraSlots
             keepOnDeathFoodSlots = config("Extra slots - Death tweaks", "Keep items at food slots", defaultValue: false, "Keep items in food slots after death. [Synced with Server]", synchronizedSetting: true);
             keepOnDeathAmmoSlots = config("Extra slots - Death tweaks", "Keep items at ammo slots", defaultValue: false, "Keep items in ammo slots after death. [Synced with Server]", synchronizedSetting: true);
             keepOnDeathMiscSlots = config("Extra slots - Death tweaks", "Keep items at misc slots", defaultValue: false, "Keep items in misc slots after death. [Synced with Server]", synchronizedSetting: true);
+            
+            itemWeightFactorEquipmentSlots = config("Extra slots - Item weight factor", "Equipment slots", defaultValue: 1.0f, "Weight factor for items in equipment slots. [Synced with Server]", synchronizedSetting: true);
+            itemWeightFactorQuickSlots = config("Extra slots - Item weight factor", "Quick slots", defaultValue: 1.0f, "Weight factor for items in quick slots. [Synced with Server]", synchronizedSetting: true);
+            itemWeightFactorFoodSlots = config("Extra slots - Item weight factor", "Food slots", defaultValue: 1.0f, "Weight factor for items in food slots. [Synced with Server]", synchronizedSetting: true);
+            itemWeightFactorAmmoSlots = config("Extra slots - Item weight factor", "Ammo slots", defaultValue: 1.0f, "Weight factor for items in ammo slots. [Synced with Server]", synchronizedSetting: true);
+            itemWeightFactorMiscSlots = config("Extra slots - Item weight factor", "Misc slots", defaultValue: 1.0f, "Weight factor for items in misc slots. [Synced with Server]", synchronizedSetting: true);
+
+            itemWeightFactorEquipmentSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
+            itemWeightFactorQuickSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
+            itemWeightFactorFoodSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
+            itemWeightFactorAmmoSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
+            itemWeightFactorMiscSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
 
             vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder, "Comma separated list defining order of vanilla equipment slots");
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalLeft, "Equipment slots alignment");
