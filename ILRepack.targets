@@ -23,7 +23,7 @@
 				Overwrite="true"/>
 	</Target>
 	<Target Name="CopyDLLPlugins" AfterTargets="ILRepacker">
-		<Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Users\Suden\AppData\Roaming\r2modmanPlus-local\Valheim\profiles\beta\BepInEx\plugins\shudnal-$(SolutionName)\" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="D:\r2modman\Valheim\profiles\beta\BepInEx\plugins\shudnal-$(SolutionName)\" />
 		<Message Text="Copied to r2 folder." Importance="High" />
 	</Target>
 </Project>

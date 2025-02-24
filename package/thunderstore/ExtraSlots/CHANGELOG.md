@@ -1,5 +1,6 @@
 # 1.0.25
 * Ukrainian translation
+* fix for rare error related to equipment effects
 
 # 1.0.24
 * hotbars now has configurable anchor to make it work the same on clients with different resolutions and GUI scales (if you moved panels you may need to reposition it again)

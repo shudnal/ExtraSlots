@@ -136,7 +136,7 @@ namespace ExtraSlots
 
                     tempEffects.Clear();
 
-                    foreach(ItemDrop.ItemData item in GetEquippedItems())
+                    foreach(ItemDrop.ItemData item in GetEquippedItems().ToArray())
                     {
                         if ((bool)item.m_shared.m_equipStatusEffect)
                             tempEffects.Add(item.m_shared.m_equipStatusEffect);
