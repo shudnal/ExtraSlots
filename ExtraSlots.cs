@@ -32,7 +32,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.24";
+        public const string pluginVersion = "1.0.26";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -440,6 +440,9 @@ namespace ExtraSlots
             quickSlotsPreventStackAll = config("Panels - Quick slots", "Prevent Stack All", defaultValue: true, "Prevent items from quick slots to be placed into container when Stack All feature is used.");
 
             quickSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
+            quickSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
+            quickSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
+            quickSlotsHotBarScale.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
 
             ammoSlotsHotBarEnabled = config("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots");
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 228f), "On screen position of ammo slots hotbar panel");
@@ -457,6 +460,9 @@ namespace ExtraSlots
             ammoSlotsPreventStackAll = config("Panels - Ammo slots", "Prevent Stack All", defaultValue: true, "Prevent items from ammo slots to be placed into container when Stack All feature is used.");
 
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
+            ammoSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
+            ammoSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
+            ammoSlotsHotBarScale.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
 
             foodSlotsHotBarEnabled = config("Panels - Food slots", "Enabled", defaultValue: true, "Enable hotbar with Food slots");
             foodSlotsHotBarOffset = config("Panels - Food slots", "Offset", defaultValue: new Vector2(230f, 84f), "On screen position of Food slots hotbar panel");
@@ -474,6 +480,9 @@ namespace ExtraSlots
             foodSlotsPreventStackAll = config("Panels - Food slots", "Prevent Stack All", defaultValue: true, "Prevent items from food slots to be placed into container when Stack All feature is used.");
 
             foodSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
+            foodSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
+            foodSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
+            foodSlotsHotBarScale.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
 
             equipmentSlotLabelAlignment = config("Panels - Equipment slots - Label style", "Horizontal alignment", TMPro.HorizontalAlignmentOptions.Left, "Horizontal alignment of text component in equipment slot label");
             equipmentSlotLabelWrappingMode = config("Panels - Equipment slots - Label style", "Text wrapping mode", TMPro.TextWrappingModes.Normal, "Size of text component in slot label");
@@ -604,18 +613,15 @@ namespace ExtraSlots
             epicLootMagicItemUnequippedAlpha = config("Mods compatibility", "EpicLoot unequipped item alpha", 0.2f, "Make unequipped enchanted item more visible in equipment panel by making its background image more transparent.");
             epicLootExcludeMiscItemsFromSacrifice = config("Mods compatibility", "EpicLoot exclude misc items from sacrifice", true, "If EpicLoot config ShowEquippedAndHotbarItemsInSacrificeTab is enabled then items in misc slots will be excluded from sacrifice.");
 
-            if (pluginVersion == "1.0.24")
-            {
-                // new default values were updated for new anchor point
-                if (ammoSlotsHotBarOffset.Value == new Vector2(230f, 850f))
-                    ammoSlotsHotBarOffset.Value = (Vector2)ammoSlotsHotBarOffset.DefaultValue;
+            // new default values were updated for new anchor point
+            if (ammoSlotsHotBarOffset.Value == new Vector2(230f, 850f) && ammoSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)
+                ammoSlotsHotBarOffset.Value = (Vector2)ammoSlotsHotBarOffset.DefaultValue;
 
-                if (foodSlotsHotBarOffset.Value == new Vector2(230f, 996f))
-                    foodSlotsHotBarOffset.Value = (Vector2)foodSlotsHotBarOffset.DefaultValue;
+            if (foodSlotsHotBarOffset.Value == new Vector2(230f, 996f) && foodSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)
+                foodSlotsHotBarOffset.Value = (Vector2)foodSlotsHotBarOffset.DefaultValue;
                 
-                if (quickSlotsHotBarOffset.Value == new Vector2(230f, 923f))
-                    quickSlotsHotBarOffset.Value = (Vector2)quickSlotsHotBarOffset.DefaultValue;
-            }
+            if (quickSlotsHotBarOffset.Value == new Vector2(230f, 923f) && quickSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)
+                quickSlotsHotBarOffset.Value = (Vector2)quickSlotsHotBarOffset.DefaultValue;
         }
 
         public static void LogDebug(object data)
@@ -668,6 +674,8 @@ namespace ExtraSlots
             Texture2D tex = new Texture2D(2, 2);
             if (LoadTexture(filename, ref tex))
                 icon = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.zero);
+            else
+                Destroy(tex);
         }
 
         internal static bool LoadTextureFromConfigDirectory(string filename, ref Texture2D tex)
@@ -718,9 +726,11 @@ namespace ExtraSlots
             instance.StartCoroutine(slotsUpdater);
         }
 
+        private static readonly WaitForEndOfFrame waitForFrame = new WaitForEndOfFrame();
+
         private System.Collections.IEnumerator UpdateSlotsNextFrame()
         {
-            yield return new WaitForEndOfFrame();
+            yield return waitForFrame;
 
             LogInfo("UpdateSlots delayed update");
 

@@ -9,6 +9,7 @@ namespace ExtraSlots
     public static class TombStoneInteraction
     {
         private static readonly List<ItemDrop.ItemData> itemsToKeep = new List<ItemDrop.ItemData>();
+        private static readonly HashSet<Slot> takenSlots = new HashSet<Slot>();
 
         public static void EquipItemsInSlots()
         {
@@ -170,7 +171,7 @@ namespace ExtraSlots
                 if (__instance.m_container.GetInventory().NrOfItems() > InventorySizeActive)
                     return;
 
-                int nrOfItems = 0; HashSet<Slot> takenSlots = new HashSet<Slot>();
+                int nrOfItems = 0; takenSlots.Clear();
                 foreach (ItemDrop.ItemData item in __instance.m_container.GetInventory().GetAllItemsInGridOrder())
                 {
                     if (item.m_gridPos.y < InventoryHeightPlayer)

@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -55,15 +54,23 @@ public static class AmmoSlotsHotBar
         }
     }
 
+    // Runs every frame Hud.Update
     internal static bool Refresh()
     {
         if (!isDirty)
             return false;
 
-        if (ammoSlotsHotBarEnabled.Value && hotBarRect == null)
+        if (IsEnabled() && hotBarRect == null)
             CreateBar();
-        else if (!ammoSlotsHotBarEnabled.Value && hotBarRect != null)
+        else if (!IsEnabled() && hotBarRect != null)
             ClearBar();
+
+        if (hotBarRect != null)
+        {
+            hotBarRect.localScale = Vector3.one * ammoSlotsHotBarScale.Value;
+            hotBarRect.SetAnchor(ammoSlotsHotBarAnchor.Value);
+            hotBarRect.anchoredPosition = ammoSlotsHotBarOffset.Value;
+        }
 
         isDirty = false;
 
@@ -72,33 +79,22 @@ public static class AmmoSlotsHotBar
 
     internal static void ClearBar()
     {
+        if (hotBar != null)
+            UnityEngine.Object.Destroy(hotBar.gameObject);
+
         if (hotBarRect != null)
-            UnityEngine.Object.DestroyImmediate(hotBarRect.gameObject);
+            UnityEngine.Object.Destroy(hotBarRect.gameObject);
 
         hotBar = null;
         hotBarRect = null;
     }
 
-    internal static Slot GetSlotWithShortcutDown() => hotBarSlots.FirstOrDefault(slot => slot.IsShortcutDown());
+    internal static bool IsEnabled() => ammoSlotsHotBarEnabled.Value;
 
-    internal static IEnumerable<Slot> GetSlotsWithShortcutDown() => hotBarSlots.Where(slot => slot.IsShortcutDown() && slot.Item != null);
+    internal static bool IsShortcutDownWithItem(Slot slot) => slot.IsShortcutDown() && slot.Item != null;
 
-    // Runs every frame Hud.Update
-    internal static void UpdatePosition()
-    {
-        if (!hotBar)
-            return;
+    internal static Slot GetSlotWithShortcutDown() => IsEnabled() ? hotBarSlots.FirstOrDefault(IsShortcutDownWithItem) : null;
 
-        hotBarRect.localScale = Vector3.one * ammoSlotsHotBarScale.Value;
-        hotBarRect.SetAnchor(ammoSlotsHotBarAnchor.Value);
-        if (hotBarRect.anchoredPosition != (hotBarRect.anchoredPosition = ammoSlotsHotBarOffset.Value))
-            QuickBars.ResetBars();
-    }
+    internal static IEnumerable<Slot> GetSlotsWithShortcutDown() => IsEnabled() ? hotBarSlots.Where(IsShortcutDownWithItem) : null;
 
-    [HarmonyPatch(typeof(Hud), nameof(Hud.Update))]
-    private static class Hud_Update_SlotsPosition
-    {
-        [HarmonyPriority(Priority.Low)]
-        private static void Postfix() => UpdatePosition();
-    }
 }

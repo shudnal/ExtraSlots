@@ -20,18 +20,6 @@ namespace ExtraSlots
             public int height;
             public int extraRows;
             public string inventoryBase64;
-
-            public string GetTooltip()
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("Extra Slots backup is available.");
-                sb.AppendFormat("Backup made at: {0}\n", date);
-                sb.AppendFormat("Made in world: {0}\n", worldName);
-                sb.AppendFormat("Number of items: {0}\n\n", nrOfItems);
-                sb.AppendFormat("If you do not restore backup now but perform saving of current character this backup will no longer be available.");
-
-                return sb.ToString();
-            }
         }
 
         public const string customKeyBackupID = "ExtraSlotsInventoryBackup";

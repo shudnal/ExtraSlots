@@ -1,3 +1,7 @@
+# 1.0.26
+* patch 0.220.3
+* minor performance improvements
+
 # 1.0.25
 * Ukrainian translation
 * fix for rare error related to equipment effects

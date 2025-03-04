@@ -23,6 +23,8 @@ public static class QuickBars
         };
     private static readonly Dictionary<GameObject, Tuple<RectTransform, TMP_Text>> elementsExtraData = new Dictionary<GameObject, Tuple<RectTransform, TMP_Text>>();
 
+    private static readonly List<ItemDrop.ItemData> itemsToUse = new List<ItemDrop.ItemData>();
+
     public static RectTransform InstantiateHotKeyBar(string barName)
     {
         RectTransform vanillaBar = Hud.instance.m_rootObject.transform.Find(vanillaBarName).GetComponent<RectTransform>();
@@ -164,7 +166,20 @@ public static class QuickBars
         return null;
     }
 
-    private static IEnumerable<ItemDrop.ItemData> GetItemsToUse() => QuickSlotsHotBar.GetSlotsWithShortcutDown().Concat(AmmoSlotsHotBar.GetSlotsWithShortcutDown()).Concat(FoodSlotsHotBar.GetSlotsWithShortcutDown()).Select(slot => slot.Item);
+    private static IEnumerable<ItemDrop.ItemData> GetItemsToUse()
+    {
+        itemsToUse.Clear();
+        if (QuickSlotsHotBar.GetSlotsWithShortcutDown() is IEnumerable<Slot> quickItems)
+            itemsToUse.AddRange(quickItems.Select(slot => slot.Item));
+
+        if (AmmoSlotsHotBar.GetSlotsWithShortcutDown() is IEnumerable<Slot> ammoItems)
+            itemsToUse.AddRange(ammoItems.Select(slot => slot.Item));
+
+        if (FoodSlotsHotBar.GetSlotsWithShortcutDown() is IEnumerable<Slot> foodItems)
+            itemsToUse.AddRange(foodItems.Select(slot => slot.Item));
+
+        return itemsToUse;
+    }
 
     private static bool GetButtonDown(string name) => !Compatibility.PlantEasilyCompat.DisableGamepadInput && ZInput.GetButtonDown(name);
 
@@ -178,7 +193,7 @@ public static class QuickBars
 
             if (QuickSlotsHotBar.Refresh() || AmmoSlotsHotBar.Refresh() || FoodSlotsHotBar.Refresh())
                 ResetBars();
-            else 
+            else
                 bars ??= GetHotKeyBarsToControl();
 
             if (bars == null)

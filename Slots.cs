@@ -28,10 +28,12 @@ namespace ExtraSlots
 
         public static readonly string VanillaOrder = $"{helmetSlotID},{chestSlotID},{legsSlotID},{shoulderSlotID},{utilitySlotID}";
         public static readonly HashSet<string> vanillaSlots = new HashSet<string>() { helmetSlotID, chestSlotID, legsSlotID, shoulderSlotID, utilitySlotID };
-
+        
         private const string customKeyPlayerID = "ExtraSlotsEquippedBy";
         private const string customKeySlotID = "ExtraSlotsEquippedSlot";
         internal const string customKeyWeaponShield = "ExtraSlotsEquippedWeaponShield";
+
+        private static readonly List<ItemDrop.ItemData> itemsInGridOrder = new List<ItemDrop.ItemData>();
 
         public class Slot
         {
@@ -57,6 +59,7 @@ namespace ExtraSlots
             public Vector2i GridPosition => _gridPos;
             
             public int Index => _index;
+            public int EquipmentIndex => IsCustomSlot ? _index + 200 : (_index >= 16 && _index <= 20) ? _index : _index + 100;
 
             public bool IsHotkeySlot => _getShortcut != null;
             public bool IsQuickSlot => _index < 6;
@@ -310,15 +313,8 @@ namespace ExtraSlots
         public static int GetEquipmentSlotsCount() => slots.Count(slot => slot.IsEquipmentSlot && slot.IsActive);
         public static int GetQuickSlotsCount() => slots.Count(slot => slot.IsQuickSlot && slot.IsActive);
 
-        public static Slot[] GetEquipmentSlots(bool onlyActive = true)
-        {
-            List<Slot> equipment = new List<Slot>();
-            equipment.AddRange(Array.FindAll(slots, slot => (!onlyActive || slot.IsActive) && slot.IsVanillaEquipment()).OrderBy(slot => slot.Index));
-            equipment.AddRange(Array.FindAll(slots, slot => (!onlyActive || slot.IsActive) && slot.ID.StartsWith(extraUtilitySlotID)).OrderBy(slot => slot.Index));
-            equipment.AddRange(Array.FindAll(slots, slot => (!onlyActive || slot.IsActive) && slot.IsCustomSlot).OrderBy(slot => slot.Index));
+        public static Slot[] GetEquipmentSlots(bool onlyActive = true) => slots.Where(slot => slot.IsEquipmentSlot && (!onlyActive || slot.IsActive)).OrderBy(slot => slot.EquipmentIndex).ToArray();
 
-            return equipment.ToArray();
-        }
         public static Slot[] GetQuickSlots() => Array.FindAll(slots, slot => slot.IsQuickSlot).OrderBy(slot => slot.Index).ToArray();
         public static Slot[] GetFoodSlots() => Array.FindAll(slots, slot => slot.IsFoodSlot).OrderBy(slot => slot.Index).ToArray();
         public static Slot[] GetAmmoSlots() => Array.FindAll(slots, slot => slot.IsAmmoSlot).OrderBy(slot => slot.Index).ToArray();
@@ -403,7 +399,7 @@ namespace ExtraSlots
         {
             gridPos = emptyPosition;
 
-            List<ItemDrop.ItemData> itemsInGridOrder = new List<ItemDrop.ItemData>();
+            itemsInGridOrder.Clear();
             if (tryFindRegularInventorySlot)
                 for (int i = InventoryHeightPlayer - 1; i >= 0; i--)
                     for (int j = InventoryWidth - 1; j >= 0; j--)
@@ -411,9 +407,13 @@ namespace ExtraSlots
                             return (gridPos = new Vector2i(j, i)) != emptyPosition;
                         else
                             itemsInGridOrder.Add(item);
-            
-            if (!tryFindRegularInventorySlot)
-                itemsInGridOrder.AddRange(PlayerInventory.GetAllItemsInGridOrder().Where(item => item.m_gridPos.y < InventoryHeightPlayer).Reverse());
+            else
+                itemsInGridOrder.AddRange(
+                            PlayerInventory.GetAllItemsInGridOrder()
+                                .Where(item => item.m_gridPos.y < InventoryHeightPlayer)
+                                .OrderByDescending(item => item.m_gridPos.y)
+                                .ThenByDescending(item => item.m_gridPos.x)
+                        );
 
             // To be clear there is no cached items overlap
             ClearCachedItems();

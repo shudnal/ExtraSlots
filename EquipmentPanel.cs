@@ -140,8 +140,11 @@ namespace ExtraSlots
             equipmentBackground.sizeDelta = new Vector2(PanelWidth, PanelHeight);
             equipmentBackground.anchoredPosition = PanelPosition + new Vector2(PanelWidth / 2, -PanelHeight / 2);
 
-            selectedFrame.sizeDelta = equipmentBackground.sizeDelta + Vector2.one * 26f;
-            selectedFrame.anchoredPosition = equipmentBackground.anchoredPosition;
+            if (selectedFrame)
+            {
+                selectedFrame.sizeDelta = equipmentBackground.sizeDelta + Vector2.one * 26f;
+                selectedFrame.anchoredPosition = equipmentBackground.anchoredPosition;
+            }
         }
 
         internal static void SetSlotElement(InventoryGrid.Element element, Slot slot, bool regularInventoryUnfitsForDragItem)
@@ -370,10 +373,10 @@ namespace ExtraSlots
                 return;
 
             inventoryBackground ??= InventoryGui.instance.m_player.Find("Bkg").GetComponent<RectTransform>();
-            if (!inventoryBackground)
+            if (inventoryBackground == null)
                 return;
 
-            if (!equipmentBackground)
+            if (!equipmentBackground && InventoryGui.instance.m_player)
             {
                 Transform selected_frames = InventoryGui.instance.m_player.GetComponent<UIGroupHandler>()?.m_enableWhenActiveAndGamepad.transform;
                 inventoryDarken = InventoryGui.instance.m_player.Find("Darken").GetComponent<RectTransform>();
@@ -381,7 +384,7 @@ namespace ExtraSlots
                 equipmentBackground = new GameObject(BackgroundName, typeof(RectTransform)).GetComponent<RectTransform>();
                 equipmentBackground.gameObject.layer = inventoryBackground.gameObject.layer;
                 equipmentBackground.SetParent(InventoryGui.instance.m_player, worldPositionStays: false);
-                equipmentBackground.SetSiblingIndex(1 + (selected_frames == null ? inventoryDarken.GetSiblingIndex(): selected_frames.GetSiblingIndex())); // In front of Darken and selected_frame elements
+                equipmentBackground.SetSiblingIndex(1 + (selected_frames == null ? inventoryDarken.GetSiblingIndex(): selected_frames.GetSiblingIndex())); // In front of Darken and selected_frames elements
                 equipmentBackground.offsetMin = Vector2.zero;
                 equipmentBackground.offsetMax = Vector2.zero;
                 equipmentBackground.sizeDelta = Vector2.zero;
@@ -399,16 +402,19 @@ namespace ExtraSlots
                 equipmentBackgroundImage = equipmentBkg.GetComponent<Image>();
                 inventoryBackgroundImage = inventoryBackground.transform.GetComponent<Image>();
 
-                inventorySelectedFrame = selected_frames.GetChild(0) as RectTransform;
-                selectedFrame = UnityEngine.Object.Instantiate(inventorySelectedFrame, selected_frames);
-                selectedFrame.name = "selected (ExtraSlots)";
+                if (selected_frames != null)
+                {
+                    inventorySelectedFrame = selected_frames.GetChild(0) as RectTransform;
+                    selectedFrame = UnityEngine.Object.Instantiate(inventorySelectedFrame, selected_frames);
+                    selectedFrame.name = "selected (ExtraSlots)";
 
-                selectedFrame.offsetMin = equipmentBackground.offsetMin;
-                selectedFrame.offsetMax = equipmentBackground.offsetMax;
-                selectedFrame.sizeDelta = equipmentBackground.sizeDelta;
-                selectedFrame.anchoredPosition = equipmentBackground.anchoredPosition;
-                selectedFrame.anchorMin = equipmentBackground.anchorMin;
-                selectedFrame.anchorMax = equipmentBackground.anchorMax;
+                    selectedFrame.offsetMin = equipmentBackground.offsetMin;
+                    selectedFrame.offsetMax = equipmentBackground.offsetMax;
+                    selectedFrame.sizeDelta = equipmentBackground.sizeDelta;
+                    selectedFrame.anchoredPosition = equipmentBackground.anchoredPosition;
+                    selectedFrame.anchorMin = equipmentBackground.anchorMin;
+                    selectedFrame.anchorMax = equipmentBackground.anchorMax;
+                }
 
                 UpdateBackground();
             }
@@ -429,8 +435,12 @@ namespace ExtraSlots
                 }
             }
 
-            inventoryBackground.anchorMin = new Vector2(0.0f, -1f * ((float)ExtraRowsPlayer / vanillaInventoryHeight - 0.01f * Math.Max(ExtraRowsPlayer - 1, 0)));
-            inventorySelectedFrame.anchorMin = inventoryBackground.anchorMin;
+            if (inventoryBackground)
+            {
+                inventoryBackground.anchorMin = new Vector2(0.0f, -1f * ((float)ExtraRowsPlayer / vanillaInventoryHeight - 0.01f * Math.Max(ExtraRowsPlayer - 1, 0)));
+                if (inventorySelectedFrame)
+                    inventorySelectedFrame.anchorMin = inventoryBackground.anchorMin;
+            }
 
             if (fixContainerPosition.Value)
                 InventoryGui.instance.m_container.pivot = new Vector2(0f, 1f + ExtraRowsPlayer * 0.2f);
