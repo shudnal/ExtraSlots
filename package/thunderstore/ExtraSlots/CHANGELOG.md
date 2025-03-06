@@ -1,3 +1,8 @@
+# 1.0.27
+* Polish translation refined
+* ServerSync updated
+* more compat for mods altering original hotkey bar
+
 # 1.0.26
 * patch 0.220.3
 * minor performance improvements

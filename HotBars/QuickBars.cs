@@ -40,7 +40,7 @@ public static class QuickBars
     {
         elementsExtraData.Clear();
         _currentBarIndex = -1;
-        bars = GetHotKeyBarsToControl();
+        bars = null;
     }
 
     // Patch this method if you want your bar to be controlled in the same way
@@ -183,6 +183,8 @@ public static class QuickBars
 
     private static bool GetButtonDown(string name) => !Compatibility.PlantEasilyCompat.DisableGamepadInput && ZInput.GetButtonDown(name);
 
+    private static bool NoBarsToControl() => bars == null || bars.Count == 0 || bars.Count == 1 && bars[0].name == vanillaBarName;
+
     [HarmonyPatch(typeof(Hud), nameof(Hud.Update))]
     public static class Hud_Update_BarController
     {
@@ -193,10 +195,10 @@ public static class QuickBars
 
             if (QuickSlotsHotBar.Refresh() || AmmoSlotsHotBar.Refresh() || FoodSlotsHotBar.Refresh())
                 ResetBars();
-            else
-                bars ??= GetHotKeyBarsToControl();
+            
+            bars ??= GetHotKeyBarsToControl();
 
-            if (bars == null)
+            if (NoBarsToControl())
                 return;
 
             if (!UpdateCurrentHotkeyBar() && (GetButtonDown("JoyDPadLeft") || GetButtonDown("JoyDPadRight") || GetButtonDown("JoyDPadUp")))
@@ -232,7 +234,7 @@ public static class QuickBars
     public static class HotkeyBar_Update_PreventCall
     {
         [HarmonyPriority(Priority.First)]
-        public static bool Prefix() => false;
+        public static bool Prefix() => NoBarsToControl();
     }
 
     [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.UpdateIcons))]
