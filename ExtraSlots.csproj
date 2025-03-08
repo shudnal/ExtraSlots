@@ -40,6 +40,7 @@
     <Compile Include="Compatibility\BetterArcheryCompat.cs" />
     <Compile Include="Compatibility\EquipmentAndQuickSlotsCompat.cs" />
     <Compile Include="Compatibility\PlantEasilyCompat.cs" />
+    <Compile Include="CustomConfigs.cs" />
     <Compile Include="EquipmentPanel.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="HotBars\FoodHotBar.cs" />
@@ -110,6 +111,10 @@
     <Reference Include="UnityEngine.ImageConversionModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\stable\UnityEngine.ImageConversionModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\stable\UnityEngine.IMGUIModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

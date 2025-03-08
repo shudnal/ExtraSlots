@@ -1,3 +1,7 @@
+# 1.0.28
+* custom item list for misc slot items (by default includes items required to summon bosses)
+* vanilla slot order and Unique utility items configs now use custom config drawers to easier format handling
+
 # 1.0.27
 * Polish translation refined
 * ServerSync updated

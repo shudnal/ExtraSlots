@@ -27,8 +27,9 @@ namespace ExtraSlots
         public static readonly Vector2i emptyPosition = new Vector2i(-1, -1);
 
         public static readonly string VanillaOrder = $"{helmetSlotID},{chestSlotID},{legsSlotID},{shoulderSlotID},{utilitySlotID}";
-        public static readonly HashSet<string> vanillaSlots = new HashSet<string>() { helmetSlotID, chestSlotID, legsSlotID, shoulderSlotID, utilitySlotID };
-        
+        public static readonly HashSet<string> vanillaSlots = new HashSet<string>(VanillaOrder.Split(','));
+        public static readonly HashSet<string> miscItemsList = new HashSet<string>();
+
         private const string customKeyPlayerID = "ExtraSlotsEquippedBy";
         private const string customKeySlotID = "ExtraSlotsEquippedSlot";
         internal const string customKeyWeaponShield = "ExtraSlotsEquippedWeaponShield";
@@ -567,6 +568,8 @@ namespace ExtraSlots
 
             UpdateSlotsGridPosition();
 
+            UpdateMiscSlotCustomItemList();
+
             HotBars.QuickSlotsHotBar.UpdateSlots();
             HotBars.AmmoSlotsHotBar.UpdateSlots();
             HotBars.FoodSlotsHotBar.UpdateSlots();
@@ -620,6 +623,13 @@ namespace ExtraSlots
             InventoryInteraction.UpdatePlayerInventorySize();
         }
 
+        internal static void UpdateMiscSlotCustomItemList() 
+        {
+            miscItemsList.Clear();
+            miscItemsList.Add("$item_coins");
+            miscSlotsItemList.Value.Split(',').Do(item => miscItemsList.Add(item));
+        }
+
         internal static void SwapSlots(int index, int indexToExchange)
         {
             (slots[index], slots[indexToExchange]) = (slots[indexToExchange], slots[index]);
@@ -642,7 +652,7 @@ namespace ExtraSlots
                                     item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trophy ||
                                     item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Misc ||
                                     item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Fish ||
-                                    item.m_shared.m_name == "$item_coins");
+                                    miscItemsList.Contains(item.m_shared.m_name));
         }
 
         public static bool IsFoodSlotItem(ItemDrop.ItemData item)

@@ -32,7 +32,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.27";
+        public const string pluginVersion = "1.0.28";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -110,6 +110,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> miscSlotsShowTooltip;
         public static ConfigEntry<Color> miscSlotsStackColor;
         public static ConfigEntry<bool> miscSlotsPreventStackAll;
+        public static ConfigEntry<string> miscSlotsItemList;
 
         public static ConfigEntry<bool> ammoSlotsHotBarEnabled;
         public static ConfigEntry<Vector2> ammoSlotsHotBarOffset;
@@ -322,8 +323,10 @@ namespace ExtraSlots
                                                                                         "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.", synchronizedSetting: true);
             slotsProgressionEnabled = config("Extra slots", "Slots progression enabled", defaultValue: true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]", synchronizedSetting: true);
             rowsProgressionEnabled = config("Extra slots", "Inventory rows progression enabled", defaultValue: false, "Enabled inventory rows obtaining progression.  Use with caution and report bugs. [Synced with Server]", synchronizedSetting: true);
-            preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "$item_beltstrength:$belt_ymir_TW", "Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
-                                                                                           "\nIf you just want one item to be unique-equipped just add its name without \":\"", synchronizedSetting: true);
+            preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "$item_beltstrength:$belt_ymir_TW",
+                                    new ConfigDescription("Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
+                                    "\nIf you just want one item to be unique-equipped just add its name without \":\"", null, new CustomConfigs.ConfigurationManagerAttributes { CustomDrawer = CustomConfigs.DrawSeparatedStrings(",") }), synchronizedSetting: true);
+
             useSingleHotbarItem = config("Extra slots", "Use single hotbar item", defaultValue: true, "Enabled - only item from the first slot will be used with slots priority (Quick -> Ammo -> Food)\n" +
                                                                                                       "Disabled - all items with similar hotkey will be used at once. [Synced with Server]", synchronizedSetting: true);
 
@@ -360,7 +363,9 @@ namespace ExtraSlots
             itemWeightFactorAmmoSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
             itemWeightFactorMiscSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
 
-            vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder, "Comma separated list defining order of vanilla equipment slots");
+            vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder,
+                new ConfigDescription("Comma separated list defining order of vanilla equipment slots", null, new CustomConfigs.ConfigurationManagerAttributes { CustomDrawer = CustomConfigs.DrawOrderedFixedStrings(",") }));
+
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalLeft, "Equipment slots alignment");
             equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
             quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle under equipment slots");
@@ -378,6 +383,10 @@ namespace ExtraSlots
             miscSlotsShowTooltip = config("Panels - Misc slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             miscSlotsStackColor = config("Panels - Misc slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             miscSlotsPreventStackAll = config("Panels - Misc slots", "Prevent Stack All", defaultValue: true, "Prevent items from misc slots to be placed into container when Stack All feature is used.");
+            miscSlotsItemList = config("Panels - Misc slots", "Custom item list", defaultValue: "$item_ancientseed,$item_witheredbone,$item_bellfragment,$item_dvergrkeyfragment", 
+                    new ConfigDescription("Comma separated list of items that should be treated as misc items", null, new CustomConfigs.ConfigurationManagerAttributes { CustomDrawer = CustomConfigs.DrawSeparatedStrings(",") }));
+
+            miscSlotsItemList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
 
             quickSlotHotKey1 = config("Hotkeys", "Quickslot 1", new KeyboardShortcut(KeyCode.Z, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
             quickSlotHotKey2 = config("Hotkeys", "Quickslot 2", new KeyboardShortcut(KeyCode.X, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
