@@ -1,6 +1,5 @@
 ﻿using HarmonyLib;
 using System.Collections.Generic;
-using System.Linq;
 using static ExtraSlots.Slots;
 using static ExtraSlots.ExtraSlots;
 
