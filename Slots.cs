@@ -29,6 +29,8 @@ namespace ExtraSlots
         public static readonly string VanillaOrder = $"{helmetSlotID},{chestSlotID},{legsSlotID},{shoulderSlotID},{utilitySlotID}";
         public static readonly HashSet<string> vanillaSlots = new HashSet<string>(VanillaOrder.Split(','));
         public static readonly HashSet<string> miscItemsList = new HashSet<string>();
+        public static readonly HashSet<string> ammoItemsList = new HashSet<string>();
+        public static readonly HashSet<string> foodItemsList = new HashSet<string>();
 
         private const string customKeyPlayerID = "ExtraSlotsEquippedBy";
         private const string customKeySlotID = "ExtraSlotsEquippedSlot";
@@ -292,7 +294,7 @@ namespace ExtraSlots
 
         public static readonly Slot[] slots = new Slot[32];
         public static readonly Dictionary<Vector2i, ItemDrop.ItemData> cachedItems = new Dictionary<Vector2i, ItemDrop.ItemData>();
-        public const int vanillaInventoryHeight = 4;
+        public const int VanillaInventoryHeight = 4;
 
         public static Player loadedPlayer;
 
@@ -301,7 +303,7 @@ namespace ExtraSlots
         public static Inventory PlayerInventory => CurrentPlayer?.GetInventory();
         public static int ExtraRowsPlayer => GetExtraRows();
         public static int InventoryWidth => PlayerInventory != null ? PlayerInventory.GetWidth() : 8;
-        public static int InventoryHeightPlayer => vanillaInventoryHeight + ExtraRowsPlayer;
+        public static int InventoryHeightPlayer => VanillaInventoryHeight + ExtraRowsPlayer;
         public static int InventoryHeightFull => InventoryHeightPlayer + GetTargetInventoryHeight(slots.Length, InventoryWidth);
         public static int InventorySizePlayer => InventoryHeightPlayer * InventoryWidth;
         public static int InventorySizeFull => InventoryHeightFull * InventoryWidth;
@@ -630,6 +632,18 @@ namespace ExtraSlots
             miscSlotsItemList.Value.Split(',').Do(item => miscItemsList.Add(item));
         }
 
+        internal static void UpdateAmmoSlotCustomItemList()
+        {
+            ammoItemsList.Clear();
+            ammoSlotsItemList.Value.Split(',').Do(item => ammoItemsList.Add(item));
+        }
+
+        internal static void UpdateFoodSlotCustomItemList()
+        {
+            foodItemsList.Clear();
+            foodSlotsItemList.Value.Split(',').Do(item => foodItemsList.Add(item));
+        }
+
         internal static void SwapSlots(int index, int indexToExchange)
         {
             (slots[index], slots[indexToExchange]) = (slots[indexToExchange], slots[index]);
@@ -643,27 +657,42 @@ namespace ExtraSlots
 
         public static bool IsAmmoSlotItem(ItemDrop.ItemData item)
         {
-            return item != null && item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo;
+            return item != null &&
+                   (
+                       item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo ||
+                       ammoItemsList.Contains(item.m_shared.m_name)
+                   );
         }
 
         public static bool IsMiscSlotItem(ItemDrop.ItemData item)
         {
-            return item != null && (item.m_shared.m_questItem || 
-                                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trophy ||
-                                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Misc ||
-                                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Fish ||
-                                    miscItemsList.Contains(item.m_shared.m_name));
+            return item != null &&
+                   (
+                       item.m_shared.m_questItem ||
+                       item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trophy ||
+                       item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Misc ||
+                       item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Fish ||
+                       miscItemsList.Contains(item.m_shared.m_name)
+                   );
         }
 
         public static bool IsFoodSlotItem(ItemDrop.ItemData item)
         {
-            return item != null && 
-                   item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable &&
-                   (item.m_shared.m_food > 0 
-                   || item.m_shared.m_foodStamina > 0 
-                   || item.m_shared.m_foodEitr > 0 
-                   || item.m_shared.m_isDrink
-                   || item.m_shared.m_consumeStatusEffect is SE_Stats se && se.m_healthOverTime + se.m_staminaOverTime + se.m_eitrOverTime > 0);
+            return item != null &&
+                   (
+                       item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable &&
+                       (
+                           item.m_shared.m_food > 0 ||
+                           item.m_shared.m_foodStamina > 0 ||
+                           item.m_shared.m_foodEitr > 0 ||
+                           item.m_shared.m_isDrink ||
+                           item.m_shared.m_consumeStatusEffect is SE_Stats se &&
+                           (
+                               se.m_healthOverTime + se.m_staminaOverTime + se.m_eitrOverTime > 0
+                           )
+                       ) ||
+                       foodItemsList.Contains(item.m_shared.m_name)
+                   );
         }
 
         public static bool IsUtilitySlotItem(ItemDrop.ItemData item)

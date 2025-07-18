@@ -38,17 +38,20 @@ namespace ExtraSlots
         public static void OnDeathPrefix(Player player)
         {
             itemsToKeep.Clear();
-            slots.DoIf(IsSlotToKeep, slot => KeepItem(slot.Item));
+            slots.DoIf(IsSlotToKeep, KeepItem);
             ClearCachedItems();
 
             SaveLastEquippedSlotsToItems();
 
             SaveLastEquippedWeaponShieldToItems(player);
 
-            void KeepItem(ItemDrop.ItemData item)
+            void KeepItem(Slot slot)
             {
+                ItemDrop.ItemData item = slot.Item;
+
                 itemsToKeep.Add(item);
                 player.GetInventory().m_inventory.Remove(item);
+                LogDebug($"Character.CheckDeath.Prefix: On death drop prevented for item {item.m_shared.m_name} from slot {slot}. Item temporary removed from player inventory.");
             }
 
             bool IsSlotToKeep(Slot slot)
@@ -70,6 +73,9 @@ namespace ExtraSlots
                 return;
 
             player.GetInventory().m_inventory.AddRange(itemsToKeep);
+
+            LogDebug($"Player.OnDeath.Postfix: {itemsToKeep.Count} item(s) returned to player inventory after preventing on death drop.");
+
             itemsToKeep.Clear();
         }
 
@@ -83,13 +89,10 @@ namespace ExtraSlots
 
                 if (Player.m_enableAutoPickup && __instance.m_body.transform.root.gameObject != __instance.gameObject && __instance.TryGetComponent(out FloatingTerrain floatingTerrain))
                 {
-                    LogDebug($"Destroyed tombstone component {__instance.m_body?.gameObject} to prevent NRE on AutoPickup");
+                    LogDebug($"Destroyed tombstone component {__instance.m_body?.gameObject} to prevent NullReferenceException on AutoPickup");
                     floatingTerrain.m_lastHeightmap = null;
                     UnityEngine.Object.Destroy(__instance.m_body?.gameObject);
                 }
-
-                if (!slotsTombstoneAutoEquipEnabled.Value && !slotsTombstoneAutoEquipCarryWeightItemsEnabled.Value)
-                    return;
 
                 EquipItemsInSlots();
 
@@ -112,6 +115,22 @@ namespace ExtraSlots
                 {
                     LogDebug($"TombStone Container Awake height {__instance.m_height} -> {targetHeight}");
                     __instance.m_height = targetHeight;
+                }
+                else
+                {
+                    LogDebug($"TombStone Container Awake current height {__instance.m_height}, target height {targetHeight}");
+                }
+            }
+
+            private static void Postfix(Container __instance)
+            {
+                if (__instance.m_nview?.IsValid() == true && __instance.m_nview.IsOwner() && __instance.GetComponent<TombStone>() is not null && __instance.m_height > VanillaInventoryHeight)
+                {
+                    string typeName = __instance.GetType().Name;
+                    __instance.m_nview.GetZDO().Set(ZNetView.CustomFieldsStr, true);
+                    __instance.m_nview.GetZDO().Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
+                    __instance.m_nview.GetZDO().Set(typeName + "." + "m_height", InventoryHeightFull);
+                    LogDebug($"TombStone Container Awake Postfix height {InventoryHeightFull} saved with {ZNetView.CustomFieldsStr}");
                 }
             }
         }

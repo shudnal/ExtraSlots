@@ -1,5 +1,6 @@
 ﻿using BepInEx;
 using BepInEx.Configuration;
+using BepInEx.Bootstrap;
 using HarmonyLib;
 using LocalizationManager;
 using ServerSync;
@@ -32,7 +33,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.28";
+        public const string pluginVersion = "1.0.29";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -96,6 +97,7 @@ namespace ExtraSlots
         public static ConfigEntry<string> foodSlotsTooltipNameFormat;
         public static ConfigEntry<Color> foodSlotsStackColor;
         public static ConfigEntry<bool> foodSlotsPreventStackAll;
+        public static ConfigEntry<string> foodSlotsItemList;
 
         public static ConfigEntry<KeyboardShortcut> foodSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> foodSlotHotKey2;
@@ -126,6 +128,7 @@ namespace ExtraSlots
         public static ConfigEntry<string> ammoSlotsTooltipNameFormat;
         public static ConfigEntry<Color> ammoSlotsStackColor;
         public static ConfigEntry<bool> ammoSlotsPreventStackAll;
+        public static ConfigEntry<string> ammoSlotsItemList;
 
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey2;
@@ -293,6 +296,11 @@ namespace ExtraSlots
             harmony?.UnpatchSelf();
         }
 
+        private ConfigDescription GetDescriptionSeparatedStrings(string description) =>
+            Chainloader.PluginInfos.ContainsKey("_shudnal.ConfigurationManager")
+                    ? new ConfigDescription(description)
+                    : new ConfigDescription(description, null, new CustomConfigs.ConfigurationManagerAttributes { CustomDrawer = CustomConfigs.DrawSeparatedStrings(",") });
+
         public void ConfigInit()
         {
             config("General", "NexusID", 2901, "Nexus mod ID for updates");
@@ -323,9 +331,9 @@ namespace ExtraSlots
                                                                                         "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.", synchronizedSetting: true);
             slotsProgressionEnabled = config("Extra slots", "Slots progression enabled", defaultValue: true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]", synchronizedSetting: true);
             rowsProgressionEnabled = config("Extra slots", "Inventory rows progression enabled", defaultValue: false, "Enabled inventory rows obtaining progression.  Use with caution and report bugs. [Synced with Server]", synchronizedSetting: true);
-            preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "$item_beltstrength:$belt_ymir_TW",
-                                    new ConfigDescription("Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
-                                    "\nIf you just want one item to be unique-equipped just add its name without \":\"", null, new CustomConfigs.ConfigurationManagerAttributes { CustomDrawer = CustomConfigs.DrawSeparatedStrings(",") }), synchronizedSetting: true);
+            preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "$item_beltstrength:$belt_ymir_TW", 
+                GetDescriptionSeparatedStrings("Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
+                                            "\nIf you just want one item to be unique-equipped just add its name without \":\"") , synchronizedSetting: true);
 
             useSingleHotbarItem = config("Extra slots", "Use single hotbar item", defaultValue: true, "Enabled - only item from the first slot will be used with slots priority (Quick -> Ammo -> Food)\n" +
                                                                                                       "Disabled - all items with similar hotkey will be used at once. [Synced with Server]", synchronizedSetting: true);
@@ -383,8 +391,8 @@ namespace ExtraSlots
             miscSlotsShowTooltip = config("Panels - Misc slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             miscSlotsStackColor = config("Panels - Misc slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             miscSlotsPreventStackAll = config("Panels - Misc slots", "Prevent Stack All", defaultValue: true, "Prevent items from misc slots to be placed into container when Stack All feature is used.");
-            miscSlotsItemList = config("Panels - Misc slots", "Custom item list", defaultValue: "$item_ancientseed,$item_witheredbone,$item_bellfragment,$item_dvergrkeyfragment", 
-                    new ConfigDescription("Comma separated list of items that should be treated as misc items", null, new CustomConfigs.ConfigurationManagerAttributes { CustomDrawer = CustomConfigs.DrawSeparatedStrings(",") }));
+            miscSlotsItemList = config("Panels - Misc slots", "Custom item list", defaultValue: "$item_ancientseed,$item_witheredbone,$item_bellfragment,$item_dvergrkeyfragment",
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as misc items"));
 
             miscSlotsItemList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
 
@@ -467,6 +475,10 @@ namespace ExtraSlots
             ammoSlotsTooltipNameFormat = config("Panels - Ammo slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
             ammoSlotsStackColor = config("Panels - Ammo slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             ammoSlotsPreventStackAll = config("Panels - Ammo slots", "Prevent Stack All", defaultValue: true, "Prevent items from ammo slots to be placed into container when Stack All feature is used.");
+            ammoSlotsItemList = config("Panels - Ammo slots", "Custom item list", defaultValue: "",
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in ammo slots"));
+
+            ammoSlotsItemList.SettingChanged += (s, e) => Slots.UpdateAmmoSlotCustomItemList();
 
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
             ammoSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
@@ -487,7 +499,10 @@ namespace ExtraSlots
             foodSlotsTooltipNameFormat = config("Panels - Food slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
             foodSlotsStackColor = config("Panels - Food slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             foodSlotsPreventStackAll = config("Panels - Food slots", "Prevent Stack All", defaultValue: true, "Prevent items from food slots to be placed into container when Stack All feature is used.");
+            foodSlotsItemList = config("Panels - Food slots", "Custom item list", defaultValue: "",
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in food slots"));
 
+            foodSlotsItemList.SettingChanged += (s, e) => Slots.UpdateFoodSlotCustomItemList();
             foodSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
             foodSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
             foodSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();

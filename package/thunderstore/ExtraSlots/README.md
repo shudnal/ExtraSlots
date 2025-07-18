@@ -250,3 +250,6 @@ Or [Official BepInEx Configuration Manager](https://valheim.thunderstore.io/pack
 
 ## Donation
 [Buy Me a Coffee](https://buymeacoffee.com/shudnal)
+
+## Discord
+[Join server](https://discord.gg/e3UtQB8GFK)

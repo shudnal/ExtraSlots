@@ -1,3 +1,8 @@
+# 1.0.29
+* players without mod installed should now see extra items in Tombstone on interaction
+* Czech translation added
+* custom item lists for food and ammo slot items (you can now add bombs to ammo slots)
+
 # 1.0.28
 * custom item list for misc slot items (by default includes items required to summon bosses)
 * vanilla slot order and Unique utility items configs now use custom config drawers to easier format handling

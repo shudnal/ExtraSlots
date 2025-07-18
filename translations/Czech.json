@@ -1,0 +1,21 @@
+{
+    "exsl_slot_equipment_helmet_label": "Hlava",
+    "exsl_slot_equipment_chest_label": "Hrudník",
+    "exsl_slot_equipment_legs_label": "Nohavice",
+    "exsl_slot_equipment_shoulders_label": "Záda",
+    "exsl_slot_equipment_utility_label": "Nástroje",
+    "exsl_slot_equipment": "Slot pro vybavení",
+    "exsl_slot_equipment_desc": "Převlékatelné předměty",
+    "exsl_slot_ammo": "Slot pro munici",
+    "exsl_slot_ammo_label": "Munice",
+    "exsl_slot_ammo_desc": "Střelivo a rybářské návnady",
+    "exsl_slot_quick": "Rychlý slot",
+    "exsl_slot_quick_label": "Rychlý",
+    "exsl_slot_quick_desc": "Jakékoli položky",
+    "exsl_slot_misc": "Různé sloty",
+    "exsl_slot_misc_label": "Různé",
+    "exsl_slot_misc_desc": "Předměty úkolů, klíče, mince, trofeje a ryby",
+    "exsl_slot_food": "Slot pro jídlo",
+    "exsl_slot_food_label": "Jídlo",
+    "exsl_slot_food_desc": "Jídlo určené ke spotřebě"
+}
