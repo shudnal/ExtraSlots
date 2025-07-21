@@ -33,7 +33,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.29";
+        public const string pluginVersion = "1.0.30";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -239,6 +239,8 @@ namespace ExtraSlots
 
         public static string configDirectory;
 
+        public static bool HasServerCharactersActive => !ZNet.IsSinglePlayer && Chainloader.PluginInfos.ContainsKey("org.bepinex.plugins.servercharacters");
+
         public enum SlotsAlignment
         {
             VerticalTopHorizontalLeft,
@@ -268,17 +270,7 @@ namespace ExtraSlots
             if (loggingDebugEnabled.Value || loggingEnabled.Value)
                 LogCurrentLogLevel();
 
-            Compatibility.EpicLootCompat.CheckForCompatibility();
-
-            Compatibility.BetterArcheryCompat.CheckForCompatibility();
-
-            Compatibility.PlantEasilyCompat.CheckForCompatibility();
-
-            Compatibility.ValheimPlusCompat.CheckForCompatibility();
-
-            Compatibility.BetterProgressionCompat.CheckForCompatibility();
-
-            Compatibility.MagicPluginCompat.CheckForCompatibility();
+            CheckForCompatibility();
 
             harmony.PatchAll();
         }
@@ -646,6 +638,21 @@ namespace ExtraSlots
                 
             if (quickSlotsHotBarOffset.Value == new Vector2(230f, 923f) && quickSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)
                 quickSlotsHotBarOffset.Value = (Vector2)quickSlotsHotBarOffset.DefaultValue;
+        }
+
+        private static void CheckForCompatibility()
+        {
+            Compatibility.EpicLootCompat.CheckForCompatibility();
+
+            Compatibility.BetterArcheryCompat.CheckForCompatibility();
+
+            Compatibility.PlantEasilyCompat.CheckForCompatibility();
+
+            Compatibility.ValheimPlusCompat.CheckForCompatibility();
+
+            Compatibility.BetterProgressionCompat.CheckForCompatibility();
+
+            Compatibility.MagicPluginCompat.CheckForCompatibility();
         }
 
         public static void LogDebug(object data)

@@ -4,7 +4,6 @@ using System.Linq;
 using UnityEngine;
 using static ExtraSlots.Slots;
 using static ExtraSlots.ExtraSlots;
-using System.Text;
 
 namespace ExtraSlots
 {
@@ -81,6 +80,9 @@ namespace ExtraSlots
         private static bool PlayerCanRestoreBackup(Player player, out ExtraSlotsBackup extraSlotsBackup)
         {
             extraSlotsBackup = null;
+
+            if (HasServerCharactersActive)
+                return false;
 
             if (player == null || !player.m_customData.ContainsKey(customKeyBackupID))
                 return false;

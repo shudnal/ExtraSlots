@@ -1,3 +1,6 @@
+# 1.0.30
+* fixed duping things after death
+
 # 1.0.29
 * players without mod installed should now see extra items in Tombstone on interaction
 * Czech translation added
