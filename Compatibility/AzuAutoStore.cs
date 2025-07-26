@@ -25,7 +25,7 @@ namespace ExtraSlots.Compatibility
                     return false;
 
                 if (original == null)
-                    ExtraSlots.LogInfo("AzuAutoStore.AzuExtendedPlayerInventory.API:IsLoaded method is patched to ignore items in extra slots");
+                    ExtraSlots.LogInfo("AzuAutoStore.AzuExtendedPlayerInventory.API:IsLoaded method is patched to return true as if AzuEPI is used");
 
                 return true;
             }
@@ -50,7 +50,7 @@ namespace ExtraSlots.Compatibility
                     return false;
 
                 if (original == null)
-                    ExtraSlots.LogInfo("AzuAutoStore.AzuExtendedPlayerInventory.API:GetQuickSlotsItems method is patched to ignore items in extra slots");
+                    ExtraSlots.LogInfo("AzuAutoStore.AzuExtendedPlayerInventory.API:GetQuickSlotsItems method is patched to return items in extra slots");
 
                 return true;
             }

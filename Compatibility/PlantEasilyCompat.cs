@@ -34,7 +34,6 @@ internal static class PlantEasilyCompat
 
         // Unpatch redundant method
         MethodInfo method = AccessTools.Method(typeof(HotkeyBar), nameof(HotkeyBar.Update));
-        //MethodInfo patch = AccessTools.GetDeclaredMethods(assembly.GetType("Advize_PlantEasily.InputPatches"), "Prefix");
         if (method != null)
         {
             ExtraSlots.instance.harmony.Unpatch(method, HarmonyPatchType.Prefix, GUID);

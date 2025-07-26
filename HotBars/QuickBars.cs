@@ -64,11 +64,11 @@ public static class QuickBars
         if (hotkeyBar.m_selected < 0 || hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1 || !IsHotkeyBarsActive())
             return !IsHotkeyBarsActive();
 
-        if (GetButtonDown("JoyDPadLeft") && --hotkeyBar.m_selected < 0)
+        if (GetJoyButtonDown("JoyHotbarLeft") && --hotkeyBar.m_selected < 0)
             ChangeActiveHotkeyBar(next: false);
-        else if (GetButtonDown("JoyDPadRight") && ++hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1)
+        else if (GetJoyButtonDown("JoyHotbarRight") && ++hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1)
             ChangeActiveHotkeyBar(next: true);
-        else if (GetButtonDown("JoyDPadUp"))
+        else if (GetJoyButtonDown("JoyHotbarUse"))
             if (hotkeyBar.name == QuickSlotsHotBar.barName)
                 Player.m_localPlayer.UseItem(Player.m_localPlayer.GetInventory(), QuickSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), fromInventoryGui: false);
             else if (hotkeyBar.name == AmmoSlotsHotBar.barName)
@@ -181,7 +181,7 @@ public static class QuickBars
         return itemsToUse;
     }
 
-    private static bool GetButtonDown(string name) => !Compatibility.PlantEasilyCompat.DisableGamepadInput && ZInput.GetButtonDown(name);
+    private static bool GetJoyButtonDown(string name) => !Compatibility.PlantEasilyCompat.DisableGamepadInput && ZInput.GetButtonDown(name) && !ZInput.GetButton("JoyAltKeys");
 
     private static bool NoBarsToControl() => bars == null || bars.Count == 0 || bars.Count == 1 && bars[0].name == vanillaBarName;
 
@@ -201,7 +201,7 @@ public static class QuickBars
             if (NoBarsToControl())
                 return;
 
-            if (!UpdateCurrentHotkeyBar() && (GetButtonDown("JoyDPadLeft") || GetButtonDown("JoyDPadRight") || GetButtonDown("JoyDPadUp")))
+            if (!UpdateCurrentHotkeyBar() && (GetJoyButtonDown("JoyHotbarLeft") || GetJoyButtonDown("JoyHotbarRight") || GetJoyButtonDown("JoyHotbarUse")))
                 ChangeActiveHotkeyBar();
 
             bool clearBars = false;

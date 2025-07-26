@@ -106,7 +106,7 @@ namespace ExtraSlots
             private static void Prefix(Container __instance)
             {
                 // Patch tombstone container to always fit player inventory even with custom tombstone container size
-                if (!__instance.GetComponent<TombStone>())
+                if (__instance.m_name is not "Grave" && !__instance.GetComponentInParent<TombStone>())
                     return;
 
                 int targetHeight = GetTargetInventoryHeight(InventorySizeFull, __instance.m_width);

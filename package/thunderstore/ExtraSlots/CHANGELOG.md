@@ -1,3 +1,7 @@
+# 1.0.31
+* another attempt at better ValheimPlus inventory rows count compatibility
+* fixed hotbars cycling when alternative placing is up
+
 # 1.0.30
 * fixed duping things after death
 
