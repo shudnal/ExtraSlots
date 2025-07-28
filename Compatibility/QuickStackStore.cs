@@ -24,14 +24,14 @@ namespace ExtraSlots.Compatibility
                     return false;
 
                 if (original == null)
-                    ExtraSlots.LogInfo("QuickStackStore.CompatibilitySupport:InternalIsEquipOrQuickSlot method is patched to ignore items in extra slots");
+                    ExtraSlots.LogInfo("QuickStackStore.CompatibilitySupport:InternalIsEquipOrQuickSlot method is patched to ignore items in equipment slots and restock other slots");
 
                 return true;
             }
 
             public static MethodBase TargetMethod() => target;
 
-            public static void Postfix(Vector2i itemPos, ref bool __result) => __result = __result || Slots.GetSlotInGrid(itemPos) != null;
+            public static void Postfix(Vector2i itemPos, bool includeRestockableSlots, ref bool __result) => __result = __result || (includeRestockableSlots ? Slots.GetSlotInGrid(itemPos) != null : Slots.GetSlotInGrid(itemPos)?.IsEquipmentSlot == true);
         }
     }
 }

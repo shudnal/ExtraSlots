@@ -1,3 +1,8 @@
+# 1.0.32
+* Quick Stack Store Sort Trash Restock mod compatibility for restock of quick, misc, food and ammo slots
+* fix for error on mod initialization when language has not been set explicitly
+* thunderstore version now has YamlDotNet as dependency
+
 # 1.0.31
 * another attempt at better ValheimPlus inventory rows count compatibility
 * fixed hotbars cycling when alternative placing is up
