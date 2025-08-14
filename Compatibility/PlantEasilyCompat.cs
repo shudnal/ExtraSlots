@@ -28,7 +28,7 @@ internal static class PlantEasilyCompat
         PropertyInfo overrideGamepadInput = AccessTools.Property(pluginPlantEasily, "OverrideGamepadInput");
         if (overrideGamepadInput != null)
         {
-            _overrideGamepadInput = () => (bool)overrideGamepadInput.GetValue(null);
+            _overrideGamepadInput = (Func<bool>)Delegate.CreateDelegate(typeof(Func<bool>), overrideGamepadInput.GetGetMethod(true));
             ExtraSlots.LogInfo("PlantEasily gamepad compatibility enabled");
         }
 

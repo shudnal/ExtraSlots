@@ -1,3 +1,7 @@
+# 1.0.33
+* compatibility with ZenBeehive
+* minor optimization
+
 # 1.0.32
 * Quick Stack Store Sort Trash Restock mod compatibility for restock of quick, misc, food and ammo slots
 * fix for error on mod initialization when language has not been set explicitly

@@ -65,13 +65,13 @@ public static class MagicPluginCompat
 
         MethodInfo isTome = AccessTools.Method(assembly.GetType("MagicPlugin.Functions.MagicSlot"), "IsTomeItem");
         if (isTome != null)
-            _isTome = (ItemDrop.ItemData item) => item != null && (bool)isTome.Invoke(null, new[] { item });
+            _isTome = (Func<ItemDrop.ItemData, bool>) Delegate.CreateDelegate(typeof(Func<ItemDrop.ItemData, bool>), isTome);
         else
             ExtraSlots.LogWarning("MagicPlugin mod is loaded but MagicPlugin.Functions.MagicSlot:IsTomeItem is not found");
         
         MethodInfo isEarring = AccessTools.Method(assembly.GetType("MagicPlugin.Functions.MagicSlot"), "IsEarringItem");
         if (isEarring!= null)
-            _isEarring = (ItemDrop.ItemData item) => item != null && (bool)isEarring.Invoke(null, new[] { item });
+            _isEarring = (Func<ItemDrop.ItemData, bool>) Delegate.CreateDelegate(typeof(Func<ItemDrop.ItemData, bool>), isEarring);
         else
             ExtraSlots.LogWarning("MagicPlugin mod is loaded but MagicPlugin.Functions.MagicSlot:IsEarringItem is not found");
     }

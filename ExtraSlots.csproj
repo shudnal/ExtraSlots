@@ -33,6 +33,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Compatibility\ZenBeehiveCompat.cs" />
     <Compile Include="LocalizationManager.cs" />
     <Compile Include="Compatibility\QuickStackStore.cs" />
     <Compile Include="Compatibility\AzuAutoStore.cs" />
