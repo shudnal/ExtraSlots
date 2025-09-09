@@ -23,15 +23,9 @@ public static class BetterArcheryCompat
                 baEnableQuiver.SettingChanged += (s, e) => DisableQuiver();
 
             assembly ??= Assembly.GetAssembly(betterArcheryPlugin.Instance.GetType());
-
+            
             // Unpatch redundant method that validate inventory
-            MethodInfo method = AccessTools.Method(typeof(TombStone), nameof(TombStone.OnTakeAllSuccess));
-            MethodInfo patch = AccessTools.Method(assembly.GetType("BetterArchery.Tombstone+TombStone_OnTakeAllSuccess_Patch"),"Postfix");
-            if (method != null && patch != null)
-            {
-                ExtraSlots.instance.harmony.Unpatch(method, patch);
-                ExtraSlots.LogInfo("BetterArchery.Tombstone+TombStone_OnTakeAllSuccess_Patch:Postfix was unpatched to prevent inventory mess.");
-            }
+            assembly.RemoveHarmonyPatch(typeof(TombStone), nameof(TombStone.OnTakeAllSuccess), "BetterArchery.Tombstone+TombStone_OnTakeAllSuccess_Patch", "Postfix", "prevent inventory mess");
         }
     }
 

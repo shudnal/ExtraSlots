@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "クエスト アイテム、キー、コイン、トロフィー、魚",
     "exsl_slot_food": "フードスロット",
     "exsl_slot_food_label": "食品",
-    "exsl_slot_food_desc": "すぐに食べられる食べ物"
+    "exsl_slot_food_desc": "すぐに食べられる食べ物",
+    "exsl_slot_equipment_trinket_label": "装飾品"
 }

@@ -33,6 +33,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Compatibility\BBHCompat.cs" />
+    <Compile Include="Compatibility\Compatibility.cs" />
     <Compile Include="Compatibility\ZenBeehiveCompat.cs" />
     <Compile Include="LocalizationManager.cs" />
     <Compile Include="Compatibility\QuickStackStore.cs" />
@@ -82,6 +84,10 @@
     <Reference Include="Mono.Cecil, Version=0.10.4.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>F:\Steam\steamapps\common\Valheim\BepInEx\core\Mono.Cecil.dll</HintPath>
+    </Reference>
+    <Reference Include="netstandard, Version=2.1.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Assemblies\beta\netstandard.dll</HintPath>
     </Reference>
     <Reference Include="ServerSync, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -198,6 +204,9 @@
       <Version>2.0.34.2</Version>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="System.Memory">
+      <Version>4.6.3</Version>
     </PackageReference>
     <PackageReference Include="YamlDotNet">
       <Version>16.3.0</Version>

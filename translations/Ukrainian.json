@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "Квестові предмети, ключі, монети, трофеї та риба",
     "exsl_slot_food": "Слот для їжі",
     "exsl_slot_food_label": "Їжа",
-    "exsl_slot_food_desc": "Готова до вживання їжа"
+    "exsl_slot_food_desc": "Готова до вживання їжа",
+    "exsl_slot_equipment_trinket_label": "Посилювач"
 }

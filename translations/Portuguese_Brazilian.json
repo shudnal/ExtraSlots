@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "Itens de missão, chaves, moedas, troféus e peixes",
     "exsl_slot_food": "Slot para alimentação",
     "exsl_slot_food_label": "Comida",
-    "exsl_slot_food_desc": "Pronto para comer"
+    "exsl_slot_food_desc": "Pronto para comer",
+    "exsl_slot_equipment_trinket_label": "Adereço"
 }

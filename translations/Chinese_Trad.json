@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "放置任務物品、鑰匙、金幣、戰利品或魚",
     "exsl_slot_food": "食物欄",
     "exsl_slot_food_label": "食物",
-    "exsl_slot_food_desc": "放置可消耗的食物"
+    "exsl_slot_food_desc": "放置可消耗的食物",
+    "exsl_slot_equipment_trinket_label": "飾品"
 }

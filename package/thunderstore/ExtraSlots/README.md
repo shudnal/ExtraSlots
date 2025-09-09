@@ -231,7 +231,7 @@ For example, to add a French translation you could create a **Extra Slots.French
 
 Localization file will be loaded on the next game launch or on the next language change.
 
-You can send me a file with your localization at [GitHub](https://github.com/shudnal/ExtraSlots/issues) or [Nexus](https://www.nexusmods.com/valheim/mods/2901?tab=posts) so I can add it to mod's bundle.
+You can send me a file with your localization at [Discord](https://discord.gg/e3UtQB8GFK), [GitHub](https://github.com/shudnal/ExtraSlots/issues) or [Nexus](https://www.nexusmods.com/valheim/mods/2901?tab=posts) so I can add it to mod's bundle.
 
 [Language list](https://valheim-modding.github.io/Jotunn/data/localization/language-list.html).
 

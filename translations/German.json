@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "Questgegenstände, Schlüssel, Münzen, Trophäen und Fische",
     "exsl_slot_food": "Essensplatz",
     "exsl_slot_food_label": "Essen",
-    "exsl_slot_food_desc": "Essfertiges Essen"
+    "exsl_slot_food_desc": "Essfertiges Essen",
+    "exsl_slot_equipment_trinket_label": "Schmuckstück"
 }

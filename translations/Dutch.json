@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "Questitems, sleutels, munten, trofeeën en vissen",
     "exsl_slot_food": "Etenslot",
     "exsl_slot_food_label": "Eten",
-    "exsl_slot_food_desc": "Klaar om te eten"
+    "exsl_slot_food_desc": "Klaar om te eten",
+    "exsl_slot_equipment_trinket_label": "Snuisterij"
 }

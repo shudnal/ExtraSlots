@@ -29,12 +29,13 @@ namespace ExtraSlots
     [BepInDependency(Compatibility.AzuAutoStore.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.QuickStackStore.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.ZenBeehiveCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.BBHCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     public class ExtraSlots : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.33";
+        public const string pluginVersion = "1.0.34";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -130,6 +131,7 @@ namespace ExtraSlots
         public static ConfigEntry<Color> ammoSlotsStackColor;
         public static ConfigEntry<bool> ammoSlotsPreventStackAll;
         public static ConfigEntry<string> ammoSlotsItemList;
+        public static ConfigEntry<bool> ammoSlotsAllowThrowables;
 
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey2;
@@ -237,6 +239,7 @@ namespace ExtraSlots
 
         public static ConfigEntry<float> epicLootMagicItemUnequippedAlpha;
         public static ConfigEntry<bool> epicLootExcludeMiscItemsFromSacrifice;
+        public static ConfigEntry<bool> bbhArrowsFindingAndCounting;
 
         public static string configDirectory;
 
@@ -271,7 +274,7 @@ namespace ExtraSlots
             if (loggingDebugEnabled.Value || loggingEnabled.Value)
                 LogCurrentLogLevel();
 
-            CheckForCompatibility();
+            Compatibility.Helper.CheckForCompatibility();
 
             harmony.PatchAll();
         }
@@ -470,6 +473,7 @@ namespace ExtraSlots
             ammoSlotsPreventStackAll = config("Panels - Ammo slots", "Prevent Stack All", defaultValue: true, "Prevent items from ammo slots to be placed into container when Stack All feature is used.");
             ammoSlotsItemList = config("Panels - Ammo slots", "Custom item list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in ammo slots"));
+            ammoSlotsAllowThrowables = config("Panels - Ammo slots", "Allow throwables", defaultValue: true, "Should bombs and other throwables be allowed to be placed into ammo slots");
 
             ammoSlotsItemList.SettingChanged += (s, e) => Slots.UpdateAmmoSlotCustomItemList();
 
@@ -628,7 +632,8 @@ namespace ExtraSlots
             extraRowItemDiscovered5.SettingChanged += (s, e) => API.UpdateSlots();
 
             epicLootMagicItemUnequippedAlpha = config("Mods compatibility", "EpicLoot unequipped item alpha", 0.2f, "Make unequipped enchanted item more visible in equipment panel by making its background image more transparent.");
-            epicLootExcludeMiscItemsFromSacrifice = config("Mods compatibility", "EpicLoot exclude misc items from sacrifice", true, "If EpicLoot config ShowEquippedAndHotbarItemsInSacrificeTab is enabled then items in misc slots will be excluded from sacrifice.");
+            epicLootExcludeMiscItemsFromSacrifice = config("", "EpicLoot exclude misc items from sacrifice", true, "If EpicLoot config ShowEquippedAndHotbarItemsInSacrificeTab is enabled then items in misc slots will be excluded from sacrifice.");
+            bbhArrowsFindingAndCounting = config("Mods compatibility", "Fix best fit arrows finding when using BowsBeforeHoes Quiver", defaultValue: true, "Make BBH quiver respect item type and ammo type when game tries to find ammo and count it.");
 
             // new default values were updated for new anchor point
             if (ammoSlotsHotBarOffset.Value == new Vector2(230f, 850f) && ammoSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)
@@ -639,23 +644,6 @@ namespace ExtraSlots
                 
             if (quickSlotsHotBarOffset.Value == new Vector2(230f, 923f) && quickSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)
                 quickSlotsHotBarOffset.Value = (Vector2)quickSlotsHotBarOffset.DefaultValue;
-        }
-
-        private static void CheckForCompatibility()
-        {
-            Compatibility.EpicLootCompat.CheckForCompatibility();
-
-            Compatibility.BetterArcheryCompat.CheckForCompatibility();
-
-            Compatibility.PlantEasilyCompat.CheckForCompatibility();
-
-            Compatibility.ValheimPlusCompat.CheckForCompatibility();
-
-            Compatibility.BetterProgressionCompat.CheckForCompatibility();
-
-            Compatibility.MagicPluginCompat.CheckForCompatibility();
-
-            Compatibility.ZenBeehiveCompat.CheckForCompatibility();
         }
 
         public static void LogDebug(object data)

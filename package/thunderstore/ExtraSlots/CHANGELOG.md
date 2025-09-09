@@ -1,3 +1,8 @@
+# 1.0.34
+* Call To Arms patch (trinket slot)
+* BowsBeforeHoes arrow finding and counting compatibility
+* Bombs and throwables now also go to ammo slot
+
 # 1.0.33
 * compatibility with ZenBeehive
 * minor optimization

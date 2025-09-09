@@ -116,10 +116,7 @@ public static class FoodSlotsHotBar
 
     internal static bool IsEnabled() => foodSlotsHotBarEnabled.Value;
 
-    internal static bool IsShortcutDownWithItem(Slot slot) => slot.IsShortcutDown() && slot.Item != null;
+    internal static Slot GetSlotWithShortcutDown() => IsEnabled() ? hotBarSlots.FirstOrDefault(slot => slot.IsShortcutDownWithItem()) : null;
 
-    internal static Slot GetSlotWithShortcutDown() => IsEnabled() ? hotBarSlots.FirstOrDefault(IsShortcutDownWithItem) : null;
-
-    internal static IEnumerable<Slot> GetSlotsWithShortcutDown() => IsEnabled() ? hotBarSlots.Where(IsShortcutDownWithItem) : null;
-
+    internal static IEnumerable<Slot> GetSlotsWithShortcutDown() => IsEnabled() ? hotBarSlots.Where(slot => slot.IsShortcutDownWithItem()) : null;
 }

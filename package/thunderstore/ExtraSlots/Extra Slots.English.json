@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "Quest items, keys, coins, trophies and fish",
     "exsl_slot_food": "Food slot",
     "exsl_slot_food_label": "Food",
-    "exsl_slot_food_desc": "Consumable food"
+    "exsl_slot_food_desc": "Consumable food",
+    "exsl_slot_equipment_trinket_label": "Trinket"
 }

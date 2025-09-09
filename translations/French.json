@@ -17,5 +17,6 @@
 	"exsl_slot_misc_desc": "Objets de quête, clés, pièces, trophées et poissons",
 	"exsl_slot_food": "Emplacement de nourriture",
 	"exsl_slot_food_label": "Nourriture",
-	"exsl_slot_food_desc": "Nourriture prête à manger"
+	"exsl_slot_food_desc": "Nourriture prête à manger",
+    "exsl_slot_equipment_trinket_label": "Bibelot"
 }

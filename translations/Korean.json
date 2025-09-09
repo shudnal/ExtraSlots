@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "퀘스트 아이템, 열쇠, 동전, 트로피 및 물고기",
     "exsl_slot_food": "음식 슬롯",
     "exsl_slot_food_label": "음식",
-    "exsl_slot_food_desc": "음식을 먹을 준비가 되었습니다."
+    "exsl_slot_food_desc": "음식을 먹을 준비가 되었습니다.",
+    "exsl_slot_equipment_trinket_label": "장신구"
 }

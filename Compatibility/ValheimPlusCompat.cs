@@ -18,30 +18,9 @@ internal static class ValheimPlusCompat
             assembly ??= Assembly.GetAssembly(vplusPlugin.Instance.GetType());
 
             // Unpatch redundant methods that change inventory gui
-
-            MethodInfo method = AccessTools.Method(typeof(InventoryGui), nameof(InventoryGui.Show));
-            MethodInfo patch = AccessTools.Method(assembly.GetType("ValheimPlus.GameClasses.InventoryGui_Show_Patch"), "Postfix");
-            if (method != null && patch != null)
-            {
-                ExtraSlots.instance.harmony.Unpatch(method, patch);
-                ExtraSlots.LogInfo("ValheimPlus.GameClasses.InventoryGui_Show_Patch:Postfix was unpatched to prevent inventory GUI mess.");
-            }
-
-            method = AccessTools.Method(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui));
-            patch = AccessTools.Method(assembly.GetType("ValheimPlus.GameClasses.InventoryGrid_UpdateGui_Patch"), "Prefix");
-            if (method != null && patch != null)
-            {
-                ExtraSlots.instance.harmony.Unpatch(method, patch);
-                ExtraSlots.LogInfo("ValheimPlus.GameClasses.InventoryGrid_UpdateGui_Patch:Prefix was unpatched to prevent inventory GUI mess.");
-            }
-
-            ConstructorInfo ctor = AccessTools.Constructor(typeof(Inventory));
-            patch = AccessTools.Method(assembly.GetType("ValheimPlus.GameClasses.Inventory_Constructor_Patch"), "Prefix");
-            if (ctor != null && patch != null)
-            {
-                ExtraSlots.instance.harmony.Unpatch(ctor, patch);
-                ExtraSlots.LogInfo("ValheimPlus.GameClasses.Inventory_Constructor_Patch:Prefix was unpatched to prevent inventory GUI mess.");
-            }
+            assembly.RemoveHarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show), "ValheimPlus.GameClasses.InventoryGui_Show_Patch", "Postfix", "prevent inventory GUI mess");
+            assembly.RemoveHarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui), "ValheimPlus.GameClasses.InventoryGrid_UpdateGui_Patch", "Prefix", "prevent inventory GUI mess");
+            assembly.RemoveHarmonyPatch(AccessTools.Constructor(typeof(Inventory)), "ValheimPlus.GameClasses.Inventory_Constructor_Patch", "Prefix", "prevent inventory GUI mess");
         }
     }
 

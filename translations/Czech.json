@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "Předměty úkolů, klíče, mince, trofeje a ryby",
     "exsl_slot_food": "Slot pro jídlo",
     "exsl_slot_food_label": "Jídlo",
-    "exsl_slot_food_desc": "Jídlo určené ke spotřebě"
+    "exsl_slot_food_desc": "Jídlo určené ke spotřebě",
+    "exsl_slot_equipment_trinket_label": "Tretka"
 }

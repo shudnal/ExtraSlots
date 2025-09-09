@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "Görev eşyaları, anahtarlar, madeni paralar, kupalar ve balıklar",
     "exsl_slot_food": "Yiyecek yuvası",
     "exsl_slot_food_label": "Yiyecek",
-    "exsl_slot_food_desc": "Yemek yemeye hazır"
+    "exsl_slot_food_desc": "Yemek yemeye hazır",
+    "exsl_slot_equipment_trinket_label": "Süs"
 }

@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "Objetos de misión, llaves, monedas, trofeos y peces",
     "exsl_slot_food": "Espacio para comida",
     "exsl_slot_food_label": "Comida",
-    "exsl_slot_food_desc": "Comida lista para comer"
+    "exsl_slot_food_desc": "Comida lista para comer",
+    "exsl_slot_equipment_trinket_label": "Abalorio"
 }

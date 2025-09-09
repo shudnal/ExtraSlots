@@ -17,5 +17,6 @@
     "exsl_slot_misc_desc": "Przedmioty zadania, klucze, monety, trofea i ryby",
     "exsl_slot_food": "Slot na jedzenie",
     "exsl_slot_food_label": "Jedzenie",
-    "exsl_slot_food_desc": "Jedzenie gotowe do spożycia"
+    "exsl_slot_food_desc": "Jedzenie gotowe do spożycia",
+    "exsl_slot_equipment_trinket_label": "Talizman"
 }

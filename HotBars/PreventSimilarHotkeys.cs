@@ -30,7 +30,7 @@ public static class PreventSimilarHotkeys
             if (!ZInput.TryKeyCodeToKey(slot.GetShortcut().MainKey, out Key key))
                 continue;
 
-            var button = __instance.m_buttons.FirstOrDefault(kvp => kvp.Value.GetActionPath() == ZInput.KeyToPath(key));
+            var button = __instance.m_buttons.FirstOrDefault(kvp => kvp.Value.GetActionPath(effective: true) == ZInput.KeyToPath(key) || kvp.Value.GetActionPath(effective: false) == ZInput.KeyToPath(key));
             if (button.Key == null)
                 continue;
 
@@ -89,7 +89,7 @@ public static class PreventSimilarHotkeys
     [HarmonyPatch(typeof(ZInput), nameof(ZInput.TryGetButtonState))]
     private static class ZInput_TryGetButtonState_PreventSimilarHotkeys
     {
-        private static bool Prefix(string name) => ZInput.IsGamepadActive() || !(similarHotkey.TryGetValue(name, out List<Slot> slotsWithHotkey) && slotsWithHotkey.Any(slot => slot.IsShortcutDown() && slot.IsActive && !slot.IsFree));
+        private static bool Prefix(string name) => ZInput.IsGamepadActive() || !(similarHotkey.TryGetValue(name, out List<Slot> slotsWithHotkey) && slotsWithHotkey.Any(slot => slot.IsShortcutDownWithItem()));
     }
 
     [HarmonyPatch]
@@ -107,6 +107,6 @@ public static class PreventSimilarHotkeys
             yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.Load));
         }
 
-        private static void Postfix(ZInput __instance) => FillSimilarHotkey(__instance);
+        private static void Finalizer(ZInput __instance) => FillSimilarHotkey(__instance);
     }
 }

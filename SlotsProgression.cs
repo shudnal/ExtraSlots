@@ -57,6 +57,7 @@ namespace ExtraSlots
         public static bool IsChestSlotKnown() => !equipmentSlotsAvailableAfterDiscovery.Value || IsItemTypeKnown(ItemDrop.ItemData.ItemType.Chest);
         public static bool IsLegsSlotKnown() => !equipmentSlotsAvailableAfterDiscovery.Value || IsItemTypeKnown(ItemDrop.ItemData.ItemType.Legs);
         public static bool IsShoulderSlotKnown() => !equipmentSlotsAvailableAfterDiscovery.Value || IsItemTypeKnown(ItemDrop.ItemData.ItemType.Shoulder);
+        public static bool IsTrinketSlotKnown() => !equipmentSlotsAvailableAfterDiscovery.Value || IsItemTypeKnown(ItemDrop.ItemData.ItemType.Trinket);
 
         private static void UpdateItemTypes()
         {

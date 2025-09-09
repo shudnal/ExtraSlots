@@ -575,19 +575,20 @@ namespace ExtraSlots
 
                 QQQQQQMM
                 AAAFFFUU
-                VVVVVUUC
+                VVVVVUUT
                 CCCCCCCC
 
                 Extra slots equipment layout (maxed slots variant)
 
+                VVUUCC FA
                 VVUCCC FA
-                VVUCCC FA
-                VUUCCC FA
+                VTUCCC FA
                 QQQQQQ MM
 
                 Q - quickslot, M - misc slot
                 A - ammo slot, F - food slot, U - extra utility slot
-                V - vanilla equipment slot, C - custom slot added via API
+                V - vanilla equipment slot, T - trinket slot
+                C - custom slot added via API
 
                 Misc slot depends on both ammo or food AND quick slot. 
                 No quick slots == No misc slots

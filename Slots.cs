@@ -22,11 +22,12 @@ namespace ExtraSlots
         public const string ammoSlotID = "Ammo";
         public const string miscSlotID = "Misc";
         public const string customSlotID = "Custom";
-        public const string emptySlotID = "Empty"; 
+        public const string emptySlotID = "Empty";
+        public const string trinketSlotID = "Trinket";
 
         public static readonly Vector2i emptyPosition = new Vector2i(-1, -1);
 
-        public static readonly string VanillaOrder = $"{helmetSlotID},{chestSlotID},{legsSlotID},{shoulderSlotID},{utilitySlotID}";
+        public static readonly string VanillaOrder = $"{helmetSlotID},{chestSlotID},{legsSlotID},{shoulderSlotID},{utilitySlotID},{trinketSlotID}";
         public static readonly HashSet<string> vanillaSlots = new HashSet<string>(VanillaOrder.Split(','));
         public static readonly HashSet<string> miscItemsList = new HashSet<string>();
         public static readonly HashSet<string> ammoItemsList = new HashSet<string>();
@@ -62,13 +63,15 @@ namespace ExtraSlots
             public Vector2i GridPosition => _gridPos;
             
             public int Index => _index;
-            public int EquipmentIndex => IsCustomSlot ? _index + 200 : (_index >= 16 && _index <= 20) ? _index : _index + 100;
+            public int EquipmentIndex => IsCustomSlot ? _index + 200 : (IsTrinketSlot || IsVanillaSlot) ? _index : _index + 100;
 
             public bool IsHotkeySlot => _getShortcut != null;
             public bool IsQuickSlot => _index < 6;
             public bool IsMiscSlot => 6 <= _index && _index <= 7;
             public bool IsAmmoSlot => 8 <= _index && _index <= 10;
             public bool IsFoodSlot => 11 <= _index && _index <= 13;
+            public bool IsVanillaSlot => 16 <= _index && _index <= 20;
+            public bool IsTrinketSlot => _index == 23;
             public bool IsEquipmentSlot => _index > 13;
             public bool IsCustomSlot => _index >= CustomSlot.customSlotStartingIndex;
             public bool IsEmptySlot => _id == emptySlotID;
@@ -104,7 +107,8 @@ namespace ExtraSlots
 
             public bool IsVanillaEquipment() => vanillaSlots.Contains(_id);
 
-            public bool IsShortcutDown() => IsActive && _getShortcut != null && Player.m_localPlayer != null && Player.m_localPlayer.TakeInput() && IsShortcutDown(_getShortcut());
+            public bool IsShortcutDown() => IsActive && _getShortcut != null && Player.m_localPlayer?.TakeInput() == true && IsShortcutDown(_getShortcut());
+            public bool IsShortcutDownWithItem() => IsShortcutDown() && Item != null;
 
             public KeyboardShortcut GetShortcut() => _getShortcut == null ? KeyboardShortcut.Empty : _getShortcut();
             public string GetShortcutText() => _getShortcutText == null ? Name : Localization.instance.Localize(_getShortcutText());
@@ -172,7 +176,7 @@ namespace ExtraSlots
 
         internal static class CustomSlot
         {
-            internal static int customSlotStartingIndex = 23;
+            internal static int customSlotStartingIndex = 24;
 
             internal static bool TryAddNewSlotBefore(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
@@ -612,6 +616,8 @@ namespace ExtraSlots
             AddSlot($"{extraUtilitySlotID}3", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, IsUtilitySlot3Available);
             AddSlot($"{extraUtilitySlotID}4", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, IsUtilitySlot4Available);
 
+            AddSlot(trinketSlotID, () => "$exsl_slot_equipment_trinket_label", IsTrinketSlotItem, IsTrinketSlotKnown);
+
             CustomSlot.customSlotStartingIndex = index;
 
             for (int i = index; i < slots.Length; i++)
@@ -650,7 +656,7 @@ namespace ExtraSlots
         internal static bool IsFoodSlotAvailable() => foodSlotsEnabled.Value && IsAnyGlobalKeyActive(foodSlotsGlobalKey.Value) && IsFoodSlotKnown();
 
         internal static bool IsAmmoSlotAvailable() => ammoSlotsEnabled.Value && IsAnyGlobalKeyActive(ammoSlotsGlobalKey.Value) && IsAmmoSlotKnown();
-
+        
         internal static bool IsExtraRowAvailable(int index) => extraRows.Value > index && IsExtraRowKnown(index) && (index == 0 || IsExtraRowAvailable(index - 1));
 
         internal static int GetExtraRows()
@@ -709,8 +715,13 @@ namespace ExtraSlots
             return item != null &&
                    (
                        item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo ||
-                       ammoItemsList.Contains(item.m_shared.m_name)
+                       ammoItemsList.Contains(item.m_shared.m_name) ||
+                       ammoSlotsAllowThrowables.Value && IsThrowable(item.m_shared)
                    );
+
+            static bool IsThrowable(ItemDrop.ItemData.SharedData item) => item.m_itemType == ItemDrop.ItemData.ItemType.OneHandedWeapon && 
+                                                                          item.m_animationState == ItemDrop.ItemData.AnimationState.Unarmed && 
+                                                                          item.m_attack?.m_attackAnimation == "throw_bomb";
         }
 
         public static bool IsMiscSlotItem(ItemDrop.ItemData item)
@@ -773,6 +784,12 @@ namespace ExtraSlots
             return item != null &&
                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility &&
                    !Compatibility.MagicPluginCompat.IsMagicPluginCustomSlotItem(item);
+        }
+
+        public static bool IsTrinketSlotItem(ItemDrop.ItemData item)
+        {
+            return item != null &&
+                   item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trinket;
         }
 
         public static bool IsGridPositionASlot(Vector2i gridPos)

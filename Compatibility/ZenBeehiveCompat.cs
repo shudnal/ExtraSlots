@@ -23,7 +23,7 @@ internal static class ZenBeehiveCompat
 
         zenBeehivePlugin.Instance.Config.TryGetEntry("Beehive", "Hold To Take All", out holdToTakeAll);
 
-            assembly ??= Assembly.GetAssembly(zenBeehivePlugin.Instance.GetType());
+        assembly ??= Assembly.GetAssembly(zenBeehivePlugin.Instance.GetType());
 
         Type beehiveRules = assembly.GetType("ZenBeehive.BeehiveRules");
         if (beehiveRules == null)

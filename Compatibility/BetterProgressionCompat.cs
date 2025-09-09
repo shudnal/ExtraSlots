@@ -43,29 +43,9 @@ public static class BetterProgressionCompat
             AccessTools.Field(assembly.GetType("BetterProgression.InventoryUpdate"), "isAzuEPILoaded").SetValue(null, true);
 
             // Unpatch redundant methods that validate inventory
-            MethodInfo method = AccessTools.Method(typeof(InventoryGui), nameof(InventoryGui.Update));
-            MethodInfo patch = AccessTools.Method(assembly.GetType("BetterProgression.InventoryUpdate+InventoryGui_Update_Patch"), "Postfix");
-            if (method != null && patch != null)
-            {
-                ExtraSlots.instance.harmony.Unpatch(method, patch);
-                ExtraSlots.LogInfo("BetterProgression.InventoryUpdate+InventoryGui_Update_Patch:Postfix was unpatched to prevent inventory mess.");
-            }
-
-            method = AccessTools.Method(typeof(Container), nameof(Container.RPC_TakeAllRespons));
-            patch = AccessTools.Method(assembly.GetType("BetterProgression.InventoryUpdate+ContainerRPCRequestTakeAllPatch"), "Postfix");
-            if (method != null && patch != null)
-            {
-                ExtraSlots.instance.harmony.Unpatch(method, patch);
-                ExtraSlots.LogInfo("BetterProgression.InventoryUpdate+ContainerRPCRequestTakeAllPatch:Postfix was unpatched to prevent inventory mess.");
-            }
-
-            method = AccessTools.Method(typeof(Inventory), nameof(Inventory.MoveAll));
-            patch = AccessTools.Method(assembly.GetType("BetterProgression.InventoryUpdate+MoveAllToPatch"), "Postfix");
-            if (method != null && patch != null)
-            {
-                ExtraSlots.instance.harmony.Unpatch(method, patch);
-                ExtraSlots.LogInfo("BetterProgression.InventoryUpdate+ContainerRPCRequestTakeAllPatch:Postfix was unpatched to prevent inventory mess.");
-            }
+            assembly.RemoveHarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Update), "BetterProgression.InventoryUpdate+InventoryGui_Update_Patch", "Postfix", "prevent inventory mess");
+            assembly.RemoveHarmonyPatch(typeof(Container), nameof(Container.RPC_TakeAllRespons), "BetterProgression.InventoryUpdate+ContainerRPCRequestTakeAllPatch", "Postfix", "prevent inventory mess");
+            assembly.RemoveHarmonyPatch(typeof(Inventory), nameof(Inventory.MoveAll), "BetterProgression.InventoryUpdate+MoveAllToPatch", "Postfix", "prevent inventory mess");
         }
     }
 
