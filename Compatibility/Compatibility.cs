@@ -1,28 +1,31 @@
 ﻿using HarmonyLib;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace ExtraSlots.Compatibility
 {
-    internal static class Helper
+    internal static class CompatibilityHelper
     {
         internal static void CheckForCompatibility()
         {
-            Compatibility.EpicLootCompat.CheckForCompatibility();
+            EpicLootCompat.CheckForCompatibility();
 
-            Compatibility.BetterArcheryCompat.CheckForCompatibility();
+            BetterArcheryCompat.CheckForCompatibility();
 
-            Compatibility.PlantEasilyCompat.CheckForCompatibility();
+            PlantEasilyCompat.CheckForCompatibility();
 
-            Compatibility.ValheimPlusCompat.CheckForCompatibility();
+            ValheimPlusCompat.CheckForCompatibility();
 
-            Compatibility.BetterProgressionCompat.CheckForCompatibility();
+            BetterProgressionCompat.CheckForCompatibility();
 
-            Compatibility.MagicPluginCompat.CheckForCompatibility();
+            MagicPluginCompat.CheckForCompatibility();
 
-            Compatibility.ZenBeehiveCompat.CheckForCompatibility();
+            ZenBeehiveCompat.CheckForCompatibility();
 
-            Compatibility.BBHCompat.CheckForCompatibility();
+            BBHCompat.CheckForCompatibility();
+
+            Recycle_N_Reclaim.CheckForCompatibility();
         }
 
         internal static void RemoveHarmonyPatch(this Assembly assembly, Type patchedType, string patchedMethod, string patcherClassName, string patcherClassMethod, string reason)
@@ -67,6 +70,25 @@ namespace ExtraSlots.Compatibility
 
             ExtraSlots.instance.harmony.Unpatch(method, patch);
             ExtraSlots.LogInfo($"{patcherClassName}:{patcherClassMethod} was unpatched to {reason}.");
+        }
+
+        internal static void TryAddMethodToPatch(this Assembly assembly, List<MethodBase> list, string methodClassName, string methodName, string reason)
+        {
+            Type methodType = assembly.GetType(methodClassName);
+            if (methodType == null)
+            {
+                ExtraSlots.LogInfo($"{methodClassName} is not found.");
+                return;
+            }
+
+            if (AccessTools.Method(methodType, methodName) is not MethodInfo method)
+            {
+                ExtraSlots.LogInfo($"Method {methodType.Name}.{methodName} is not found.");
+                return;
+            }
+            
+            list.Add(method);
+            ExtraSlots.LogInfo($"{methodClassName}:{methodName} is patched to {reason}.");
         }
     }
 }

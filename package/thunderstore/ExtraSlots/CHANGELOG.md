@@ -1,3 +1,7 @@
+# 1.0.35
+* SimpleSort compatibility (exclude extra slots from sorting)
+* Recycle_N_Reclaim compatibility (ignore hotbar config ignores extra slots items)
+
 # 1.0.34
 * Call To Arms patch (trinket slot)
 * BowsBeforeHoes arrow finding and counting compatibility

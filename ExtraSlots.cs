@@ -1,6 +1,6 @@
 ﻿using BepInEx;
-using BepInEx.Configuration;
 using BepInEx.Bootstrap;
+using BepInEx.Configuration;
 using HarmonyLib;
 using LocalizationManager;
 using ServerSync;
@@ -30,12 +30,14 @@ namespace ExtraSlots
     [BepInDependency(Compatibility.QuickStackStore.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.ZenBeehiveCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.BBHCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.SimpleSort.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.Recycle_N_Reclaim.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     public class ExtraSlots : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.34";
+        public const string pluginVersion = "1.0.35";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -240,6 +242,7 @@ namespace ExtraSlots
         public static ConfigEntry<float> epicLootMagicItemUnequippedAlpha;
         public static ConfigEntry<bool> epicLootExcludeMiscItemsFromSacrifice;
         public static ConfigEntry<bool> bbhArrowsFindingAndCounting;
+        public static ConfigEntry<bool> Recycle_N_ReclaimExcludeExtraSlots;
 
         public static string configDirectory;
 
@@ -274,7 +277,7 @@ namespace ExtraSlots
             if (loggingDebugEnabled.Value || loggingEnabled.Value)
                 LogCurrentLogLevel();
 
-            Compatibility.Helper.CheckForCompatibility();
+            Compatibility.CompatibilityHelper.CheckForCompatibility();
 
             harmony.PatchAll();
         }
@@ -632,8 +635,9 @@ namespace ExtraSlots
             extraRowItemDiscovered5.SettingChanged += (s, e) => API.UpdateSlots();
 
             epicLootMagicItemUnequippedAlpha = config("Mods compatibility", "EpicLoot unequipped item alpha", 0.2f, "Make unequipped enchanted item more visible in equipment panel by making its background image more transparent.");
-            epicLootExcludeMiscItemsFromSacrifice = config("", "EpicLoot exclude misc items from sacrifice", true, "If EpicLoot config ShowEquippedAndHotbarItemsInSacrificeTab is enabled then items in misc slots will be excluded from sacrifice.");
+            epicLootExcludeMiscItemsFromSacrifice = config("Mods compatibility", "EpicLoot exclude misc items from sacrifice", defaultValue: true, "If EpicLoot config ShowEquippedAndHotbarItemsInSacrificeTab is enabled then items in misc slots will be excluded from sacrifice.");
             bbhArrowsFindingAndCounting = config("Mods compatibility", "Fix best fit arrows finding when using BowsBeforeHoes Quiver", defaultValue: true, "Make BBH quiver respect item type and ammo type when game tries to find ammo and count it.");
+            Recycle_N_ReclaimExcludeExtraSlots = config("Mods compatibility", "Prevent Recycle_N_Reclaim from recycling items in extra slots", defaultValue: true, "Recycle_N_Reclaim ignores items in hotbar only. Make it ignore items in extra slots");
 
             // new default values were updated for new anchor point
             if (ammoSlotsHotBarOffset.Value == new Vector2(230f, 850f) && ammoSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)
