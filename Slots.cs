@@ -33,8 +33,8 @@ namespace ExtraSlots
         public static readonly HashSet<string> ammoItemsList = new HashSet<string>();
         public static readonly HashSet<string> foodItemsList = new HashSet<string>();
 
-        private const string customKeyPlayerID = "ExtraSlotsEquippedBy";
-        private const string customKeySlotID = "ExtraSlotsEquippedSlot";
+        public const string customKeyPlayerID = "ExtraSlotsEquippedBy";
+        public const string customKeySlotID = "ExtraSlotsEquippedSlot";
         internal const string customKeyWeaponShield = "ExtraSlotsEquippedWeaponShield";
 
         private static readonly List<ItemDrop.ItemData> itemsInGridOrder = new List<ItemDrop.ItemData>();

@@ -28,7 +28,7 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(Player), nameof(Player.Awake))]
-        private static class Player_Awake_ExcludeRedundantSlots
+        private static class Player_Awake_SetInventoryHeight
         {
             private static void Postfix(Player __instance)
             {
@@ -256,7 +256,16 @@ namespace ExtraSlots
             private static void Prefix(Inventory __instance, ItemDrop.ItemData item, ref int x, ref int y)
             {
                 if (__instance != PlayerInventory)
+                {
+                    // There is some nasty behaviour when Tombstone inside a dungeon loading Grave inventory ignores inventory height set in Tombstone ZNetView Awake in LoadFields
+                    // It should be only possible when loading grave inventory. But anyway if item contains slot custom data - make it always fit current inventory
+                    if (Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall && y >= __instance.m_height && item.m_customData.ContainsKey(customKeySlotID) && item.m_customData.ContainsKey(customKeyPlayerID))
+                    {
+                        LogDebug($"Inventory \"{__instance.m_name}\" loading: Inventory.AddItem X Y item {item.m_shared.m_name} adding at {x},{y} position insufficient height {__instance.m_height} -> {y + 1}");
+                        __instance.m_height = y + 1;
+                    }
                     return;
+                }
 
                 // Known materials and player keys are not yet loaded, custom components are not initialized, skip validation
                 if (Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall && CurrentPlayer.m_isLoading)

@@ -1,3 +1,7 @@
+# 1.0.36
+* fixed items lose on death inside a dungeon
+* further SimpleSort compatibility (post sorting weight calculations)
+
 # 1.0.35
 * SimpleSort compatibility (exclude extra slots from sorting)
 * Recycle_N_Reclaim compatibility (ignore hotbar config ignores extra slots items)

@@ -60,6 +60,7 @@ namespace ExtraSlots.Compatibility
                     return;
 
                 inventory.m_inventory.AddRange(itemsToKeep);
+                inventory.Changed();
 
                 ExtraSlots.LogDebug($"SimpleSort.SortByType.Postfix: {itemsToKeep.Count} item(s) returned to player inventory after sorting preventing.");
 
