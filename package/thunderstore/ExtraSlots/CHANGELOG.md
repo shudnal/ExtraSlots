@@ -1,3 +1,6 @@
+# 1.0.37
+* final SimpleSort compatibility
+
 # 1.0.36
 * fixed items lose on death inside a dungeon
 * further SimpleSort compatibility (post sorting weight calculations)

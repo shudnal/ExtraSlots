@@ -14,15 +14,14 @@ namespace ExtraSlots
             if (CurrentPlayer == null)
                 return;
 
-            if (CurrentPlayer.m_inventory.m_height != InventoryHeightFull)
+            if (CurrentPlayer.m_inventory.m_height != (CurrentPlayer.m_inventory.m_height = InventoryHeightFull))
+            {
                 LogInfo($"Player inventory height changed {CurrentPlayer.m_inventory.m_height} -> {InventoryHeightFull}");
-
-            CurrentPlayer.m_inventory.m_height = InventoryHeightFull;
+                CurrentPlayer.m_inventory.Changed();
+            }
             
             if (CurrentPlayer.m_tombstone?.GetComponent<Container>() is Container tombstone)
-                tombstone.m_height = InventoryHeightFull;
-
-            CurrentPlayer.m_inventory.Changed();
+                tombstone.m_height = Mathf.Max(tombstone.m_height, InventoryHeightFull);
 
             ItemsSlotsValidation.ValidateItems();
         }

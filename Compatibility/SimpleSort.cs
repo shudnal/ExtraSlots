@@ -12,7 +12,7 @@ namespace ExtraSlots.Compatibility
         public const string GUID = "aedenthorn.SimpleSort";
 
         private static readonly List<ItemDrop.ItemData> itemsToKeep = new List<ItemDrop.ItemData>();
-
+        private static Inventory sortedInventory;
 
         [HarmonyPatch]
         public static class SimpleSort_InternalIsEquipOrQuickSlot_IgnoreExtraSlots
@@ -41,6 +41,8 @@ namespace ExtraSlots.Compatibility
                 if (inventory != PlayerInventory)
                     return;
 
+                sortedInventory = inventory;
+
                 itemsToKeep.Clear();
                 slots.DoIf(slot => !slot.IsFree, KeepItem);
                 
@@ -54,17 +56,26 @@ namespace ExtraSlots.Compatibility
                 }
             }
 
-            public static void Postfix(Inventory inventory)
+            public static void Finalizer() => sortedInventory = null;
+
+            [HarmonyPatch(typeof(Inventory), nameof(Inventory.Changed))]
+            private static class Inventory_Changed_BringItemsBack
             {
-                if (itemsToKeep.Count == 0)
-                    return;
+                [HarmonyPriority(Priority.First)]
+                private static void Prefix(Inventory __instance)
+                {
+                    if (__instance != sortedInventory)
+                        return;
 
-                inventory.m_inventory.AddRange(itemsToKeep);
-                inventory.Changed();
+                    if (itemsToKeep.Count == 0)
+                        return;
 
-                ExtraSlots.LogDebug($"SimpleSort.SortByType.Postfix: {itemsToKeep.Count} item(s) returned to player inventory after sorting preventing.");
+                    __instance.m_inventory.AddRange(itemsToKeep);
 
-                itemsToKeep.Clear();
+                    ExtraSlots.LogDebug($"SimpleSort.SortByType.Postfix: {itemsToKeep.Count} item(s) returned to player inventory after sorting preventing.");
+
+                    itemsToKeep.Clear();
+                }
             }
         }
     }
