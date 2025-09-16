@@ -1,3 +1,6 @@
+# 1.0.38
+* new config in Mods compatibility to rebind F2 (open connect panel)
+
 # 1.0.37
 * final SimpleSort compatibility
 

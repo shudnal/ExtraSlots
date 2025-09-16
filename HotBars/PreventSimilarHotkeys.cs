@@ -1,10 +1,12 @@
-﻿using HarmonyLib;
+﻿using BepInEx.Configuration;
+using HarmonyLib;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using static ExtraSlots.Slots;
+using System.Reflection.Emit;
+using UnityEngine;
 using UnityEngine.InputSystem;
-using BepInEx.Configuration;
+using static ExtraSlots.Slots;
 
 namespace ExtraSlots.HotBars;
 
@@ -108,5 +110,22 @@ public static class PreventSimilarHotkeys
         }
 
         private static void Finalizer(ZInput __instance) => FillSimilarHotkey(__instance);
+    }
+
+    [HarmonyPatch(typeof(ConnectPanel), nameof(ConnectPanel.Update))]
+    public static class ConnectPanel_Update_RebindF2
+    {
+        public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            foreach (var instr in instructions)
+            {
+                if (instr.opcode == OpCodes.Ldc_I4 && instr.operand is int value && value == (int)KeyCode.F2)
+                    yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(ConnectPanel_Update_RebindF2), nameof(GetCustomKey)));
+                else
+                    yield return instr;
+            }
+        }
+
+        private static KeyCode GetCustomKey() => ExtraSlots.rebindConnectPanel.Value;
     }
 }

@@ -48,7 +48,7 @@ namespace ExtraSlots.Compatibility
 
             public static void Prefix(MethodBase __originalMethod, Inventory inventory)
             {
-                if (!ExtraSlots.Recycle_N_ReclaimExcludeExtraSlots.Value || inventory != PlayerInventory)
+                if (!ExtraSlots.recycle_N_ReclaimExcludeExtraSlots.Value || inventory != PlayerInventory)
                     return;
 
                 itemsToIgnore.Clear();
