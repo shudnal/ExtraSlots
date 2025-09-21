@@ -4,6 +4,7 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using LocalizationManager;
 using ServerSync;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -37,7 +38,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.38";
+        public const string pluginVersion = "1.0.39";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -403,13 +404,6 @@ namespace ExtraSlots
             quickSlotHotKey5 = config("Hotkeys", "Quickslot 5", new KeyboardShortcut(KeyCode.Q, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
             quickSlotHotKey6 = config("Hotkeys", "Quickslot 6", new KeyboardShortcut(KeyCode.R, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
 
-            quickSlotHotKey1.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-            quickSlotHotKey2.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-            quickSlotHotKey3.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-            quickSlotHotKey4.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-            quickSlotHotKey5.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-            quickSlotHotKey6.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-
             quickSlotHotKey1Text = config("Hotkeys", "Quickslot 1 Text", "Alt + Z", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
             quickSlotHotKey2Text = config("Hotkeys", "Quickslot 2 Text", "Alt + X", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
             quickSlotHotKey3Text = config("Hotkeys", "Quickslot 3 Text", "Alt + C", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
@@ -425,10 +419,6 @@ namespace ExtraSlots
             ammoSlotHotKey2Text = config("Hotkeys", "Ammo 2 Text", "Alt + 2", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
             ammoSlotHotKey3Text = config("Hotkeys", "Ammo 3 Text", "Alt + 3", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
 
-            ammoSlotHotKey1.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-            ammoSlotHotKey2.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-            ammoSlotHotKey3.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-
             foodSlotHotKey1 = config("Hotkeys", "Food 1", new KeyboardShortcut(KeyCode.Q, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
             foodSlotHotKey2 = config("Hotkeys", "Food 2", new KeyboardShortcut(KeyCode.E, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
             foodSlotHotKey3 = config("Hotkeys", "Food 3", new KeyboardShortcut(KeyCode.R, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
@@ -436,10 +426,6 @@ namespace ExtraSlots
             foodSlotHotKey1Text = config("Hotkeys", "Food 1 Text", "Alt + Q", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
             foodSlotHotKey2Text = config("Hotkeys", "Food 2 Text", "Alt + E", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
             foodSlotHotKey3Text = config("Hotkeys", "Food 3 Text", "Alt + R", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
-
-            foodSlotHotKey1.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-            foodSlotHotKey2.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-            foodSlotHotKey3.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
 
             quickSlotsHotBarEnabled = config("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots");
             quickSlotsHotBarOffset = config("Panels - Quick slots", "Offset", defaultValue: new Vector2(230f, 156f), "On screen position of quick slots hotbar panel");
@@ -639,7 +625,7 @@ namespace ExtraSlots
             epicLootExcludeMiscItemsFromSacrifice = config("Mods compatibility", "EpicLoot exclude misc items from sacrifice", defaultValue: true, "If EpicLoot config ShowEquippedAndHotbarItemsInSacrificeTab is enabled then items in misc slots will be excluded from sacrifice.");
             bbhArrowsFindingAndCounting = config("Mods compatibility", "Fix best fit arrows finding when using BowsBeforeHoes Quiver", defaultValue: true, "Make BBH quiver respect item type and ammo type when game tries to find ammo and count it.");
             recycle_N_ReclaimExcludeExtraSlots = config("Mods compatibility", "Prevent Recycle_N_Reclaim from recycling items in extra slots", defaultValue: true, "Recycle_N_Reclaim ignores items in hotbar only. Make it ignore items in extra slots");
-            rebindConnectPanel = config("Mods compatibility", "Rebind Connect Panel", defaultValue: KeyCode.F2, "Recycle_N_Reclaim ignores items in hotbar only. Make it ignore items in extra slots");
+            rebindConnectPanel = config("Mods compatibility", "Rebind Connect Panel", defaultValue: KeyCode.F2, "Change the key which used to open Connect Panel with current data");
 
             // new default values were updated for new anchor point
             if (ammoSlotsHotBarOffset.Value == new Vector2(230f, 850f) && ammoSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)
@@ -650,7 +636,11 @@ namespace ExtraSlots
                 
             if (quickSlotsHotBarOffset.Value == new Vector2(230f, 923f) && quickSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)
                 quickSlotsHotBarOffset.Value = (Vector2)quickSlotsHotBarOffset.DefaultValue;
+
+            GetHotkeysConfigs().Do(cfg => cfg.SettingChanged += (s, e) => HotBars.PreventSimilarHotkeys.FillSimilarHotkey());
         }
+
+        internal static IEnumerable<ConfigEntry<KeyboardShortcut>> GetHotkeysConfigs() => instance.Config.Where(kvp => kvp.Value.SettingType == typeof(KeyboardShortcut)).Select(kvp => kvp.Value as ConfigEntry<KeyboardShortcut>);
 
         public static void LogDebug(object data)
         {

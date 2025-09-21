@@ -68,11 +68,11 @@ namespace ExtraSlots
 
             foreach (GameObject item in ObjectDB.instance.m_items)
             {
-                if (item.GetComponent<ItemDrop>()?.m_itemData is not ItemDrop.ItemData itemData)
+                if (item.GetComponent<ItemDrop>()?.m_itemData is not ItemDrop.ItemData itemData || itemData.m_shared is not ItemDrop.ItemData.SharedData shared)
                     continue;
 
-                if (Player.m_localPlayer.m_knownMaterial.Contains(itemData.m_shared.m_name))
-                    itemTypes.Add(itemData.m_shared.m_itemType);
+                if (Player.m_localPlayer.m_knownMaterial.Contains(shared.m_name))
+                    itemTypes.Add(shared.m_itemType);
             }
         }
 

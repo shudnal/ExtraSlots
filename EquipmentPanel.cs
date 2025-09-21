@@ -372,7 +372,7 @@ namespace ExtraSlots
             if (!InventoryGui.instance)
                 return;
 
-            inventoryBackground ??= InventoryGui.instance.m_player.Find("Bkg").GetComponent<RectTransform>();
+            inventoryBackground ??= InventoryGui.instance.m_player?.Find("Bkg")?.GetComponent<RectTransform>();
             if (inventoryBackground == null)
                 return;
 

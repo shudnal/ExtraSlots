@@ -18,7 +18,7 @@ public static class PreventSimilarHotkeys
 
     internal static void FillSimilarHotkey(ZInput __instance)
     {
-        ReorderShortcutsKeys();
+        SanitizeShortcutsKeys();
 
         similarHotkey.Clear();
         if (__instance == null)
@@ -43,20 +43,20 @@ public static class PreventSimilarHotkeys
         }
     }
 
-    private static void ReorderShortcutsKeys()
+    private static void SanitizeShortcutsKeys()
     {
-        ReorderKeys(ExtraSlots.foodSlotHotKey1);
-        ReorderKeys(ExtraSlots.foodSlotHotKey2);
-        ReorderKeys(ExtraSlots.foodSlotHotKey3);
-        ReorderKeys(ExtraSlots.ammoSlotHotKey1);
-        ReorderKeys(ExtraSlots.ammoSlotHotKey2);
-        ReorderKeys(ExtraSlots.ammoSlotHotKey3);
-        ReorderKeys(ExtraSlots.quickSlotHotKey1);
-        ReorderKeys(ExtraSlots.quickSlotHotKey2);
-        ReorderKeys(ExtraSlots.quickSlotHotKey3);
-        ReorderKeys(ExtraSlots.quickSlotHotKey4);
-        ReorderKeys(ExtraSlots.quickSlotHotKey5);
-        ReorderKeys(ExtraSlots.quickSlotHotKey6);
+        foreach (ConfigEntry<KeyboardShortcut> hotkeyConfig in ExtraSlots.GetHotkeysConfigs())
+        {
+            if (!ZInput.TryKeyCodeToKey(hotkeyConfig.Value.MainKey, out Key key) || key == Key.None || !ZInput.IsKeyCodeValid(hotkeyConfig.Value.MainKey))
+            {
+                if (!hotkeyConfig.Value.Equals(KeyboardShortcut.Empty))
+                    ExtraSlots.LogWarning($"Wrong bind data on {hotkeyConfig.Definition}: {hotkeyConfig.Value}. Hotkey cleared.");
+
+                hotkeyConfig.Value = KeyboardShortcut.Empty;
+            }
+
+            ReorderKeys(hotkeyConfig);
+        }
     }
 
     private static void ReorderKeys(ConfigEntry<KeyboardShortcut> keyboardShortcut)
@@ -64,28 +64,29 @@ public static class PreventSimilarHotkeys
         if (!IsModifier(keyboardShortcut.Value.MainKey))
             return;
 
-        UnityEngine.KeyCode key = keyboardShortcut.Value.Modifiers.FirstOrDefault(key => !IsModifier(key));
-        if (key == UnityEngine.KeyCode.None)
+        KeyCode key = keyboardShortcut.Value.Modifiers.FirstOrDefault(key => !IsModifier(key));
+        if (key == KeyCode.None)
             return;
 
         keyboardShortcut.Value = new KeyboardShortcut(key, keyboardShortcut.Value.Modifiers.Where(k => k != key).AddItem(keyboardShortcut.Value.MainKey).ToArray());
+        ExtraSlots.LogWarning($"Reordered bind data on {keyboardShortcut.Definition}: {keyboardShortcut.Value}.");
     }
 
-    private static bool IsModifier(UnityEngine.KeyCode key)
+    private static bool IsModifier(KeyCode key)
     {
-        return key == UnityEngine.KeyCode.AltGr ||
-               key == UnityEngine.KeyCode.LeftAlt ||
-               key == UnityEngine.KeyCode.RightAlt ||
-               key == UnityEngine.KeyCode.LeftShift ||
-               key == UnityEngine.KeyCode.RightShift ||
-               key == UnityEngine.KeyCode.LeftControl ||
-               key == UnityEngine.KeyCode.RightControl ||
-               key == UnityEngine.KeyCode.LeftApple ||
-               key == UnityEngine.KeyCode.RightApple ||
-               key == UnityEngine.KeyCode.LeftCommand ||
-               key == UnityEngine.KeyCode.RightCommand ||
-               key == UnityEngine.KeyCode.LeftWindows ||
-               key == UnityEngine.KeyCode.RightWindows;
+        return key == KeyCode.AltGr ||
+               key == KeyCode.LeftAlt ||
+               key == KeyCode.RightAlt ||
+               key == KeyCode.LeftShift ||
+               key == KeyCode.RightShift ||
+               key == KeyCode.LeftControl ||
+               key == KeyCode.RightControl ||
+               key == KeyCode.LeftApple ||
+               key == KeyCode.RightApple ||
+               key == KeyCode.LeftCommand ||
+               key == KeyCode.RightCommand ||
+               key == KeyCode.LeftWindows ||
+               key == KeyCode.RightWindows;
     }
 
     [HarmonyPatch(typeof(ZInput), nameof(ZInput.TryGetButtonState))]

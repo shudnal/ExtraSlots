@@ -1,3 +1,7 @@
+# 1.0.39
+* Wrong format hotkeys will be clear automatically to prevent issues. Use a configuration manager to set up hotkeys.
+* fixed rare issue with incorrect item in items collection
+
 # 1.0.38
 * new config in Mods compatibility to rebind F2 (open connect panel)
 
