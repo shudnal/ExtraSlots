@@ -1,3 +1,6 @@
+# 1.0.40
+* fixed binding of gamepad buttons to slots hotkeys (apparently it worked with some controllers)
+
 # 1.0.39
 * Wrong format hotkeys will be clear automatically to prevent issues. Use a configuration manager to set up hotkeys.
 * fixed rare issue with incorrect item in items collection

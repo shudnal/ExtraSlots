@@ -47,7 +47,8 @@ public static class PreventSimilarHotkeys
     {
         foreach (ConfigEntry<KeyboardShortcut> hotkeyConfig in ExtraSlots.GetHotkeysConfigs())
         {
-            if (!ZInput.TryKeyCodeToKey(hotkeyConfig.Value.MainKey, out Key key) || key == Key.None || !ZInput.IsKeyCodeValid(hotkeyConfig.Value.MainKey))
+            KeyCode key = hotkeyConfig.Value.MainKey;
+            if (!ZInput.IsKeyCodeValid(key) || !IsCorrectKeyboardBind(key) && !IsCorrectGamepadBind(key))
             {
                 if (!hotkeyConfig.Value.Equals(KeyboardShortcut.Empty))
                     ExtraSlots.LogWarning($"Wrong bind data on {hotkeyConfig.Definition}: {hotkeyConfig.Value}. Hotkey cleared.");
@@ -58,6 +59,10 @@ public static class PreventSimilarHotkeys
             ReorderKeys(hotkeyConfig);
         }
     }
+
+    private static bool IsCorrectKeyboardBind(KeyCode keyCode) => ZInput.TryKeyCodeToKey(keyCode, out Key key) && key != Key.None;
+
+    private static bool IsCorrectGamepadBind(KeyCode keyCode) => ZInput.TryKeyCodeToGamepadButton(keyCode, out _);
 
     private static void ReorderKeys(ConfigEntry<KeyboardShortcut> keyboardShortcut)
     {
