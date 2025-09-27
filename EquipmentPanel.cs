@@ -17,6 +17,7 @@ namespace ExtraSlots
         private const float tileSpace = 6f;
         private const float tileSize = 64f + tileSpace;
         private const float interslotSpaceInTiles = 0.25f;
+        private const float inventoryPanelOffset = 100f;
         private static int equipmentSlotsCount = 0;
         internal static int quickSlotsCount = 0;    
 
@@ -24,7 +25,7 @@ namespace ExtraSlots
         private static float PanelWidth => (Math.Max(quickSlotsCount, SlotPositions.LastEquipmentColumn() + 1) + FoodAmmoSlotsWidthInTiles) * tileSize + tileSpace / 2;
         private static float PanelHeight => (((quickSlotsCount > 0 || IsFirstMiscSlotAvailable()) ? 1f + interslotSpaceInTiles : 0f) + EquipmentHeight) * tileSize + tileSpace / 2;
         private static Vector2 PanelOffset => new Vector2(equipmentPanelOffset.Value.x, -equipmentPanelOffset.Value.y);
-        private static Vector2 PanelPosition => new Vector2(InventoryPanelWidth + 100f, 0f) + PanelOffset;
+        private static Vector2 PanelPosition => new Vector2(InventoryPanelWidth + inventoryPanelOffset, 0f) + PanelOffset;
         private static float FoodAmmoSlotsWidthInTiles => (IsFoodSlotAvailable() || IsAmmoSlotAvailable() ? interslotSpaceInTiles : 0) + (IsFoodSlotAvailable() ? 1f : 0) + (IsAmmoSlotAvailable() ? 1f : 0);
         private static int EquipmentHeight => equipmentSlotsCount > 3 || IsFoodSlotAvailable() || IsAmmoSlotAvailable() ? 3 : equipmentSlotsCount;
 
@@ -93,6 +94,8 @@ namespace ExtraSlots
         // Runs every frame InventoryGui.UpdateInventory if visible
         internal static void UpdateInventorySlots()
         {
+            InventoryGui.instance.m_playerGrid.m_gridRoot.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, InventoryHeightPlayer * InventoryGui.instance.m_playerGrid.m_elementSpace);
+
             if (originalScale == Vector3.zero && InventoryGui.instance.m_playerGrid.m_elements.Count > 0 
                                               && InventoryGui.instance.m_playerGrid.m_elements[0].m_icon.material != null 
                                               && InventoryGui.instance.m_playerGrid.m_elements[0].m_icon.transform.localScale != Vector3.one)

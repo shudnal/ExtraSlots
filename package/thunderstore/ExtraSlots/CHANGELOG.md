@@ -1,3 +1,6 @@
+# 1.0.41
+* fixed invisible element prevented drag'n'droping item out of inventory
+
 # 1.0.40
 * fixed binding of gamepad buttons to slots hotkeys (apparently it worked with some controllers)
 
