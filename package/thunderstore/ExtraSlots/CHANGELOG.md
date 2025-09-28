@@ -1,3 +1,6 @@
+# 1.0.42
+* fixed occasional error on loading
+
 # 1.0.41
 * fixed invisible element prevented drag'n'droping item out of inventory
 

@@ -66,9 +66,9 @@ namespace ExtraSlots
             if (!ObjectDB.instance || !Player.m_localPlayer)
                 return;
 
-            foreach (GameObject item in ObjectDB.instance.m_items)
+            foreach (ItemDrop itemDrop in ObjectDB.instance.m_items.Select(item => item?.GetComponent<ItemDrop>()).Where(item => item != null))
             {
-                if (item.GetComponent<ItemDrop>()?.m_itemData is not ItemDrop.ItemData itemData || itemData.m_shared is not ItemDrop.ItemData.SharedData shared)
+                if (itemDrop.m_itemData is not ItemDrop.ItemData itemData || itemData.m_shared is not ItemDrop.ItemData.SharedData shared)
                     continue;
 
                 if (Player.m_localPlayer.m_knownMaterial.Contains(shared.m_name))
