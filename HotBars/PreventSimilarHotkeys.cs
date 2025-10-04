@@ -18,6 +18,9 @@ public static class PreventSimilarHotkeys
 
     internal static void FillSimilarHotkey(ZInput __instance)
     {
+        if (ExtraSlots.IsDedicated)
+            return;
+
         SanitizeShortcutsKeys();
 
         similarHotkey.Clear();

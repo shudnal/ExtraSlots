@@ -1,3 +1,6 @@
+# 1.0.43
+* minor fixes
+
 # 1.0.42
 * fixed occasional error on loading
 
