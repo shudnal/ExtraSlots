@@ -321,11 +321,11 @@ namespace ExtraSlots
         public static int GetQuickSlotsCount() => slots.Count(slot => slot.IsQuickSlot && slot.IsActive);
 
         public static Slot[] GetEquipmentSlots(bool onlyActive = true) => slots.Where(slot => slot.IsEquipmentSlot && (!onlyActive || slot.IsActive)).OrderBy(slot => slot.EquipmentIndex).ToArray();
-
-        public static Slot[] GetQuickSlots() => Array.FindAll(slots, slot => slot.IsQuickSlot).OrderBy(slot => slot.Index).ToArray();
-        public static Slot[] GetFoodSlots() => Array.FindAll(slots, slot => slot.IsFoodSlot).OrderBy(slot => slot.Index).ToArray();
-        public static Slot[] GetAmmoSlots() => Array.FindAll(slots, slot => slot.IsAmmoSlot).OrderBy(slot => slot.Index).ToArray();
-        public static Slot[] GetMiscSlots() => Array.FindAll(slots, slot => slot.IsMiscSlot).OrderBy(slot => slot.Index).ToArray();
+        public static Slot[] GetQuickSlots() => Array.FindAll(slots, slot => slot.IsQuickSlot);
+        public static Slot[] GetFoodSlots() => Array.FindAll(slots, slot => slot.IsFoodSlot);
+        public static Slot[] GetAmmoSlots() => Array.FindAll(slots, slot => slot.IsAmmoSlot);
+        public static Slot[] GetMiscSlots() => Array.FindAll(slots, slot => slot.IsMiscSlot);
+        public static Slot[] GetCustomSlots(bool onlyActive = true) => Array.FindAll(slots, slot => slot.IsCustomSlot && (!onlyActive || slot.IsActive));
 
         public static bool TryGetSavedPlayerSlot(ItemDrop.ItemData item, out Slot slot)
         {
@@ -378,9 +378,8 @@ namespace ExtraSlots
                 return true;
             }
 
-            Slot[] equipmentSlots = GetEquipmentSlots();
-
-            slot = equipmentSlots.FirstOrDefault(slot => slot.IsCustomSlot && slot.ItemFits(item) && slot.IsFree) ?? equipmentSlots.FirstOrDefault(slot => slot.ItemFits(item) && slot.IsFree);
+            bool isCustomSlotItem = IsCustomSlotItem(item);
+            slot = GetEquipmentSlots().FirstOrDefault(slot => (!isCustomSlotItem || slot.IsCustomSlot) && slot.IsFree && slot.ItemFits(item));
             return slot != null;
         }
 
@@ -396,9 +395,9 @@ namespace ExtraSlots
                 slot = prevSlot;
                 return true;
             }
-            Slot[] equipmentSlots = GetEquipmentSlots();
 
-            slot = equipmentSlots.FirstOrDefault(slot => slot.IsCustomSlot && slot.ItemFits(item) && slot.Item != null && !CurrentPlayer.IsItemEquiped(slot.Item)) ?? equipmentSlots.FirstOrDefault(slot => slot.ItemFits(item) && slot.Item != null && !CurrentPlayer.IsItemEquiped(slot.Item));
+            bool isCustomSlotItem = IsCustomSlotItem(item);
+            slot = GetEquipmentSlots().FirstOrDefault(slot => (!isCustomSlotItem || slot.IsCustomSlot) && !slot.IsFree && slot.ItemFits(item) && !CurrentPlayer.IsItemEquiped(slot.Item));
             return slot != null;
         }
 
@@ -782,8 +781,13 @@ namespace ExtraSlots
         public static bool IsUtilitySlotItem(ItemDrop.ItemData item)
         {
             return item != null &&
-                   item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility &&
-                   !Compatibility.MagicPluginCompat.IsMagicPluginCustomSlotItem(item);
+                   item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility;
+        }
+
+        public static bool IsCustomSlotItem(ItemDrop.ItemData item)
+        {
+            return item != null &&
+                   GetCustomSlots().Any(slot => slot.ItemFits(item));
         }
 
         public static bool IsTrinketSlotItem(ItemDrop.ItemData item)

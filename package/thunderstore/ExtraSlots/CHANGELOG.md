@@ -1,3 +1,6 @@
+# 1.0.44
+* fix for utility items from custom slot competing for extra utility slots
+
 # 1.0.43
 * minor fixes
 

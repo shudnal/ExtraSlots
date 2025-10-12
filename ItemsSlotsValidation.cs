@@ -163,7 +163,7 @@ namespace ExtraSlots
                     if (item == null) 
                         continue;
 
-                    if (Player.m_localPlayer.IsItemEquiped(item) && (GetItemSlot(item) is not Slot slotItem || !slotItem.IsEquipmentSlot) && IsEquipmentSlotItem(item))
+                    if (Player.m_localPlayer.IsItemEquiped(item) && IsEquipmentSlotItem(item) && (GetItemSlot(item) is not Slot slotItem || !slotItem.IsEquipmentSlot || !slotItem.IsCustomSlot && IsCustomSlotItem(item)))
                     {
                         LogInfo($"ItemsValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} is not in equipment slot");
                         // Try putting equipped item in slot

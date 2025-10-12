@@ -19,8 +19,6 @@ namespace ExtraSlots.Compatibility
 
             BetterProgressionCompat.CheckForCompatibility();
 
-            MagicPluginCompat.CheckForCompatibility();
-
             ZenBeehiveCompat.CheckForCompatibility();
 
             BBHCompat.CheckForCompatibility();

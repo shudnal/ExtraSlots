@@ -42,7 +42,6 @@
     <Compile Include="LocalizationManager.cs" />
     <Compile Include="Compatibility\QuickStackStore.cs" />
     <Compile Include="Compatibility\AzuAutoStore.cs" />
-    <Compile Include="Compatibility\MagicPluginCompat.cs" />
     <Compile Include="Compatibility\BetterProgressionCompat.cs" />
     <Compile Include="Compatibility\BetterArcheryCompat.cs" />
     <Compile Include="Compatibility\EquipmentAndQuickSlotsCompat.cs" />
