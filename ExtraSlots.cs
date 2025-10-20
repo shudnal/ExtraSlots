@@ -21,7 +21,6 @@ namespace ExtraSlots
     [BepInIncompatibility("randyknapp.mods.auga")]
     [BepInIncompatibility("toombe.EquipMultipleUtilityItemsUpdate")] // https://thunderstore.io/c/valheim/p/JackFrostCC/ToombeEquipMultipleUtilityItemsUnofficialUpdate/
     [BepInIncompatibility("aedenthorn.EquipMultipleUtilityItems")] // https://www.nexusmods.com/valheim/mods/1348
-    [BepInIncompatibility("neobotics.valheim_mod.requipme")]
     [BepInDependency(Compatibility.EpicLootCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.BetterArcheryCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.ValheimPlusCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
