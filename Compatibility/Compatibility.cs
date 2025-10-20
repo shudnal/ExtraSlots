@@ -24,6 +24,8 @@ namespace ExtraSlots.Compatibility
             BBHCompat.CheckForCompatibility();
 
             Recycle_N_Reclaim.CheckForCompatibility();
+
+            RequipMeCompat.CheckForCompatibility();
         }
 
         internal static void RemoveHarmonyPatch(this Assembly assembly, Type patchedType, string patchedMethod, string patcherClassName, string patcherClassMethod, string reason)

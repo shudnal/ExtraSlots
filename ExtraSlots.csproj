@@ -34,6 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Compatibility\BBHCompat.cs" />
+    <Compile Include="Compatibility\RequipMeCompat.cs" />
     <Compile Include="Compatibility\Compatibility.cs" />
     <Compile Include="Compatibility\Recycle_N_Reclaim.cs" />
     <Compile Include="Compatibility\SimpleSort.cs" />

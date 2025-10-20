@@ -60,6 +60,7 @@ There is [ExtraSlotsCustomSlots](https://thunderstore.io/c/valheim/p/shudnal/Ext
 * [CircletExtended](https://thunderstore.io/c/valheim/p/shudnal/CircletExtended/) (Circlet slot)
 * [HipLantern](https://thunderstore.io/c/valheim/p/shudnal/HipLantern/) (Lantern slot)
 * [Judes Equipment](https://thunderstore.io/c/valheim/p/GoldenJude/Judes_Equipment/) (Backpack slot)
+* [Rusty Bags](https://thunderstore.io/c/valheim/p/RustyMods/RustyBags/) (Bag slot)
 
 You can add/remove custom equipment slots on the fly but most stable way is to do it on Awake.
 
@@ -223,7 +224,6 @@ Mod is incompatible with other mods altering inventory in similar way or allowin
 * [Extended Player Inventory (aedenthorn)](https://www.nexusmods.com/valheim/mods/1356)
 * [Equip Multiple Utility Items (aedenthorn)](https://www.nexusmods.com/valheim/mods/1348)
 * [EquipMultipleUtilityItems (toombe)](https://thunderstore.io/c/valheim/p/JackFrostCC/ToombeEquipMultipleUtilityItemsUnofficialUpdate/)
-* [RequipMe](https://thunderstore.io/c/valheim/p/Neobotics/RequipMe/)
 
 ## Localization
 To add your own localization create a file with the name **Extra Slots.LanguageName.yml** or **Extra Slots.LanguageName.json** anywhere inside of the Bepinex folder.
