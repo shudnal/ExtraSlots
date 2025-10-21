@@ -1,8 +1,9 @@
-﻿using HarmonyLib;
-using static ExtraSlots.Slots;
-using static ExtraSlots.ExtraSlots;
+﻿using BepInEx.Configuration;
+using HarmonyLib;
 using System.Collections.Generic;
 using System.Linq;
+using static ExtraSlots.ExtraSlots;
+using static ExtraSlots.Slots;
 
 namespace ExtraSlots
 {
@@ -11,14 +12,64 @@ namespace ExtraSlots
         private static readonly List<ItemDrop.ItemData> itemsToKeep = new List<ItemDrop.ItemData>();
         private static readonly HashSet<Slot> takenSlots = new HashSet<Slot>();
 
+        public static List<string> autoEquipWhiteList = new List<string>();
+        public static List<string> autoEquipBlackList = new List<string>();
+        
+        public static List<string> keepItemWhiteList = new List<string>();
+        public static List<string> keepItemBlackList = new List<string>();
+
+        public static void UpdateBlackAndWhiteItemLists()
+        {
+            UpdateItemList(autoEquipWhiteList, slotsTombstoneAutoEquipWhiteList);
+            UpdateItemList(autoEquipBlackList, slotsTombstoneAutoEquipBlackList);
+            UpdateItemList(keepItemWhiteList, keepOnDeathWhiteList);
+            UpdateItemList(keepItemBlackList, keepOnDeathBlackList);
+        }
+        private static void UpdateItemList(List<string> list, ConfigEntry<string> config)
+        {
+            list.Clear();
+            config.Value.Split(',').Select(p => p.Trim().ToLower()).Where(p => !string.IsNullOrWhiteSpace(p)).Do(list.Add);
+        }
+
+        internal static bool ItemFitBlackWhiteLists(ItemDrop.ItemData item, List<string> whiteList, List<string> blackList)
+        {
+            if (item == null)
+                return true;
+
+            if (whiteList.Contains(item.m_shared.m_name.ToLower()))
+                return true;
+
+            if (whiteList.Contains(item.m_dropPrefab?.name.ToLower()))
+                return true;
+
+            if (whiteList.Count > 0)
+                return false;
+
+            if (blackList.Contains(item.m_shared.m_name.ToLower()))
+                return false;
+
+            if (blackList.Contains(item.m_dropPrefab?.name.ToLower()))
+                return false;
+
+            return true;
+        }
+
         public static void EquipItemsInSlots()
         {
             ClearCachedItems();
             GetEquipmentSlots(onlyActive: false).Select(slot => slot.Item).Where(IsItemToEquip).Do(TryEquipItem);
         }
 
-        private static bool IsItemToEquip(ItemDrop.ItemData item) => slotsTombstoneAutoEquipEnabled.Value ||
-                   slotsTombstoneAutoEquipCarryWeightItemsEnabled.Value && item != null && item.m_shared.m_equipStatusEffect is SE_Stats se && se.m_addMaxCarryWeight > 0;
+        private static bool IsItemToEquip(ItemDrop.ItemData item)
+        {
+            if (slotsTombstoneAutoEquipCarryWeightItemsEnabled.Value && item != null && item.m_shared.m_equipStatusEffect is SE_Stats se && se.m_addMaxCarryWeight > 0)
+                return true;
+
+            if (!slotsTombstoneAutoEquipEnabled.Value)
+                return false;
+
+            return ItemFitBlackWhiteLists(item, autoEquipWhiteList, autoEquipBlackList);
+        }
         
         private static bool IsWeaponShieldToEquip(ItemDrop.ItemData item) => slotsTombstoneAutoEquipWeaponShield.Value && 
                 item.m_customData.TryGetValue(customKeyWeaponShield, out string value) && value == Game.instance.GetPlayerProfile().GetPlayerID().ToString();
@@ -53,18 +104,23 @@ namespace ExtraSlots
                 player.GetInventory().m_inventory.Remove(item);
                 LogDebug($"Character.CheckDeath.Prefix: On death drop prevented for item {item.m_shared.m_name} from slot {slot}. Item temporary removed from player inventory.");
             }
+        }
 
-            bool IsSlotToKeep(Slot slot)
-            {
-                if (slot.IsFree)
-                    return false;
+        public static bool IsSlotToKeep(Slot slot)
+        {
+            if (slot.IsFree)
+                return false;
 
-                return slot.IsEquipmentSlot && keepOnDeathEquipmentSlots.Value ||
-                       slot.IsQuickSlot && keepOnDeathQuickSlots.Value ||
-                       slot.IsAmmoSlot && keepOnDeathAmmoSlots.Value ||
-                       slot.IsFoodSlot && keepOnDeathFoodSlots.Value ||
-                       slot.IsMiscSlot && keepOnDeathMiscSlots.Value;
-            }
+            bool keepSlot = slot.IsEquipmentSlot && keepOnDeathEquipmentSlots.Value ||
+                            slot.IsQuickSlot && keepOnDeathQuickSlots.Value ||
+                            slot.IsAmmoSlot && keepOnDeathAmmoSlots.Value ||
+                            slot.IsFoodSlot && keepOnDeathFoodSlots.Value ||
+                            slot.IsMiscSlot && keepOnDeathMiscSlots.Value;
+
+            if (!keepSlot)
+                return false;
+
+            return ItemFitBlackWhiteLists(slot.Item, keepItemWhiteList, keepItemBlackList);
         }
 
         public static void OnDeathPostfix(Player player)

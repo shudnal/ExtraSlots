@@ -38,7 +38,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.44";
+        public const string pluginVersion = "1.0.45";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -68,11 +68,17 @@ namespace ExtraSlots
         public static ConfigEntry<bool> slotsTombstoneAutoEquipEnabled;
         public static ConfigEntry<bool> slotsTombstoneAutoEquipCarryWeightItemsEnabled;
 
+        public static ConfigEntry<string> slotsTombstoneAutoEquipWhiteList;
+        public static ConfigEntry<string> slotsTombstoneAutoEquipBlackList;
+
         public static ConfigEntry<bool> keepOnDeathEquipmentSlots;
         public static ConfigEntry<bool> keepOnDeathQuickSlots;
         public static ConfigEntry<bool> keepOnDeathFoodSlots;
         public static ConfigEntry<bool> keepOnDeathAmmoSlots;
         public static ConfigEntry<bool> keepOnDeathMiscSlots;
+
+        public static ConfigEntry<string> keepOnDeathWhiteList;
+        public static ConfigEntry<string> keepOnDeathBlackList;
 
         public static ConfigEntry<float> itemWeightFactorEquipmentSlots;
         public static ConfigEntry<float> itemWeightFactorQuickSlots;
@@ -353,15 +359,27 @@ namespace ExtraSlots
             preventUniqueUtilityItemsEquip.SettingChanged += (s, e) => ExtraUtilitySlots.UpdateUniqueEquipped();
 
             slotsTombstoneAutoEquipEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip all equipment slots", defaultValue: false, "Auto equip items in equipment slots if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
-            slotsTombstoneAutoEquipCarryWeightItemsEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip items increasing carry weight", defaultValue: true, "Auto equip items in equipment slots that increase max carry weight (like Megingjord) if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
-            slotsTombstoneAutoEquipWeaponShield = config("Extra slots - Auto equip on tombstone pickup", "Equip previous weapon and shield", defaultValue: false, "Auto equip weapon and shield that was equipped on death. [Synced with Server]", synchronizedSetting: true);
+            slotsTombstoneAutoEquipCarryWeightItemsEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip items increasing carry weight", defaultValue: true, "Auto equip items in equipment slots that increase max carry weight (like Megingjord) if tombstone was successfully taken as whole. [Synced with Server]" +
+                "\nThese items are unaffected by black and white lists", synchronizedSetting: true);
+            slotsTombstoneAutoEquipWeaponShield = config("Extra slots - Auto equip on tombstone pickup", "Equip previous weapon and shield", defaultValue: false, "Auto equip weapon and shield that was equipped on death. [Synced with Server]" +
+                "\nThese items are unaffected by black and white lists", synchronizedSetting: true);
+            slotsTombstoneAutoEquipWhiteList = config("Extra slots - Auto equip on tombstone pickup", "Items white list", defaultValue: "", "If this list is filled - only these items will be auto equipped. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]", synchronizedSetting: true);
+            slotsTombstoneAutoEquipBlackList = config("Extra slots - Auto equip on tombstone pickup", "Items black list", defaultValue: "", "Items from this list will not be auto equipped. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]", synchronizedSetting: true);
+
+            slotsTombstoneAutoEquipWhiteList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateBlackAndWhiteItemLists();
+            slotsTombstoneAutoEquipBlackList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateBlackAndWhiteItemLists();
 
             keepOnDeathEquipmentSlots = config("Extra slots - Death tweaks", "Keep items at equipment slots", defaultValue: false, "Keep items in equipment slots after death. [Synced with Server]", synchronizedSetting: true);
             keepOnDeathQuickSlots = config("Extra slots - Death tweaks", "Keep items at quick slots", defaultValue: false, "Keep items in quick slots after death. [Synced with Server]", synchronizedSetting: true);
             keepOnDeathFoodSlots = config("Extra slots - Death tweaks", "Keep items at food slots", defaultValue: false, "Keep items in food slots after death. [Synced with Server]", synchronizedSetting: true);
             keepOnDeathAmmoSlots = config("Extra slots - Death tweaks", "Keep items at ammo slots", defaultValue: false, "Keep items in ammo slots after death. [Synced with Server]", synchronizedSetting: true);
             keepOnDeathMiscSlots = config("Extra slots - Death tweaks", "Keep items at misc slots", defaultValue: false, "Keep items in misc slots after death. [Synced with Server]", synchronizedSetting: true);
-            
+            keepOnDeathWhiteList = config("Extra slots - Death tweaks", "Keep items white list", defaultValue: "", "If this list is filled - only these items will be kept after death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]", synchronizedSetting: true);
+            keepOnDeathBlackList = config("Extra slots - Death tweaks", "Keep items black list", defaultValue: "", "Items from this list will not be kept after death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]", synchronizedSetting: true);
+
+            keepOnDeathWhiteList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateBlackAndWhiteItemLists();
+            keepOnDeathBlackList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateBlackAndWhiteItemLists();
+
             itemWeightFactorEquipmentSlots = config("Extra slots - Item weight factor", "Equipment slots", defaultValue: 1.0f, "Weight factor for items in equipment slots. [Synced with Server]", synchronizedSetting: true);
             itemWeightFactorQuickSlots = config("Extra slots - Item weight factor", "Quick slots", defaultValue: 1.0f, "Weight factor for items in quick slots. [Synced with Server]", synchronizedSetting: true);
             itemWeightFactorFoodSlots = config("Extra slots - Item weight factor", "Food slots", defaultValue: 1.0f, "Weight factor for items in food slots. [Synced with Server]", synchronizedSetting: true);

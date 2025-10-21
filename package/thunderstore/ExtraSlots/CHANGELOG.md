@@ -1,5 +1,7 @@
 # 1.0.45
 * RequipMe compatibility
+* black and white lists for items to be kept on death
+* black and white lists for items to be auto equipped after tombstone interaction
 
 # 1.0.44
 * fix for utility items from custom slot competing for extra utility slots
