@@ -1,3 +1,6 @@
+# 1.0.46
+* maximum amount of custom slots increased to 16 to support used defined custom slots from ExtraSlotsCustomSlots
+
 # 1.0.45
 * RequipMe compatibility
 * black and white lists for items to be kept on death

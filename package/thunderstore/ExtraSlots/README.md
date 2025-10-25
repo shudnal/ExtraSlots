@@ -61,6 +61,7 @@ There is [ExtraSlotsCustomSlots](https://thunderstore.io/c/valheim/p/shudnal/Ext
 * [HipLantern](https://thunderstore.io/c/valheim/p/shudnal/HipLantern/) (Lantern slot)
 * [Judes Equipment](https://thunderstore.io/c/valheim/p/GoldenJude/Judes_Equipment/) (Backpack slot)
 * [Rusty Bags](https://thunderstore.io/c/valheim/p/RustyMods/RustyBags/) (Bag slot)
+* up to 8 user defined custom slots where you can set any item(s) to be placed in dedicated slot.
 
 You can add/remove custom equipment slots on the fly but most stable way is to do it on Awake.
 

@@ -580,8 +580,9 @@ namespace ExtraSlots
                 AAAFFFUU
                 VVVVVUUT
                 CCCCCCCC
+                CCCCCCCC
 
-                Extra slots equipment layout (maxed slots variant)
+                Extra slots equipment layout (maxed slots variant example)
 
                 VVUUCC FA
                 VVUCCC FA
