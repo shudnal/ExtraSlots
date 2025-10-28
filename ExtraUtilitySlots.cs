@@ -120,7 +120,7 @@ namespace ExtraSlots
             {
                 string[] items = itemsTuple.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
                 if (items.Length > 0)
-                    uniqueEquipped.Add(new HashSet<string>(items));
+                    uniqueEquipped.Add(new HashSet<string>(items.Select(item => item.GetItemName())));
             };
         }
 

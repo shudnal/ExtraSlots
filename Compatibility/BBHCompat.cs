@@ -76,7 +76,7 @@ public static class BBHCompat
                 __result = firstMatch;
         }
 
-        private static bool IsItemFitsFilter(ItemDrop.ItemData item, string ammoName, string matchPrefabName = null) => (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.AmmoNonEquipable || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable) && item.m_shared.m_ammoType == ammoName && (matchPrefabName == null || item.m_dropPrefab.name == matchPrefabName);
+        private static bool IsItemFitsFilter(ItemDrop.ItemData item, string ammoName, string matchPrefabName = null) => (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.AmmoNonEquipable || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable) && item.m_shared.m_ammoType == ammoName && (matchPrefabName == null || item.m_dropPrefab?.name == matchPrefabName);
     }
 
     [HarmonyPatch(typeof(Inventory), nameof(Inventory.CountItems))]

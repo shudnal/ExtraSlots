@@ -47,7 +47,7 @@ namespace ExtraSlots
 
             IEnumerable<string> keys = GetKeys(itemNames);
 
-            return keys.Count() == 0 || keys.Any(s => CurrentPlayer.IsMaterialKnown(s));
+            return keys.Count() == 0 || keys.Any(s => CurrentPlayer.IsMaterialKnown(s.GetItemName()));
         }
 
         public static bool IsAmmoSlotKnown() => !ammoSlotsAvailableAfterDiscovery.Value || IsItemTypeKnown(ItemDrop.ItemData.ItemType.Ammo);
@@ -193,7 +193,7 @@ namespace ExtraSlots
                 return true;
 
             string playerKey = ExtraRowPlayerKey(index);
-            string itemDiscovered = ExtraRowItemDiscovered(index);
+            string itemDiscovered = ExtraRowItemDiscovered(index).GetItemName();
 
             bool globalKeyIsSet = !playerKey.IsNullOrWhiteSpace();
             bool itemIsSet = !itemDiscovered.IsNullOrWhiteSpace();
@@ -314,6 +314,26 @@ namespace ExtraSlots
 
         [HarmonyPatch(typeof(ZoneSystem), nameof(ZoneSystem.RPC_GlobalKeys))]
         private static class ZoneSystem_RPC_GlobalKeys_UpdateInventoryRows
+        {
+            private static void Postfix()
+            {
+                if (IsRowProgressionActive())
+                    instance.StartSlotsUpdateNextFrame();
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.AddUniqueKey))]
+        private static class Player_AddUniqueKey_UpdateInventoryRows
+        {
+            private static void Postfix()
+            {
+                if (IsRowProgressionActive())
+                    instance.StartSlotsUpdateNextFrame();
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.RemoveUniqueKey))]
+        private static class Player_RemoveUniqueKey_UpdateInventoryRows
         {
             private static void Postfix()
             {

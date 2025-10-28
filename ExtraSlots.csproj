@@ -40,6 +40,7 @@
     <Compile Include="Compatibility\SimpleSort.cs" />
     <Compile Include="Compatibility\ZenBeehiveCompat.cs" />
     <Compile Include="DebugLogging.cs" />
+    <Compile Include="ItemNameTokens.cs" />
     <Compile Include="LocalizationManager.cs" />
     <Compile Include="Compatibility\QuickStackStore.cs" />
     <Compile Include="Compatibility\AzuAutoStore.cs" />

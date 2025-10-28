@@ -1,3 +1,8 @@
+# 1.0.47
+* you can now use prefab names instead of item names ($item_...). For example BeltStrength instead of $item_beltstrength
+* changed default values of configs related to changes in item name -> prefab name. Previously configurated values still work.
+* fixed wrong state of player inventory after obtaining player unique key expanding extra inventory rows (like when you get Forsaken Power first time and that Forsaken Power was supposed to add inventory row)
+
 # 1.0.46
 * maximum amount of custom slots increased to 16 to support used defined custom slots from ExtraSlotsCustomSlots
 

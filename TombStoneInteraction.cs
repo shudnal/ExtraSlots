@@ -28,7 +28,7 @@ namespace ExtraSlots
         private static void UpdateItemList(List<string> list, ConfigEntry<string> config)
         {
             list.Clear();
-            config.Value.Split(',').Select(p => p.Trim().ToLower()).Where(p => !string.IsNullOrWhiteSpace(p)).Do(list.Add);
+            config.Value.Split(',').Select(p => p.GetItemName()).Where(p => !string.IsNullOrWhiteSpace(p)).Do(list.Add);
         }
 
         internal static bool ItemFitBlackWhiteLists(ItemDrop.ItemData item, List<string> whiteList, List<string> blackList)
@@ -39,16 +39,10 @@ namespace ExtraSlots
             if (whiteList.Contains(item.m_shared.m_name.ToLower()))
                 return true;
 
-            if (whiteList.Contains(item.m_dropPrefab?.name.ToLower()))
-                return true;
-
             if (whiteList.Count > 0)
                 return false;
 
             if (blackList.Contains(item.m_shared.m_name.ToLower()))
-                return false;
-
-            if (blackList.Contains(item.m_dropPrefab?.name.ToLower()))
                 return false;
 
             return true;

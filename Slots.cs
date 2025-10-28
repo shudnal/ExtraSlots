@@ -681,21 +681,18 @@ namespace ExtraSlots
 
         internal static void UpdateMiscSlotCustomItemList() 
         {
-            miscItemsList.Clear();
+            AddItemsToList(miscSlotsItemList, miscItemsList);
             miscItemsList.Add("$item_coins");
-            miscSlotsItemList.Value.Split(',').Do(item => miscItemsList.Add(item));
         }
 
-        internal static void UpdateAmmoSlotCustomItemList()
-        {
-            ammoItemsList.Clear();
-            ammoSlotsItemList.Value.Split(',').Do(item => ammoItemsList.Add(item));
-        }
+        internal static void UpdateAmmoSlotCustomItemList() => AddItemsToList(ammoSlotsItemList, ammoItemsList);
 
-        internal static void UpdateFoodSlotCustomItemList()
+        internal static void UpdateFoodSlotCustomItemList() => AddItemsToList(foodSlotsItemList, foodItemsList);
+
+        internal static void AddItemsToList(ConfigEntry<string> configEntry, HashSet<string> strings)
         {
-            foodItemsList.Clear();
-            foodSlotsItemList.Value.Split(',').Do(item => foodItemsList.Add(item));
+            strings.Clear();
+            configEntry.Value.Split(',', StringSplitOptions.RemoveEmptyEntries).Do(item => strings.Add(item.GetItemName()));
         }
 
         internal static void SwapSlots(int index, int indexToExchange)

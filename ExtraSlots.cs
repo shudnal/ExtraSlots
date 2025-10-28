@@ -38,7 +38,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.46";
+        public const string pluginVersion = "1.0.47";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -340,9 +340,10 @@ namespace ExtraSlots
                                                                                         "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.", synchronizedSetting: true);
             slotsProgressionEnabled = config("Extra slots", "Slots progression enabled", defaultValue: true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]", synchronizedSetting: true);
             rowsProgressionEnabled = config("Extra slots", "Inventory rows progression enabled", defaultValue: false, "Enabled inventory rows obtaining progression.  Use with caution and report bugs. [Synced with Server]", synchronizedSetting: true);
-            preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "$item_beltstrength:$belt_ymir_TW", 
+            preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "BeltStrength:BeltYmir_TW", 
                 GetDescriptionSeparatedStrings("Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
-                                            "\nIf you just want one item to be unique-equipped just add its name without \":\"") , synchronizedSetting: true);
+                                            "\nIf you just want one item to be unique-equipped just add its name without \":\"" +
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength).") , synchronizedSetting: true);
 
             useSingleHotbarItem = config("Extra slots", "Use single hotbar item", defaultValue: true, "Enabled - only item from the first slot will be used with slots priority (Quick -> Ammo -> Food)\n" +
                                                                                                       "Disabled - all items with similar hotkey will be used at once. [Synced with Server]", synchronizedSetting: true);
@@ -412,8 +413,9 @@ namespace ExtraSlots
             miscSlotsShowTooltip = config("Panels - Misc slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             miscSlotsStackColor = config("Panels - Misc slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             miscSlotsPreventStackAll = config("Panels - Misc slots", "Prevent Stack All", defaultValue: true, "Prevent items from misc slots to be placed into container when Stack All feature is used.");
-            miscSlotsItemList = config("Panels - Misc slots", "Custom item list", defaultValue: "$item_ancientseed,$item_witheredbone,$item_bellfragment,$item_dvergrkeyfragment",
-                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as misc items"));
+            miscSlotsItemList = config("Panels - Misc slots", "Custom item list", defaultValue: "AncientSeed,WitheredBone,BellFragment,DvergrKeyFragment",
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as misc items" +
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."));
 
             miscSlotsItemList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
 
@@ -482,7 +484,8 @@ namespace ExtraSlots
             ammoSlotsStackColor = config("Panels - Ammo slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             ammoSlotsPreventStackAll = config("Panels - Ammo slots", "Prevent Stack All", defaultValue: true, "Prevent items from ammo slots to be placed into container when Stack All feature is used.");
             ammoSlotsItemList = config("Panels - Ammo slots", "Custom item list", defaultValue: "",
-                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in ammo slots"));
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in ammo slots" +
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."));
             ammoSlotsAllowThrowables = config("Panels - Ammo slots", "Allow throwables", defaultValue: true, "Should bombs and other throwables be allowed to be placed into ammo slots");
 
             ammoSlotsItemList.SettingChanged += (s, e) => Slots.UpdateAmmoSlotCustomItemList();
@@ -507,7 +510,8 @@ namespace ExtraSlots
             foodSlotsStackColor = config("Panels - Food slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             foodSlotsPreventStackAll = config("Panels - Food slots", "Prevent Stack All", defaultValue: true, "Prevent items from food slots to be placed into container when Stack All feature is used.");
             foodSlotsItemList = config("Panels - Food slots", "Custom item list", defaultValue: "",
-                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in food slots"));
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in food slots" +
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."));
 
             foodSlotsItemList.SettingChanged += (s, e) => Slots.UpdateFoodSlotCustomItemList();
             foodSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
@@ -593,8 +597,8 @@ namespace ExtraSlots
             foodSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
-            utilitySlotItemDiscovered1 = config("Progression - Items", "Extra utility slot 1", "$item_wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            utilitySlotItemDiscovered2 = config("Progression - Items", "Extra utility slot 2", "$item_demister,$mod_epicloot_assets_goldrubyring,$mod_epicloot_assets_silverring", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotItemDiscovered1 = config("Progression - Items", "Extra utility slot 1", "Wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotItemDiscovered2 = config("Progression - Items", "Extra utility slot 2", "Demister,GoldRubyRing,SilverRing", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
             utilitySlotItemDiscovered3 = config("Progression - Items", "Extra utility slot 3", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
             utilitySlotItemDiscovered4 = config("Progression - Items", "Extra utility slot 4", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
 
@@ -603,9 +607,9 @@ namespace ExtraSlots
             utilitySlotItemDiscovered3.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             utilitySlotItemDiscovered4.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
-            quickSlotItemDiscovered1 = config("Progression - Items", "Quickslot 1", "$item_cryptkey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotItemDiscovered2 = config("Progression - Items", "Quickslot 2", "$item_cryptkey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotItemDiscovered3 = config("Progression - Items", "Quickslot 3", "$item_wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotItemDiscovered1 = config("Progression - Items", "Quickslot 1", "CryptKey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotItemDiscovered2 = config("Progression - Items", "Quickslot 2", "CryptKey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotItemDiscovered3 = config("Progression - Items", "Quickslot 3", "Wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
             quickSlotItemDiscovered4 = config("Progression - Items", "Quickslot 4", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
             quickSlotItemDiscovered5 = config("Progression - Items", "Quickslot 5", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
             quickSlotItemDiscovered6 = config("Progression - Items", "Quickslot 6", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
@@ -629,11 +633,11 @@ namespace ExtraSlots
             extraRowPlayerKey4.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowPlayerKey5.SettingChanged += (s, e) => API.UpdateSlots();
 
-            extraRowItemDiscovered1 = config("Progression - Inventory - Items", "Extra row 1", "$item_wishbone", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowItemDiscovered2 = config("Progression - Inventory - Items", "Extra row 2", "$item_dragontear", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowItemDiscovered3 = config("Progression - Inventory - Items", "Extra row 3", "$item_yagluththing", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowItemDiscovered4 = config("Progression - Inventory - Items", "Extra row 4", "$item_seekerqueen_drop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowItemDiscovered5 = config("Progression - Inventory - Items", "Extra row 5", "$item_fader_drop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscovered1 = config("Progression - Inventory - Items", "Extra row 1", "Wishbone", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscovered2 = config("Progression - Inventory - Items", "Extra row 2", "DragonTear", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscovered3 = config("Progression - Inventory - Items", "Extra row 3", "YagluthDrop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscovered4 = config("Progression - Inventory - Items", "Extra row 4", "QueenDrop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscovered5 = config("Progression - Inventory - Items", "Extra row 5", "FaderDrop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
 
             extraRowItemDiscovered1.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowItemDiscovered2.SettingChanged += (s, e) => API.UpdateSlots();
