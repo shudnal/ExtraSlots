@@ -48,6 +48,155 @@ namespace ExtraSlots
         }
     }
 
+    [Serializable]
+    public class VisEquipmentCustomItemState
+    {
+        public string m_item = "";
+        public List<GameObject> m_instances;
+        public int m_hash = 0;
+    }
+
+    [Serializable]
+    public class VisEquipmentCustomItem
+    {
+        public VisEquipmentCustomItemState customItem1 = new VisEquipmentCustomItemState();
+        public VisEquipmentCustomItemState customItem2 = new VisEquipmentCustomItemState();
+        public VisEquipmentCustomItemState customItem3 = new VisEquipmentCustomItemState();
+        public VisEquipmentCustomItemState customItem4 = new VisEquipmentCustomItemState();
+    }
+
+    public static class VisEquipmentExtension
+    {
+        private static readonly List<int> customItemStateZdoHash = new List<int>()
+        {
+            "ExtraSlots_ExtraUtility_1".GetStableHashCode(),
+            "ExtraSlots_ExtraUtility_2".GetStableHashCode(),
+            "ExtraSlots_ExtraUtility_3".GetStableHashCode(),
+            "ExtraSlots_ExtraUtility_4".GetStableHashCode(),
+        };
+
+        private static readonly ConditionalWeakTable<VisEquipment, VisEquipmentCustomItem> data = new ConditionalWeakTable<VisEquipment, VisEquipmentCustomItem>();
+
+        public static VisEquipmentCustomItem GetCustomItemData(this VisEquipment visEquipment) => data.GetOrCreateValue(visEquipment);
+
+        public static VisEquipmentCustomItemState GetCustomItemState(this VisEquipment humanoid, int index)
+        {
+            return index switch
+            {
+                0 => humanoid.GetCustomItemData().customItem1,
+                1 => humanoid.GetCustomItemData().customItem2,
+                2 => humanoid.GetCustomItemData().customItem3,
+                3 => humanoid.GetCustomItemData().customItem4,
+                _ => null
+            };
+        }
+
+        public static void SetCustomItemState(this VisEquipment visEquipment, int index, string name)
+        {
+            VisEquipmentCustomItemState customItemData = visEquipment.GetCustomItemState(index);
+
+            if (customItemData.m_item != name)
+            {
+                customItemData.m_item = name;
+                if (visEquipment.m_nview.IsValid() && visEquipment.m_nview.IsOwner())
+                    visEquipment.m_nview.GetZDO().Set(customItemStateZdoHash[index], (!string.IsNullOrEmpty(name)) ? name.GetStableHashCode() : 0);
+            }
+        }
+
+        public static bool SetCustomItemEquipped(this VisEquipment visEquipment, int hash, int index)
+        {
+            VisEquipmentCustomItemState customItemData = visEquipment.GetCustomItemState(index);
+            if (customItemData.m_hash == hash)
+                return false;
+
+            if (customItemData.m_instances != null)
+            {
+                foreach (GameObject utilityItemInstance in customItemData.m_instances)
+                {
+                    if ((bool)visEquipment.m_lodGroup)
+                    {
+                        Utils.RemoveFromLodgroup(visEquipment.m_lodGroup, utilityItemInstance);
+                    }
+
+                    UnityEngine.Object.Destroy(utilityItemInstance);
+                }
+
+                customItemData.m_instances = null;
+            }
+
+            customItemData.m_hash = hash;
+            if (hash != 0)
+                customItemData.m_instances = visEquipment.AttachArmor(hash);
+
+            return true;
+        }
+
+        [HarmonyPatch(typeof(VisEquipment), nameof(VisEquipment.UpdateEquipmentVisuals))]
+        public static class VisEquipment_UpdateEquipmentVisuals_CustomItemType
+        {
+            public static VisEquipment visEq;
+            public static bool updateLodGroup;
+
+            private static void Prefix(VisEquipment __instance)
+            {
+                ZDO zDO = __instance.m_nview?.GetZDO();
+
+                updateLodGroup = false;
+                for (int i = 0; i < 4; i++)
+                {
+                    int itemEquipped = 0;
+                    if (zDO != null)
+                    {
+                        itemEquipped = zDO.GetInt(customItemStateZdoHash[i]);
+                    }
+                    else
+                    {
+                        VisEquipmentCustomItemState customItemData = __instance.GetCustomItemState(i);
+                        if (!string.IsNullOrEmpty(customItemData.m_item))
+                            itemEquipped = customItemData.m_item.GetStableHashCode();
+                    }
+
+                    if (__instance.SetCustomItemEquipped(itemEquipped, i))
+                        updateLodGroup = true;
+                }
+
+                visEq = __instance;
+            }
+
+            private static void Postfix(VisEquipment __instance)
+            {
+                if (updateLodGroup)
+                    __instance.UpdateLodgroup();
+
+                visEq = null;
+                updateLodGroup = false;
+            }
+        }
+
+        [HarmonyPatch(typeof(VisEquipment), nameof(VisEquipment.UpdateLodgroup))]
+        public static class VisEquipment_UpdateLodgroup_CustomItemType
+        {
+            private static void Finalizer(VisEquipment __instance)
+            {
+                if (__instance == VisEquipment_UpdateEquipmentVisuals_CustomItemType.visEq)
+                    VisEquipment_UpdateEquipmentVisuals_CustomItemType.updateLodGroup = false;
+            }
+        }
+
+        [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.SetupVisEquipment))]
+        public static class Humanoid_SetupVisEquipment_CustomItemType
+        {
+            private static void Postfix(Humanoid __instance, VisEquipment visEq)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    ItemDrop.ItemData itemData = __instance.GetExtraUtility(i);
+                    visEq.SetCustomItemState(i, (ExtraSlots.showExtraUtilityItems.Value && itemData != null && itemData.m_dropPrefab != null) ? itemData.m_dropPrefab.name : "");
+                }
+            }
+        }
+    }
+
     public static class ExtraUtilitySlots
     {
         private static readonly List<ItemDrop.ItemData> tempItems = new List<ItemDrop.ItemData>();

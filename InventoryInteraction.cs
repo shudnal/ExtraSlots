@@ -14,9 +14,10 @@ namespace ExtraSlots
             if (CurrentPlayer == null)
                 return;
 
-            if (CurrentPlayer.m_inventory.m_height != (CurrentPlayer.m_inventory.m_height = InventoryHeightFull))
+            if (CurrentPlayer.m_inventory.m_height != InventoryHeightFull)
             {
                 LogInfo($"Player inventory height changed {CurrentPlayer.m_inventory.m_height} -> {InventoryHeightFull}");
+                CurrentPlayer.m_inventory.m_height = InventoryHeightFull;
                 CurrentPlayer.m_inventory.Changed();
             }
             
@@ -110,7 +111,7 @@ namespace ExtraSlots
                     return;
 
                 __result = InventoryHeightPlayer * __instance.m_width - __instance.m_inventory.Count(item => !API.IsItemInSlot(item)) + (Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem ? 0 :GetEmptyQuickSlots());
-                LogDebug($"Inventory.GetEmptySlots: {__result}, AutoPickup: {Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem}");
+                LogDebug($"Inventory.GetEmptySlots: {__result}, PreventAutoPickupInQuickSlots: {Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem}");
             }
         }
 

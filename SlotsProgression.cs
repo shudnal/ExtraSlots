@@ -214,6 +214,9 @@ namespace ExtraSlots
         {
             return index switch
             {
+                -3 => extraRowPlayerKeyMinus2.Value,
+                -2 => extraRowPlayerKeyMinus1.Value,
+                -1 => extraRowPlayerKeyVanilla.Value,
                 0 => extraRowPlayerKey1.Value,
                 1 => extraRowPlayerKey2.Value,
                 2 => extraRowPlayerKey3.Value,
@@ -227,6 +230,9 @@ namespace ExtraSlots
         {
             return index switch
             {
+                -3 => extraRowItemDiscoveredMinus2.Value,
+                -2 => extraRowItemDiscoveredMinus1.Value,
+                -1 => extraRowItemDiscoveredVanilla.Value,
                 0 => extraRowItemDiscovered1.Value,
                 1 => extraRowItemDiscovered2.Value,
                 2 => extraRowItemDiscovered3.Value,

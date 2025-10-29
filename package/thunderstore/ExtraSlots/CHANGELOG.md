@@ -1,3 +1,8 @@
+# 1.0.48
+* extra rows amount can now be set up to -3 to reduce regular inventory size
+* added new configs for regular inventory rows progression
+* items in extra utility slots made visible on player (disableable in config)
+
 # 1.0.47
 * you can now use prefab names instead of item names ($item_...). For example BeltStrength instead of $item_beltstrength
 * changed default values of configs related to changes in item name -> prefab name. Previously configurated values still work.

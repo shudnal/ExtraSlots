@@ -38,7 +38,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.47";
+        public const string pluginVersion = "1.0.48";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -63,6 +63,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> backupEnabled;
         public static ConfigEntry<string> preventUniqueUtilityItemsEquip;
         public static ConfigEntry<bool> useSingleHotbarItem;
+        public static ConfigEntry<bool> showExtraUtilityItems;
 
         public static ConfigEntry<bool> slotsTombstoneAutoEquipWeaponShield;
         public static ConfigEntry<bool> slotsTombstoneAutoEquipEnabled;
@@ -234,12 +235,18 @@ namespace ExtraSlots
 
         public static ConfigEntry<bool> rowsProgressionEnabled;
 
+        public static ConfigEntry<string> extraRowPlayerKeyMinus2;
+        public static ConfigEntry<string> extraRowPlayerKeyMinus1;
+        public static ConfigEntry<string> extraRowPlayerKeyVanilla;
         public static ConfigEntry<string> extraRowPlayerKey1;
         public static ConfigEntry<string> extraRowPlayerKey2;
         public static ConfigEntry<string> extraRowPlayerKey3;
         public static ConfigEntry<string> extraRowPlayerKey4;
         public static ConfigEntry<string> extraRowPlayerKey5;
 
+        public static ConfigEntry<string> extraRowItemDiscoveredMinus2;
+        public static ConfigEntry<string> extraRowItemDiscoveredMinus1;
+        public static ConfigEntry<string> extraRowItemDiscoveredVanilla;
         public static ConfigEntry<string> extraRowItemDiscovered1;
         public static ConfigEntry<string> extraRowItemDiscovered2;
         public static ConfigEntry<string> extraRowItemDiscovered3;
@@ -251,6 +258,10 @@ namespace ExtraSlots
         public static ConfigEntry<bool> bbhArrowsFindingAndCounting;
         public static ConfigEntry<bool> recycle_N_ReclaimExcludeExtraSlots;
         public static ConfigEntry<KeyCode> rebindConnectPanel;
+        
+        public static ConfigEntry<bool> reducedInventoryMoveArmorAndWeightPanels;
+        public static ConfigEntry<bool> reducedInventoryMoveCustomPanels;
+        public static ConfigEntry<string> reducedInventoryHideCustomPanels;
 
         public static string configDirectory;
 
@@ -328,7 +339,7 @@ namespace ExtraSlots
 
             quickSlotsAmount = config("Extra slots", "Amount of quick slots", defaultValue: 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
             extraUtilitySlotsAmount = config("Extra slots", "Amount of extra utility slots", defaultValue: 2, new ConfigDescription("How much extra utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 4)), synchronizedSetting: true);
-            extraRows = config("Extra slots", "Amount of extra inventory rows", defaultValue: 0, new ConfigDescription("How much rows to add in regular inventory [Synced with Server]", new AcceptableValueRange<int>(0, 5)), synchronizedSetting: true);
+            extraRows = config("Extra slots", "Amount of extra inventory rows", defaultValue: 0, new ConfigDescription("How much rows to add or remove from regular inventory [Synced with Server]", new AcceptableValueRange<int>(-3, 5)), synchronizedSetting: true);
             ammoSlotsEnabled = config("Extra slots", "Enable ammo slots", defaultValue: true, "Enable 3 slots for ammo [Synced with Server]", synchronizedSetting: true);
             foodSlotsEnabled = config("Extra slots", "Enable food slots", defaultValue: true, "Enable 3 slots for food [Synced with Server]", synchronizedSetting: true);
             miscSlotsEnabled = config("Extra slots", "Enable misc slots", defaultValue: true, "Enable up to 2 slots for trophies, coins, fish, miscellaneous, keys and quest items. [Synced with Server]" +
@@ -339,14 +350,16 @@ namespace ExtraSlots
                                                                                         "\nIt could be restored in case of loading character without mod installed leading to extra slots item loss." +
                                                                                         "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.", synchronizedSetting: true);
             slotsProgressionEnabled = config("Extra slots", "Slots progression enabled", defaultValue: true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]", synchronizedSetting: true);
-            rowsProgressionEnabled = config("Extra slots", "Inventory rows progression enabled", defaultValue: false, "Enabled inventory rows obtaining progression.  Use with caution and report bugs. [Synced with Server]", synchronizedSetting: true);
+            rowsProgressionEnabled = config("Extra slots", "Inventory rows progression enabled", defaultValue: false, "Enabled inventory rows obtaining progression. [Synced with Server]", synchronizedSetting: true);
             preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "BeltStrength:BeltYmir_TW", 
                 GetDescriptionSeparatedStrings("Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
                                             "\nIf you just want one item to be unique-equipped just add its name without \":\"" +
                                             "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength).") , synchronizedSetting: true);
 
+
             useSingleHotbarItem = config("Extra slots", "Use single hotbar item", defaultValue: true, "Enabled - only item from the first slot will be used with slots priority (Quick -> Ammo -> Food)\n" +
                                                                                                       "Disabled - all items with similar hotkey will be used at once. [Synced with Server]", synchronizedSetting: true);
+            showExtraUtilityItems = config("Extra slots", "Show extra utility items", defaultValue: true, "Show extra utility items on player model. [Synced with Server]", synchronizedSetting: true);
 
             extraRows.SettingChanged += (s, e) => API.UpdateSlots();
             rowsProgressionEnabled.SettingChanged += (s, e) => API.UpdateSlots();
@@ -358,6 +371,7 @@ namespace ExtraSlots
             ammoSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             slotsProgressionEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             preventUniqueUtilityItemsEquip.SettingChanged += (s, e) => ExtraUtilitySlots.UpdateUniqueEquipped();
+            showExtraUtilityItems.SettingChanged += (s,e) => Player.m_localPlayer?.SetupEquipment();
 
             slotsTombstoneAutoEquipEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip all equipment slots", defaultValue: false, "Auto equip items in equipment slots if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
             slotsTombstoneAutoEquipCarryWeightItemsEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip items increasing carry weight", defaultValue: true, "Auto equip items in equipment slots that increase max carry weight (like Megingjord) if tombstone was successfully taken as whole. [Synced with Server]" +
@@ -627,11 +641,19 @@ namespace ExtraSlots
             extraRowPlayerKey4 = config("Progression - Inventory - Player keys", "Extra row 4", "GP_Queen", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
             extraRowPlayerKey5 = config("Progression - Inventory - Player keys", "Extra row 5", "GP_Fader", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
 
+            extraRowPlayerKeyMinus2 = config("Progression - Inventory - Player keys", "Regular row 2", "", "Comma-separated list of Player unique keys. Regular inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowPlayerKeyMinus1 = config("Progression - Inventory - Player keys", "Regular row 3", "GP_Eikthyr", "Comma-separated list of Player unique keys. Regular inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowPlayerKeyVanilla = config("Progression - Inventory - Player keys", "Regular row 4", "GP_TheElder", "Comma-separated list of Player unique keys. Regular inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+
             extraRowPlayerKey1.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowPlayerKey2.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowPlayerKey3.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowPlayerKey4.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowPlayerKey5.SettingChanged += (s, e) => API.UpdateSlots();
+
+            extraRowPlayerKeyMinus2.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowPlayerKeyMinus1.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowPlayerKeyVanilla.SettingChanged += (s, e) => API.UpdateSlots();
 
             extraRowItemDiscovered1 = config("Progression - Inventory - Items", "Extra row 1", "Wishbone", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
             extraRowItemDiscovered2 = config("Progression - Inventory - Items", "Extra row 2", "DragonTear", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
@@ -639,17 +661,33 @@ namespace ExtraSlots
             extraRowItemDiscovered4 = config("Progression - Inventory - Items", "Extra row 4", "QueenDrop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
             extraRowItemDiscovered5 = config("Progression - Inventory - Items", "Extra row 5", "FaderDrop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
 
+            extraRowItemDiscoveredMinus2 = config("Progression - Inventory - Items", "Regular row 2", "", "Comma-separated list of items. Regular inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscoveredMinus1 = config("Progression - Inventory - Items", "Regular row 3", "HardAntler", "Comma-separated list of items. Regular inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscoveredVanilla = config("Progression - Inventory - Items", "Regular row 4", "CryptKey", "Comma-separated list of items. Regular inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+
             extraRowItemDiscovered1.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowItemDiscovered2.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowItemDiscovered3.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowItemDiscovered4.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowItemDiscovered5.SettingChanged += (s, e) => API.UpdateSlots();
 
+            extraRowItemDiscoveredMinus2.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowItemDiscoveredMinus1.SettingChanged += (s, e) => API.UpdateSlots();
+            extraRowItemDiscoveredVanilla.SettingChanged += (s, e) => API.UpdateSlots();
+
             epicLootMagicItemUnequippedAlpha = config("Mods compatibility", "EpicLoot unequipped item alpha", 0.2f, "Make unequipped enchanted item more visible in equipment panel by making its background image more transparent.");
             epicLootExcludeMiscItemsFromSacrifice = config("Mods compatibility", "EpicLoot exclude misc items from sacrifice", defaultValue: true, "If EpicLoot config ShowEquippedAndHotbarItemsInSacrificeTab is enabled then items in misc slots will be excluded from sacrifice.");
             bbhArrowsFindingAndCounting = config("Mods compatibility", "Fix best fit arrows finding when using BowsBeforeHoes Quiver", defaultValue: true, "Make BBH quiver respect item type and ammo type when game tries to find ammo and count it.");
             recycle_N_ReclaimExcludeExtraSlots = config("Mods compatibility", "Prevent Recycle_N_Reclaim from recycling items in extra slots", defaultValue: true, "Recycle_N_Reclaim ignores items in hotbar only. Make it ignore items in extra slots");
             rebindConnectPanel = config("Mods compatibility", "Rebind Connect Panel", defaultValue: KeyCode.F2, "Change the key which used to open Connect Panel with current data");
+
+            reducedInventoryMoveArmorAndWeightPanels = config("Mods compatibility - Reduced inventory size", "Move Armor and Weight panels", defaultValue: true, "If regular inventory height is reduced panels have to be moved in appropriate position. Disable this config if other mod handles it.");
+            reducedInventoryMoveCustomPanels = config("Mods compatibility - Reduced inventory size", "Move custom panels", defaultValue: true, "If regular inventory height is reduced panels between Armor and Weight will be moved or hidden");
+            reducedInventoryHideCustomPanels = config("Mods compatibility - Reduced inventory size", "Hide custom panels", defaultValue: "", "Comma separated list of prefab names of childs of InventoryGui.instance.m_player");
+
+            reducedInventoryMoveArmorAndWeightPanels.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
+            reducedInventoryMoveCustomPanels.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
+            reducedInventoryHideCustomPanels.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
 
             // new default values were updated for new anchor point
             if (ammoSlotsHotBarOffset.Value == new Vector2(230f, 850f) && ammoSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)

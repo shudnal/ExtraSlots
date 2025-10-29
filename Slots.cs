@@ -299,6 +299,8 @@ namespace ExtraSlots
         public static readonly Slot[] slots = new Slot[40];
         public static readonly Dictionary<Vector2i, ItemDrop.ItemData> cachedItems = new Dictionary<Vector2i, ItemDrop.ItemData>();
         public const int VanillaInventoryHeight = 4;
+        public const int VanillaInventoryWidth = 8;
+        public const int minAmountOfExtraRows = -3;
 
         public static Player loadedPlayer;
 
@@ -306,7 +308,7 @@ namespace ExtraSlots
         public static Player CurrentPlayer => Player.m_localPlayer ?? Compatibility.EquipmentAndQuickSlotsCompat.playerToLoad ?? loadedPlayer ?? FejdStartup.instance?.GetPreviewPlayer();
         public static Inventory PlayerInventory => CurrentPlayer?.GetInventory();
         public static int ExtraRowsPlayer => GetExtraRows();
-        public static int InventoryWidth => PlayerInventory != null ? PlayerInventory.GetWidth() : 8;
+        public static int InventoryWidth => PlayerInventory != null ? PlayerInventory.GetWidth() : VanillaInventoryWidth;
         public static int InventoryHeightPlayer => VanillaInventoryHeight + ExtraRowsPlayer;
         public static int InventoryHeightFull => InventoryHeightPlayer + GetTargetInventoryHeight(slots.Length, InventoryWidth);
         public static int InventorySizePlayer => InventoryHeightPlayer * InventoryWidth;
@@ -656,15 +658,15 @@ namespace ExtraSlots
 
         internal static bool IsAmmoSlotAvailable() => ammoSlotsEnabled.Value && IsAnyGlobalKeyActive(ammoSlotsGlobalKey.Value) && IsAmmoSlotKnown();
         
-        internal static bool IsExtraRowAvailable(int index) => extraRows.Value > index && IsExtraRowKnown(index) && (index == 0 || IsExtraRowAvailable(index - 1));
+        internal static bool IsExtraRowAvailable(int index) => extraRows.Value > index && IsExtraRowKnown(index) && (index == minAmountOfExtraRows || IsExtraRowAvailable(index - 1));
 
         internal static int GetExtraRows()
         {
-            for (int i = extraRows.Value - 1; i >= 0; i--)
+            for (int i = extraRows.Value - 1; i >= minAmountOfExtraRows; i--)
                 if (IsExtraRowAvailable(i))
                     return i + 1;
 
-            return 0;
+            return minAmountOfExtraRows;
         }
 
         internal static void UpdateSlotsGridPosition()

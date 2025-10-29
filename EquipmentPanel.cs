@@ -38,6 +38,7 @@ namespace ExtraSlots
         public static RectTransform inventorySelectedFrame = null;
 
         private static bool isDirty = true;
+        private static bool updateSidePanels;
 
         private static Color normalColor = Color.clear;
         private static Color highlightedColor = Color.clear;
@@ -54,7 +55,13 @@ namespace ExtraSlots
         internal static Sprite quickSlot;
         internal static Sprite background;
 
+        private static Vector2 armorDefaultPosition = Vector2.zero;
+        private static Vector2 weightDefaultPosition = Vector2.zero;
+        private static Vector2 panelDefaultPosition = Vector2.zero;
+
         public static void MarkDirty() => isDirty = true;
+
+        public static void UpdateSidePanels() => updateSidePanels = true;
 
         internal static void UpdateSlotsCount()
         {
@@ -89,6 +96,7 @@ namespace ExtraSlots
             UpdateBackground();
             SetSlotsPositions();
             MarkDirty();
+            UpdateSidePanels();
         }
 
         // Runs every frame InventoryGui.UpdateInventory if visible
@@ -437,16 +445,105 @@ namespace ExtraSlots
                     equipmentBackgroundImage.overrideSprite = background;
                 }
             }
-
+            int extraRows = ExtraRowsPlayer;
             if (inventoryBackground)
             {
-                inventoryBackground.anchorMin = new Vector2(0.0f, -1f * ((float)ExtraRowsPlayer / VanillaInventoryHeight - 0.01f * Math.Max(ExtraRowsPlayer - 1, 0)));
+                inventoryBackground.anchorMin = new Vector2(0.0f, -1f * ((float)extraRows / VanillaInventoryHeight - 0.01f * Math.Max(extraRows - 1, 0)));
                 if (inventorySelectedFrame)
                     inventorySelectedFrame.anchorMin = inventoryBackground.anchorMin;
             }
 
             if (fixContainerPosition.Value)
-                InventoryGui.instance.m_container.pivot = new Vector2(0f, 1f + ExtraRowsPlayer * 0.2f);
+                InventoryGui.instance.m_container.pivot = new Vector2(0f, 1f + extraRows * 0.2f);
+
+            if (updateSidePanels)
+            {
+                if (reducedInventoryMoveArmorAndWeightPanels.Value)
+                {
+                    RectTransform armor = InventoryGui.instance.m_player.Find("Armor") as RectTransform;
+                    RectTransform weight = InventoryGui.instance.m_player.Find("Weight") as RectTransform;
+
+                    if (armorDefaultPosition == Vector2.zero)
+                        armorDefaultPosition = armor.anchoredPosition;
+
+                    if (weightDefaultPosition == Vector2.zero)
+                        weightDefaultPosition = weight.anchoredPosition;
+
+                    weight.gameObject.SetActive(extraRows > -3);
+
+                    RectTransform panelToMove = null;
+                    if (reducedInventoryMoveCustomPanels.Value)
+                    {
+                        float distance = Vector2.Distance(armor.localPosition, weight.localPosition) * 0.75f;
+                        for (int i = 0; i < InventoryGui.instance.m_player.childCount; i++)
+                        {
+                            if (InventoryGui.instance.m_player.GetChild(i) is RectTransform panel
+                                    && Vector2.Distance(panel.localPosition, armor.localPosition) <= distance
+                                    && Vector2.Distance(panel.localPosition, weight.localPosition) <= distance)
+                                panel.gameObject.SetActive(extraRows > -2);
+                            else
+                                continue;
+
+                            if (panelToMove != null)
+                                continue;
+
+                            if (panel.gameObject.activeInHierarchy && panel.Find("bkg") is Transform bkg && bkg.GetComponent<Image>() is Image img && img.sprite == armor.Find("bkg")?.GetComponent<Image>()?.sprite)
+                            {
+                                panelToMove = panel;
+                                if (panelDefaultPosition == Vector2.zero)
+                                    panelDefaultPosition = panelToMove.anchoredPosition;
+                            }
+                        }
+                    }
+
+                    if (extraRows == -3)
+                    {
+                        armor.anchoredPosition = new Vector2(armor.anchoredPosition.x, 107f);
+                    }
+                    else if (extraRows == -2)
+                    {
+                        armor.anchoredPosition = new Vector2(armor.anchoredPosition.x, 110f);
+                        weight.anchoredPosition = new Vector2(armor.anchoredPosition.x, 177f);
+                    }
+                    else if (extraRows == -1)
+                    {
+                        if (panelToMove)
+                        {
+                            armor.anchoredPosition = new Vector2(armor.anchoredPosition.x, 110f);
+                            weight.anchoredPosition = new Vector2(armor.anchoredPosition.x, 107f);
+                            panelToMove.anchoredPosition = new Vector2(weight.anchoredPosition.x, 38f);
+                        }
+                        else
+                        {
+                            armor.anchoredPosition = new Vector2(armor.anchoredPosition.x, 100f);
+                            weight.anchoredPosition = new Vector2(armor.anchoredPosition.x, 117f);
+                        }
+                    }
+                    else
+                    {
+                        armor.anchoredPosition = armorDefaultPosition;
+                        weight.anchoredPosition = weightDefaultPosition;
+                        if (panelToMove)
+                            panelToMove.anchoredPosition = panelDefaultPosition;
+                    }
+
+                    Transform selected_frames = InventoryGui.instance.m_player.GetComponent<UIGroupHandler>()?.m_enableWhenActiveAndGamepad.transform;
+                    
+                    if (selected_frames.GetChild(1) is RectTransform armorFrame)
+                        armorFrame.anchoredPosition = new Vector2(armorFrame.anchoredPosition.x, armor.anchoredPosition.y);
+                    
+                    if (selected_frames.GetChild(2) is RectTransform weightFrame)
+                    {
+                        weightFrame.anchoredPosition = new Vector2(weightFrame.anchoredPosition.x, weight.anchoredPosition.y - 287f);
+                        weightFrame.gameObject.SetActive(weight.gameObject.activeSelf);
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(reducedInventoryHideCustomPanels.Value))
+                    reducedInventoryHideCustomPanels.Value.Split(',', StringSplitOptions.RemoveEmptyEntries).Do(panel => InventoryGui.instance.m_player.Find(panel)?.gameObject?.SetActive(extraRows >= 0));
+
+                updateSidePanels = false;
+            }
         }
 
         internal static void ClearPanel()
