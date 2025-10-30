@@ -26,6 +26,8 @@ namespace ExtraSlots.Compatibility
             Recycle_N_Reclaim.CheckForCompatibility();
 
             RequipMeCompat.CheckForCompatibility();
+
+            ZenUICompat.CheckForCompatibility();
         }
 
         internal static void RemoveHarmonyPatch(this Assembly assembly, Type patchedType, string patchedMethod, string patcherClassName, string patcherClassMethod, string reason)

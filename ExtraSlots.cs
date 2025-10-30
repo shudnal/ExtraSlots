@@ -33,6 +33,7 @@ namespace ExtraSlots
     [BepInDependency(Compatibility.SimpleSort.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.Recycle_N_Reclaim.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.RequipMeCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency(Compatibility.ZenUICompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     public class ExtraSlots : BaseUnityPlugin
     {
