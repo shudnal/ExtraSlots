@@ -239,7 +239,9 @@ namespace ExtraSlots
             if (!freeSlot)
             {
                 ItemDrop.ItemData item = slot.Item;
-                element.m_tooltip.Set(item.m_shared.m_name, item.GetTooltip(), InventoryGui.instance.m_playerGrid.m_tooltipAnchor); // Fix possible tooltip lose
+                if (element.m_tooltip.m_topic.IndexOf(item.m_shared.m_name, StringComparison.OrdinalIgnoreCase) == -1)
+                    element.m_tooltip.Set(item.m_shared.m_name, item.GetTooltip(), InventoryGui.instance.m_playerGrid.m_tooltipAnchor); // Fix possible tooltip loss
+
                 element.m_icon.transform.localScale = originalScale == Vector3.zero ? Vector3.one: originalScale;
 
                 if (slot.IsEquipmentSlot && Compatibility.EpicLootCompat.isEnabled && epicLootMagicItemUnequippedAlpha.Value != 1f && !item.m_equipped && element.m_go.transform.Find("magicItem") is Transform magicItem && magicItem.GetComponent<Image>() is Image magicItemImage)

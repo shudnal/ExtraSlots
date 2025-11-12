@@ -1,3 +1,7 @@
+# 1.0.49
+* ZenUI assigned gear slots compatibility
+* fixed potential loss of Jewelcrafting extended tooltip
+
 # 1.0.48
 * extra rows amount can now be set up to -3 to reduce regular inventory size
 * added new configs for regular inventory rows progression
