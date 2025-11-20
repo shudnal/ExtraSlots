@@ -1,3 +1,6 @@
+# 1.0.50
+* items from quick, ammo and food slots are now shown at [ValheimRadial](https://thunderstore.io/c/valheim/p/PerspectiveBroad4501/ValheimRadial/) menu (disableable at Mods compatibility - Valheim Radial)
+
 # 1.0.49
 * ZenUI assigned gear slots compatibility
 * fixed potential loss of Jewelcrafting extended tooltip

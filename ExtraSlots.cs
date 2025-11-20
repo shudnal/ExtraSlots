@@ -39,7 +39,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.49";
+        public const string pluginVersion = "1.0.50";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -263,6 +263,10 @@ namespace ExtraSlots
         public static ConfigEntry<bool> reducedInventoryMoveArmorAndWeightPanels;
         public static ConfigEntry<bool> reducedInventoryMoveCustomPanels;
         public static ConfigEntry<string> reducedInventoryHideCustomPanels;
+
+        public static ConfigEntry<bool> valheimRadialAddQuickSlots;
+        public static ConfigEntry<bool> valheimRadialAddFoodSlots;
+        public static ConfigEntry<bool> valheimRadialAddAmmoSlots;
 
         public static string configDirectory;
 
@@ -686,9 +690,15 @@ namespace ExtraSlots
             reducedInventoryMoveCustomPanels = config("Mods compatibility - Reduced inventory size", "Move custom panels", defaultValue: true, "If regular inventory height is reduced panels between Armor and Weight will be moved or hidden");
             reducedInventoryHideCustomPanels = config("Mods compatibility - Reduced inventory size", "Hide custom panels", defaultValue: "", "Comma separated list of prefab names of childs of InventoryGui.instance.m_player");
 
+            rebindConnectPanel = config("Mods compatibility", "Rebind Connect Panel", defaultValue: KeyCode.F2, "Change the key which used to open Connect Panel with current data");
+
             reducedInventoryMoveArmorAndWeightPanels.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
             reducedInventoryMoveCustomPanels.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
             reducedInventoryHideCustomPanels.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
+
+            valheimRadialAddQuickSlots = config("Mods compatibility - Valheim Radial", "Add items from quick slots", defaultValue: true, "Add items from slots to valheim radial panel");
+            valheimRadialAddFoodSlots = config("Mods compatibility - Valheim Radial", "Add items from food slots", defaultValue: true, "Add items from slots to valheim radial panel");
+            valheimRadialAddAmmoSlots = config("Mods compatibility - Valheim Radial", "Add items from ammo slots", defaultValue: true, "Add items from slots to valheim radial panel");
 
             // new default values were updated for new anchor point
             if (ammoSlotsHotBarOffset.Value == new Vector2(230f, 850f) && ammoSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)

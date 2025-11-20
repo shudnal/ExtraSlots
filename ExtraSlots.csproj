@@ -33,6 +33,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Compatibility\ValheimRadial.cs" />
     <Compile Include="Compatibility\BBHCompat.cs" />
     <Compile Include="Compatibility\ZenUICompat.cs" />
     <Compile Include="Compatibility\RequipMeCompat.cs" />
