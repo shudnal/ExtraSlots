@@ -39,7 +39,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.50";
+        public const string pluginVersion = "1.0.51";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -260,9 +260,12 @@ namespace ExtraSlots
         public static ConfigEntry<bool> recycle_N_ReclaimExcludeExtraSlots;
         public static ConfigEntry<KeyCode> rebindConnectPanel;
         
-        public static ConfigEntry<bool> reducedInventoryMoveArmorAndWeightPanels;
-        public static ConfigEntry<bool> reducedInventoryMoveCustomPanels;
-        public static ConfigEntry<string> reducedInventoryHideCustomPanels;
+        public static ConfigEntry<string> reducedInventoryPanel1;
+        public static ConfigEntry<string> reducedInventoryPanel2;
+        public static ConfigEntry<string> reducedInventoryPanel3;
+        public static ConfigEntry<string> reducedInventoryPanelVisibility1;
+        public static ConfigEntry<string> reducedInventoryPanelVisibility2;
+        public static ConfigEntry<string> reducedInventoryPanelVisibility3;
 
         public static ConfigEntry<bool> valheimRadialAddQuickSlots;
         public static ConfigEntry<bool> valheimRadialAddFoodSlots;
@@ -686,15 +689,21 @@ namespace ExtraSlots
             recycle_N_ReclaimExcludeExtraSlots = config("Mods compatibility", "Prevent Recycle_N_Reclaim from recycling items in extra slots", defaultValue: true, "Recycle_N_Reclaim ignores items in hotbar only. Make it ignore items in extra slots");
             rebindConnectPanel = config("Mods compatibility", "Rebind Connect Panel", defaultValue: KeyCode.F2, "Change the key which used to open Connect Panel with current data");
 
-            reducedInventoryMoveArmorAndWeightPanels = config("Mods compatibility - Reduced inventory size", "Move Armor and Weight panels", defaultValue: true, "If regular inventory height is reduced panels have to be moved in appropriate position. Disable this config if other mod handles it.");
-            reducedInventoryMoveCustomPanels = config("Mods compatibility - Reduced inventory size", "Move custom panels", defaultValue: true, "If regular inventory height is reduced panels between Armor and Weight will be moved or hidden");
-            reducedInventoryHideCustomPanels = config("Mods compatibility - Reduced inventory size", "Hide custom panels", defaultValue: "", "Comma separated list of prefab names of childs of InventoryGui.instance.m_player");
+            reducedInventoryPanel1 = config("Mods compatibility - Reduced inventory size", "Side panels group 1", defaultValue: "Armor", "Names of transforms, comma-separated, which should be positioned in top group ");
+            reducedInventoryPanel2 = config("Mods compatibility - Reduced inventory size", "Side panels group 2", defaultValue: "Jewelcrafting Synergy,Trash,CoinPocketUI", "Names of transforms, comma-separated, which should be positioned in middle group");
+            reducedInventoryPanel3 = config("Mods compatibility - Reduced inventory size", "Side panels group 3", defaultValue: "Weight", "Names of transforms, comma-separated, which should be positioned in bottom group");
 
-            rebindConnectPanel = config("Mods compatibility", "Rebind Connect Panel", defaultValue: KeyCode.F2, "Change the key which used to open Connect Panel with current data");
+            reducedInventoryPanelVisibility1 = config("Mods compatibility - Reduced inventory size", "Panels to show with 1 row", defaultValue: "Weight", "Names of transforms, comma-separated, which should be shown with given inventory size");
+            reducedInventoryPanelVisibility2 = config("Mods compatibility - Reduced inventory size", "Panels to show with 2 rows", defaultValue: "Armor,Weight", "Names of transforms, comma-separated, which should be shown with given inventory size");
+            reducedInventoryPanelVisibility3 = config("Mods compatibility - Reduced inventory size", "Panels to show with 3 rows", defaultValue: "Armor,Weight,Jewelcrafting Synergy,Trash,CoinPocketUI", "Names of transforms, comma-separated, which should be shown with given inventory size");
 
-            reducedInventoryMoveArmorAndWeightPanels.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
-            reducedInventoryMoveCustomPanels.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
-            reducedInventoryHideCustomPanels.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
+            reducedInventoryPanel1.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
+            reducedInventoryPanel2.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
+            reducedInventoryPanel3.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
+
+            reducedInventoryPanelVisibility1.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
+            reducedInventoryPanelVisibility2.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
+            reducedInventoryPanelVisibility3.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
 
             valheimRadialAddQuickSlots = config("Mods compatibility - Valheim Radial", "Add items from quick slots", defaultValue: true, "Add items from slots to valheim radial panel");
             valheimRadialAddFoodSlots = config("Mods compatibility - Valheim Radial", "Add items from food slots", defaultValue: true, "Add items from slots to valheim radial panel");

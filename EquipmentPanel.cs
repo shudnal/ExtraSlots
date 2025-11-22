@@ -19,7 +19,7 @@ namespace ExtraSlots
         private const float interslotSpaceInTiles = 0.25f;
         private const float inventoryPanelOffset = 100f;
         private static int equipmentSlotsCount = 0;
-        internal static int quickSlotsCount = 0;    
+        internal static int quickSlotsCount = 0;
 
         private static float InventoryPanelWidth => InventoryGui.instance ? InventoryGui.instance.m_player.rect.width : 0;
         private static float PanelWidth => (Math.Max(quickSlotsCount, SlotPositions.LastEquipmentColumn() + 1) + FoodAmmoSlotsWidthInTiles) * tileSize + tileSpace / 2;
@@ -38,7 +38,8 @@ namespace ExtraSlots
         public static RectTransform inventorySelectedFrame = null;
 
         private static bool isDirty = true;
-        private static bool updateSidePanels;
+        private static int updateSidePanelsInFrames;
+        private static int updateSidePanelsPreviousExtraRows = -10;
 
         private static Color normalColor = Color.clear;
         private static Color highlightedColor = Color.clear;
@@ -55,13 +56,19 @@ namespace ExtraSlots
         internal static Sprite quickSlot;
         internal static Sprite background;
 
-        private static Vector2 armorDefaultPosition = Vector2.zero;
-        private static Vector2 weightDefaultPosition = Vector2.zero;
-        private static Vector2 panelDefaultPosition = Vector2.zero;
+        public class SidePanelDefaults
+        {
+            public bool active;
+            public Vector2 anchoredPosition = Vector2.zero;
+            public Vector2 anchorMin = Vector2.zero;
+            public Vector2 anchorMax = Vector2.zero;
+        }
+
+        private static readonly Dictionary<string, SidePanelDefaults> defaultPositionsSidePanels = new Dictionary<string, SidePanelDefaults>();
 
         public static void MarkDirty() => isDirty = true;
 
-        public static void UpdateSidePanels() => updateSidePanels = true;
+        public static void UpdateSidePanels() => updateSidePanelsInFrames = 3;
 
         internal static void UpdateSlotsCount()
         {
@@ -447,106 +454,221 @@ namespace ExtraSlots
                     equipmentBackgroundImage.overrideSprite = background;
                 }
             }
-            int extraRows = ExtraRowsPlayer;
+            int currentExtraRows = ExtraRowsPlayer;
             if (inventoryBackground)
             {
-                inventoryBackground.anchorMin = new Vector2(0.0f, -1f * ((float)extraRows / VanillaInventoryHeight - 0.01f * Math.Max(extraRows - 1, 0)));
+                inventoryBackground.anchorMin = new Vector2(0.0f, -1f * ((float)currentExtraRows / VanillaInventoryHeight - 0.01f * Math.Max(currentExtraRows - 1, 0)));
                 if (inventorySelectedFrame)
                     inventorySelectedFrame.anchorMin = inventoryBackground.anchorMin;
+
+                if (inventoryDarken)
+                    inventoryDarken.anchorMin = inventoryBackground.anchorMin;
             }
 
             if (fixContainerPosition.Value)
-                InventoryGui.instance.m_container.pivot = new Vector2(0f, 1f + extraRows * 0.2f);
+                InventoryGui.instance.m_container.pivot = new Vector2(0f, 1f + currentExtraRows * 0.2f);
 
-            if (updateSidePanels)
+            if (updateSidePanelsInFrames >= 0)
+                updateSidePanelsInFrames--;
+
+            if (updateSidePanelsInFrames == 0)
             {
-                if (reducedInventoryMoveArmorAndWeightPanels.Value)
+                if (updateSidePanelsPreviousExtraRows == -10)
                 {
-                    RectTransform armor = InventoryGui.instance.m_player.Find("Armor") as RectTransform;
-                    RectTransform weight = InventoryGui.instance.m_player.Find("Weight") as RectTransform;
+                    UpdateSidePanelsDefaultPositions();
+                    updateSidePanelsPreviousExtraRows = currentExtraRows;
+                }
 
-                    if (armorDefaultPosition == Vector2.zero)
-                        armorDefaultPosition = armor.anchoredPosition;
+                // Detect changes only for less than 4 rows and in case if 3 -> 4
+                if (updateSidePanelsPreviousExtraRows < currentExtraRows ? (currentExtraRows <= 0 || updateSidePanelsPreviousExtraRows < 0) : currentExtraRows < 0)
+                    MoveSidePanels(currentExtraRows);
 
-                    if (weightDefaultPosition == Vector2.zero)
-                        weightDefaultPosition = weight.anchoredPosition;
+                updateSidePanelsPreviousExtraRows = currentExtraRows;
+            }
+        }
 
-                    weight.gameObject.SetActive(extraRows > -3);
+        private static void MoveSidePanels(int extraRows)
+        {
+            List<List<RectTransform>> groups = new List<List<RectTransform>>();
+            
+            AddPanelGroup(groups, reducedInventoryPanel1.Value);
+            AddPanelGroup(groups, reducedInventoryPanel2.Value);
+            AddPanelGroup(groups, reducedInventoryPanel3.Value);
 
-                    RectTransform panelToMove = null;
-                    if (reducedInventoryMoveCustomPanels.Value)
-                    {
-                        float distance = Vector2.Distance(armor.localPosition, weight.localPosition) * 0.75f;
-                        for (int i = 0; i < InventoryGui.instance.m_player.childCount; i++)
-                        {
-                            if (InventoryGui.instance.m_player.GetChild(i) is RectTransform panel
-                                    && Vector2.Distance(panel.localPosition, armor.localPosition) <= distance
-                                    && Vector2.Distance(panel.localPosition, weight.localPosition) <= distance)
-                                panel.gameObject.SetActive(extraRows > -2);
-                            else
-                                continue;
+            // This is only possible in 3 -> 4 case
+            if (extraRows >= 0)
+            {
+                groups.Do(group => group.Do(RestorePositionAndVisibility));
+                RestorePositionAndVisibility(SelectedFrameArmor);
+                RestorePositionAndVisibility(SelectedFrameWeight);
+                return;
+            }
 
-                            if (panelToMove != null)
-                                continue;
+            groups.Do(group => group.Do(CheckVisibility));
+            groups.RemoveAll(group => !group.Any(g => g.gameObject.activeSelf));
 
-                            if (panel.gameObject.activeInHierarchy && panel.Find("bkg") is Transform bkg && bkg.GetComponent<Image>() is Image img && img.sprite == armor.Find("bkg")?.GetComponent<Image>()?.sprite)
-                            {
-                                panelToMove = panel;
-                                if (panelDefaultPosition == Vector2.zero)
-                                    panelDefaultPosition = panelToMove.anchoredPosition;
-                            }
-                        }
-                    }
-
+            RectTransform armor = null;
+            RectTransform weight = null;
+            for (int i = 0; i < groups.Count; i++)
+            {
+                for (int j = 0; j < groups[i].Count; j++)
+                {
+                    RectTransform panel = groups[i][j];
                     if (extraRows == -3)
                     {
-                        armor.anchoredPosition = new Vector2(armor.anchoredPosition.x, 107f);
+                        panel.anchorMin = Vector2.one;
+                        panel.anchorMax = Vector2.one;
+                        panel.anchoredPosition = new Vector2(panel.anchoredPosition.x, -37f);
                     }
                     else if (extraRows == -2)
                     {
-                        armor.anchoredPosition = new Vector2(armor.anchoredPosition.x, 110f);
-                        weight.anchoredPosition = new Vector2(armor.anchoredPosition.x, 177f);
+                        panel.anchorMin = Vector2.one;
+                        panel.anchorMax = Vector2.one;
+                        if (i == 0)
+                            panel.anchoredPosition = new Vector2(panel.anchoredPosition.x, -37f);
+                        else
+                            panel.anchoredPosition = new Vector2(panel.anchoredPosition.x, -107f);
                     }
                     else if (extraRows == -1)
                     {
-                        if (panelToMove)
+                        panel.anchorMin = Vector2.one;
+                        panel.anchorMax = Vector2.one;
+
+                        if (groups.Count == 3)
                         {
-                            armor.anchoredPosition = new Vector2(armor.anchoredPosition.x, 110f);
-                            weight.anchoredPosition = new Vector2(armor.anchoredPosition.x, 107f);
-                            panelToMove.anchoredPosition = new Vector2(weight.anchoredPosition.x, 38f);
+                            if (i == 0)
+                                panel.anchoredPosition = new Vector2(panel.anchoredPosition.x, -33f);
+                            else if (i == 1)
+                                panel.anchoredPosition = new Vector2(panel.anchoredPosition.x, -107f);
+                            else
+                                panel.anchoredPosition = new Vector2(panel.anchoredPosition.x, -183f);
                         }
                         else
                         {
-                            armor.anchoredPosition = new Vector2(armor.anchoredPosition.x, 100f);
-                            weight.anchoredPosition = new Vector2(armor.anchoredPosition.x, 117f);
+                            if (i == 0)
+                                panel.anchoredPosition = new Vector2(panel.anchoredPosition.x, -42f);
+                            else
+                                panel.anchoredPosition = new Vector2(panel.anchoredPosition.x, -172f);
                         }
                     }
-                    else
-                    {
-                        armor.anchoredPosition = armorDefaultPosition;
-                        weight.anchoredPosition = weightDefaultPosition;
-                        if (panelToMove)
-                            panelToMove.anchoredPosition = panelDefaultPosition;
-                    }
 
-                    Transform selected_frames = InventoryGui.instance.m_player.GetComponent<UIGroupHandler>()?.m_enableWhenActiveAndGamepad.transform;
-                    
-                    if (selected_frames.GetChild(1) is RectTransform armorFrame)
-                        armorFrame.anchoredPosition = new Vector2(armorFrame.anchoredPosition.x, armor.anchoredPosition.y);
-                    
-                    if (selected_frames.GetChild(2) is RectTransform weightFrame)
-                    {
-                        weightFrame.anchoredPosition = new Vector2(weightFrame.anchoredPosition.x, weight.anchoredPosition.y - 287f);
-                        weightFrame.gameObject.SetActive(weight.gameObject.activeSelf);
-                    }
+                    if (panel.name == "Armor")
+                        armor = panel;
+                    else if (panel.name == "Weight")
+                        weight = panel;
                 }
+            }
 
-                if (!string.IsNullOrWhiteSpace(reducedInventoryHideCustomPanels.Value))
-                    reducedInventoryHideCustomPanels.Value.Split(',', StringSplitOptions.RemoveEmptyEntries).Do(panel => InventoryGui.instance.m_player.Find(panel)?.gameObject?.SetActive(extraRows >= 0));
+            if (armor != null && SelectedFrameArmor is RectTransform armorFrame)
+            {
+                armorFrame.gameObject.SetActive(armor.gameObject.activeSelf);
+                armorFrame.anchorMin = armor.anchorMin;
+                armorFrame.anchorMax = armor.anchorMax;
+                armorFrame.anchoredPosition = armor.anchoredPosition + new Vector2(-2f, 0f);
+            }
 
-                updateSidePanels = false;
+            if (weight != null && SelectedFrameWeight is RectTransform weightFrame)
+            {
+                weightFrame.gameObject.SetActive(weight.gameObject.activeSelf);
+                weightFrame.anchorMin = weight.anchorMin;
+                weightFrame.anchorMax = weight.anchorMax;
+                weightFrame.anchoredPosition = weight.anchoredPosition + new Vector2(1f, 0f);
+            }
+
+            void CheckVisibility(RectTransform panel)
+            {
+                bool active = true;
+                if (defaultPositionsSidePanels.TryGetValue(panel.name, out var newPositionsSidePanels))
+                    active = newPositionsSidePanels.active;
+
+                if (extraRows < -2)
+                    active = active && reducedInventoryPanelVisibility1.Value.Split(',').Contains(panel.name, OrdinalComparer.OrdinalIgnoreCase);
+                else if (extraRows < -1)
+                    active = active && reducedInventoryPanelVisibility2.Value.Split(',').Contains(panel.name, OrdinalComparer.OrdinalIgnoreCase);
+                else if (extraRows < 0)
+                    active = active && reducedInventoryPanelVisibility3.Value.Split(',').Contains(panel.name, OrdinalComparer.OrdinalIgnoreCase);
+
+                panel.gameObject.SetActive(active);
             }
         }
+
+        private static void RestorePositionAndVisibility(RectTransform panel)
+        {
+            if (panel == null)
+                return;
+
+            if (!defaultPositionsSidePanels.TryGetValue(panel.name, out SidePanelDefaults defaultProperties))
+                return;
+
+            panel.anchorMin = defaultProperties.anchorMin;
+            panel.anchorMax = defaultProperties.anchorMax;
+            panel.anchoredPosition = defaultProperties.anchoredPosition;
+            panel.gameObject.SetActive(defaultProperties.active);
+        }
+
+        private static void AddPanelGroup(List<List<RectTransform>> groups, string config)
+        {
+            List<RectTransform> tempGroup = new List<RectTransform>();
+            
+            foreach (string panelName in config.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (string.IsNullOrWhiteSpace(panelName) || InventoryGui.instance.m_player.Find(panelName) is not RectTransform sidePanel)
+                    continue;
+
+                tempGroup.Add(sidePanel);
+            }
+
+            if (tempGroup.Count > 0)
+                groups.Add(tempGroup);
+        }
+
+        private static void UpdateSidePanelsDefaultPositions()
+        {
+            defaultPositionsSidePanels.Clear();
+
+            if (!InventoryGui.instance.m_player)
+                return;
+
+            List<string> panels = new List<string>();
+            panels.AddRange(reducedInventoryPanel1.Value.Split(','));
+            panels.AddRange(reducedInventoryPanel2.Value.Split(','));
+            panels.AddRange(reducedInventoryPanel3.Value.Split(','));
+
+            foreach (string panel in panels)
+            {
+                if (InventoryGui.instance.m_player.Find(panel) is not RectTransform sidePanel)
+                    continue;
+
+                defaultPositionsSidePanels[panel] = new SidePanelDefaults()
+                {
+                    active = sidePanel.gameObject.activeSelf,
+                    anchoredPosition = sidePanel.anchoredPosition,
+                    anchorMax = sidePanel.anchorMax,
+                    anchorMin = sidePanel.anchorMin
+                };
+            }
+
+            if (SelectedFrameArmor is RectTransform frameArmor)
+                defaultPositionsSidePanels[frameArmor.name] = new SidePanelDefaults()
+                {
+                    active = frameArmor.gameObject.activeSelf,
+                    anchoredPosition = frameArmor.anchoredPosition,
+                    anchorMax = frameArmor.anchorMax,
+                    anchorMin = frameArmor.anchorMin
+                };
+
+            if (SelectedFrameWeight is RectTransform frameWeight)
+                defaultPositionsSidePanels[frameWeight.name] = new SidePanelDefaults()
+                {
+                    active = frameWeight.gameObject.activeSelf,
+                    anchoredPosition = frameWeight.anchoredPosition,
+                    anchorMax = frameWeight.anchorMax,
+                    anchorMin = frameWeight.anchorMin
+                };
+        }
+
+        private static RectTransform SelectedFrameArmor => InventoryGui.instance.m_player.Find("selected_frame/selected (2)") as RectTransform;
+        private static RectTransform SelectedFrameWeight => InventoryGui.instance.m_player.Find("selected_frame/selected (3)") as RectTransform;
 
         internal static void ClearPanel()
         {
@@ -566,6 +688,9 @@ namespace ExtraSlots
 
             iconMaterial = null;
             originalScale = Vector3.zero;
+
+            updateSidePanelsInFrames = 0;
+            updateSidePanelsPreviousExtraRows = -10;
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]
@@ -627,7 +752,16 @@ namespace ExtraSlots
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.SetupDragItem))]
         private static class InventoryGui_SetupDragItem_UpdateSlotsOnItemDrag
         {
-            private static void Postfix() => MarkDirty();
+            private static void Prefix(InventoryGui __instance, ref bool __state) => __state = (bool)__instance.m_dragGo;
+
+            private static void Postfix(InventoryGui __instance, bool __state)
+            {
+                MarkDirty();
+
+                // On drag disable
+                if (!(bool)__instance.m_dragGo && __state)
+                    UpdateSidePanels();
+            }
         }
 
         [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGamepad))]

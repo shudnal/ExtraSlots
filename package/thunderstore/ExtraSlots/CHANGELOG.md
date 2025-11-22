@@ -1,3 +1,6 @@
+# 1.0.51
+* rehauled approach to repositioning of side panels with reduced inventory size
+
 # 1.0.50
 * items from quick, ammo and food slots are now shown at [ValheimRadial](https://thunderstore.io/c/valheim/p/PerspectiveBroad4501/ValheimRadial/) menu (disableable at Mods compatibility - Valheim Radial)
 
