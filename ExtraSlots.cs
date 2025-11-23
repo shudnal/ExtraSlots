@@ -690,12 +690,12 @@ namespace ExtraSlots
             rebindConnectPanel = config("Mods compatibility", "Rebind Connect Panel", defaultValue: KeyCode.F2, "Change the key which used to open Connect Panel with current data");
 
             reducedInventoryPanel1 = config("Mods compatibility - Reduced inventory size", "Side panels group 1", defaultValue: "Armor", "Names of transforms, comma-separated, which should be positioned in top group ");
-            reducedInventoryPanel2 = config("Mods compatibility - Reduced inventory size", "Side panels group 2", defaultValue: "Jewelcrafting Synergy,Trash,CoinPocketUI", "Names of transforms, comma-separated, which should be positioned in middle group");
+            reducedInventoryPanel2 = config("Mods compatibility - Reduced inventory size", "Side panels group 2", defaultValue: "Jewelcrafting Synergy,Trash", "Names of transforms, comma-separated, which should be positioned in middle group");
             reducedInventoryPanel3 = config("Mods compatibility - Reduced inventory size", "Side panels group 3", defaultValue: "Weight", "Names of transforms, comma-separated, which should be positioned in bottom group");
 
             reducedInventoryPanelVisibility1 = config("Mods compatibility - Reduced inventory size", "Panels to show with 1 row", defaultValue: "Weight", "Names of transforms, comma-separated, which should be shown with given inventory size");
             reducedInventoryPanelVisibility2 = config("Mods compatibility - Reduced inventory size", "Panels to show with 2 rows", defaultValue: "Armor,Weight", "Names of transforms, comma-separated, which should be shown with given inventory size");
-            reducedInventoryPanelVisibility3 = config("Mods compatibility - Reduced inventory size", "Panels to show with 3 rows", defaultValue: "Armor,Weight,Jewelcrafting Synergy,Trash,CoinPocketUI", "Names of transforms, comma-separated, which should be shown with given inventory size");
+            reducedInventoryPanelVisibility3 = config("Mods compatibility - Reduced inventory size", "Panels to show with 3 rows", defaultValue: "Armor,Weight,Jewelcrafting Synergy,Trash", "Names of transforms, comma-separated, which should be shown with given inventory size");
 
             reducedInventoryPanel1.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
             reducedInventoryPanel2.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
