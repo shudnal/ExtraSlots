@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using static ExtraSlots.Slots;
 
 namespace ExtraSlots.HotBars;
@@ -51,7 +52,7 @@ public static class PreventSimilarHotkeys
         foreach (ConfigEntry<KeyboardShortcut> hotkeyConfig in ExtraSlots.GetHotkeysConfigs())
         {
             KeyCode key = hotkeyConfig.Value.MainKey;
-            if (!ZInput.IsKeyCodeValid(key) || !IsCorrectKeyboardBind(key) && !IsCorrectGamepadBind(key))
+            if (!ZInput.IsKeyCodeValid(key) || !IsCorrectKeyboardBind(key) && !IsCorrectGamepadBind(key) && !IsCorrectMouseBind(key))
             {
                 if (!hotkeyConfig.Value.Equals(KeyboardShortcut.Empty))
                     ExtraSlots.LogWarning($"Wrong bind data on {hotkeyConfig.Definition}: {hotkeyConfig.Value}. Hotkey cleared.");
@@ -64,6 +65,8 @@ public static class PreventSimilarHotkeys
     }
 
     private static bool IsCorrectKeyboardBind(KeyCode keyCode) => ZInput.TryKeyCodeToKey(keyCode, out Key key) && key != Key.None;
+
+    private static bool IsCorrectMouseBind(KeyCode keyCode) => ZInput.TryKeyCodeToMouseButton(keyCode, out MouseButton mouseButton) && mouseButton != MouseButton.Left && mouseButton != MouseButton.Right;
 
     private static bool IsCorrectGamepadBind(KeyCode keyCode) => ZInput.TryKeyCodeToGamepadButton(keyCode, out _);
 
