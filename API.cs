@@ -41,7 +41,7 @@ public static class API
     /// Returns slot with given ID
     /// </summary>
     /// <param name="slotID"></param>
-    public static Slot FindSlot(string slotID) => slots.Where(slot => slot.ID == slotID || slot.ID == CustomSlot.GetSlotID(slotID)).FirstOrDefault();
+    public static Slot FindSlot(string slotID) => slots.FirstOrDefault(slot => slot.ID == slotID || slot.ID == CustomSlot.GetSlotID(slotID));
 
     /// <summary>
     /// Returns list of items located in extra slots
