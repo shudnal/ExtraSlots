@@ -685,7 +685,7 @@ namespace ExtraSlots
 
             epicLootMagicItemUnequippedAlpha = config("Mods compatibility", "EpicLoot unequipped item alpha", 0.2f, "Make unequipped enchanted item more visible in equipment panel by making its background image more transparent.");
             epicLootExcludeMiscItemsFromSacrifice = config("Mods compatibility", "EpicLoot exclude misc items from sacrifice", defaultValue: true, "If EpicLoot config ShowEquippedAndHotbarItemsInSacrificeTab is enabled then items in misc slots will be excluded from sacrifice.");
-            bbhArrowsFindingAndCounting = config("Mods compatibility", "Fix best fit arrows finding when using BowsBeforeHoes Quiver", defaultValue: true, "Make BBH quiver respect item type and ammo type when game tries to find ammo and count it.");
+            bbhArrowsFindingAndCounting = config("Mods compatibility", "Fix best fit arrows finding when using BowsBeforeHoes Quiver", defaultValue: true, "Make BBH quiver respect item type and ammo type when game tries to find ammo and count it. Game restart is required after change.");
             recycle_N_ReclaimExcludeExtraSlots = config("Mods compatibility", "Prevent Recycle_N_Reclaim from recycling items in extra slots", defaultValue: true, "Recycle_N_Reclaim ignores items in hotbar only. Make it ignore items in extra slots");
             rebindConnectPanel = config("Mods compatibility", "Rebind Connect Panel", defaultValue: KeyCode.F2, "Change the key which used to open Connect Panel with current data");
 

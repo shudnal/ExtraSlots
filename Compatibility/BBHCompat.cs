@@ -18,11 +18,33 @@ public static class BBHCompat
 
     private static Func<Player, Inventory> _getQuiverBarInventory;
 
-    public static Inventory GetQuiverBarInventory(Player player) => player != null && player == Player.m_localPlayer && isEnabled && _getQuiverBarInventory != null ? _getQuiverBarInventory(player) : null;
+    private static bool quiverInventoryCached;
+    private static int quiverInventoryCachedSecond;
+    private static Inventory quiverInventoryFromCache;
+
+    public static Inventory GetQuiverBarInventory(Player player)
+    {
+        if (!isEnabled || player == null || player != Player.m_localPlayer)
+            return null;
+
+        if (!ZNet.instance)
+            return _getQuiverBarInventory != null ? _getQuiverBarInventory(player) : null;
+
+        if (quiverInventoryCachedSecond != (quiverInventoryCachedSecond = (int)ZNet.instance.GetTimeSeconds()) && quiverInventoryCachedSecond % 5 == 0)
+            quiverInventoryCached = false;
+
+        if (!quiverInventoryCached)
+        {
+            quiverInventoryCached = true;
+            quiverInventoryFromCache = _getQuiverBarInventory != null ? _getQuiverBarInventory(player) : null;
+        }
+
+        return quiverInventoryFromCache;
+    }
 
     public static void CheckForCompatibility()
     {
-        if (isEnabled = Chainloader.PluginInfos.TryGetValue(GUID, out BBHPlugin))
+        if (isEnabled = (bbhArrowsFindingAndCounting.Value && Chainloader.PluginInfos.TryGetValue(GUID, out BBHPlugin)))
         {
             assembly ??= Assembly.GetAssembly(BBHPlugin.Instance.GetType());
 
@@ -47,7 +69,7 @@ public static class BBHCompat
     {
         private static void Postfix(Inventory __instance, string ammoName, string matchPrefabName, ref ItemDrop.ItemData __result)
         {
-            if (!bbhArrowsFindingAndCounting.Value || !isEnabled)
+            if (!isEnabled)
                 return;
 
             if (__instance != Player.m_localPlayer?.GetInventory())
@@ -84,7 +106,10 @@ public static class BBHCompat
     {
         private static void Postfix(Inventory __instance, string name, ref int __result, int quality = -1, bool matchWorldLevel = true)
         {
-            if (!bbhArrowsFindingAndCounting.Value || !isEnabled)
+            if (!isEnabled)
+                return;
+
+            if (__instance != Player.m_localPlayer?.GetInventory())
                 return;
 
             Inventory quiverBarInventory = GetQuiverBarInventory(Player.m_localPlayer);
@@ -95,5 +120,25 @@ public static class BBHCompat
         }
 
         private static bool IsItemFitsFilter(ItemDrop.ItemData item, string name, int quality = -1, bool matchWorldLevel = true) => (name == null || item.m_shared.m_name == name) && (quality < 0 || quality == item.m_quality) && (!matchWorldLevel || item.m_worldLevel >= Game.m_worldLevel);
+    }
+
+    [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.UnequipItem))]
+    public static class Humanoid_UnequipItem_QuiverInventoryCache
+    {
+        private static void Postfix(Humanoid __instance)
+        {
+            if (isEnabled && __instance == Player.m_localPlayer)
+                quiverInventoryCached = false;
+        }
+    }
+
+    [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.EquipItem))]
+    public static class Humanoid_EquipItem_QuiverInventoryCache
+    {
+        private static void Postfix(Humanoid __instance)
+        {
+            if (isEnabled && __instance == Player.m_localPlayer)
+                quiverInventoryCached = false;
+        }
     }
 }
