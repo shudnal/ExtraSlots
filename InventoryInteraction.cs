@@ -505,7 +505,7 @@ namespace ExtraSlots
         internal static void UpdateTotalWeight() => PlayerInventory?.UpdateTotalWeight();
 
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.UpdateTotalWeight))]
-        public static class Inventory_UpdateTotalWeight_UpdateGraveInventory
+        public static class Inventory_UpdateTotalWeight_ApplyWeightFactor
         {
             public static bool inCall = false;
 
@@ -515,7 +515,7 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetWeight))]
-        public static class ItemDrop_ItemData_GetWeight_UpdateGraveInventory
+        public static class ItemDrop_ItemData_GetWeight_UpdateTotalWeight_ApplyWeightFactor
         {
             private static float GetItemWeightFactor(Slot slot)
             {
@@ -539,10 +539,12 @@ namespace ExtraSlots
 
             private static void Postfix(ItemDrop.ItemData __instance, ref float __result)
             {
-                if (!Inventory_UpdateTotalWeight_UpdateGraveInventory.inCall)
+                if (!Inventory_UpdateTotalWeight_ApplyWeightFactor.inCall)
                     return;
 
-                if (GetItemSlot(__instance) is Slot slot)
+                if (LightenedSlots.IsRowAffected(__instance.m_gridPos.y))
+                    __result *= LightenedSlots.WeightFactor;
+                else if (GetItemSlot(__instance) is Slot slot)
                     __result *= GetItemWeightFactor(slot);
             }
         }

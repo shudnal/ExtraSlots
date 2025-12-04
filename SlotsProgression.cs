@@ -192,9 +192,11 @@ namespace ExtraSlots
             if (!IsRowProgressionActive())
                 return true;
 
-            string playerKey = ExtraRowPlayerKey(index);
-            string itemDiscovered = ExtraRowItemDiscovered(index).GetItemName();
+            return IsPlayerKeyItemConditionMet(ExtraRowPlayerKey(index), ExtraRowItemDiscovered(index).GetItemName());
+        }
 
+        internal static bool IsPlayerKeyItemConditionMet(string playerKey, string itemDiscovered)
+        {
             bool globalKeyIsSet = !playerKey.IsNullOrWhiteSpace();
             bool itemIsSet = !itemDiscovered.IsNullOrWhiteSpace();
 
@@ -255,7 +257,7 @@ namespace ExtraSlots
                 if (__state != __instance.m_knownMaterial.Count)
                 {
                     itemTypes.Add(item.m_shared.m_itemType);
-                    if (IsRowProgressionActive())
+                    if (IsRowProgressionActive() || LightenedSlots.IsEnabled)
                         instance.StartSlotsUpdateNextFrame();
                 }
             }
@@ -290,19 +292,21 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch]
-        public static class Player_ResetCharacterUpdateRows
+        public static class Patch_UpdateAvailableRows
         {
             private static IEnumerable<MethodBase> TargetMethods()
             {
                 yield return AccessTools.Method(typeof(Player), nameof(Player.ResetCharacter));
                 yield return AccessTools.Method(typeof(Player), nameof(Player.ResetCharacterKnownItems));
+                yield return AccessTools.Method(typeof(Player), nameof(Player.AddUniqueKey));
+                yield return AccessTools.Method(typeof(Player), nameof(Player.RemoveUniqueKey));
+                yield return AccessTools.Method(typeof(ZoneSystem), nameof(ZoneSystem.RPC_GlobalKeys));
             }
 
-            private static void Prefix(Player __instance)
+            private static void Postfix()
             {
-                if (__instance == Player.m_localPlayer)
-                    if (IsRowProgressionActive())
-                        instance.StartSlotsUpdateNextFrame();
+                if (IsRowProgressionActive() || LightenedSlots.IsEnabled)
+                    instance.StartSlotsUpdateNextFrame();
             }
         }
 
@@ -315,36 +319,6 @@ namespace ExtraSlots
                 if (IsRowProgressionActive())
                     UpdateSlotsGridPosition();
                 loadedPlayer = null;
-            }
-        }
-
-        [HarmonyPatch(typeof(ZoneSystem), nameof(ZoneSystem.RPC_GlobalKeys))]
-        private static class ZoneSystem_RPC_GlobalKeys_UpdateInventoryRows
-        {
-            private static void Postfix()
-            {
-                if (IsRowProgressionActive())
-                    instance.StartSlotsUpdateNextFrame();
-            }
-        }
-
-        [HarmonyPatch(typeof(Player), nameof(Player.AddUniqueKey))]
-        private static class Player_AddUniqueKey_UpdateInventoryRows
-        {
-            private static void Postfix()
-            {
-                if (IsRowProgressionActive())
-                    instance.StartSlotsUpdateNextFrame();
-            }
-        }
-
-        [HarmonyPatch(typeof(Player), nameof(Player.RemoveUniqueKey))]
-        private static class Player_RemoveUniqueKey_UpdateInventoryRows
-        {
-            private static void Postfix()
-            {
-                if (IsRowProgressionActive())
-                    instance.StartSlotsUpdateNextFrame();
             }
         }
 

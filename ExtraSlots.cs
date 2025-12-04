@@ -39,7 +39,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.0.51";
+        public const string pluginVersion = "1.1.0";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -87,6 +87,12 @@ namespace ExtraSlots
         public static ConfigEntry<float> itemWeightFactorFoodSlots;
         public static ConfigEntry<float> itemWeightFactorAmmoSlots;
         public static ConfigEntry<float> itemWeightFactorMiscSlots;
+
+        public static ConfigEntry<int> lightenedSlotsStartIndex;
+        public static ConfigEntry<float> lightenedSlotsWeightFactor;
+        public static ConfigEntry<bool> lightenedSlotsOnlyExtraRows;
+        public static ConfigEntry<string> lightenedSlotsPlayerKey;
+        public static ConfigEntry<string> lightenedSlotsItemDiscovered;
 
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
@@ -418,35 +424,23 @@ namespace ExtraSlots
             itemWeightFactorAmmoSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
             itemWeightFactorMiscSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
 
-            vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder,
-                new ConfigDescription("Comma separated list defining order of vanilla equipment slots", null, new CustomConfigs.ConfigurationManagerAttributes { CustomDrawer = CustomConfigs.DrawOrderedFixedStrings(",") }));
+            lightenedSlotsStartIndex = config("Extra slots - Lightened slots", "First row index", defaultValue: -2, new ConfigDescription("Defines which inventory rows will apply the weight-reduction effect. [Synced with Server]" +
+                "\nValue < 0: number of bottom rows to affect. Default value -2 means - apply to the last 2 rows" +
+                "\nValue = 0: feature disabled" +
+                "\nValue > 0: index of the first affected row (inclusive)", new AcceptableValueRange<int>(-9, 9)), synchronizedSetting: true);
+            lightenedSlotsWeightFactor = config("Extra slots - Lightened slots", "Weight factor. Item weight will be multiplied by this value.", defaultValue: 0.5f, 
+                    new ConfigDescription("Weight factor for items in lightened slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
+            lightenedSlotsOnlyExtraRows = config("Extra slots - Lightened slots", "Only extra rows", defaultValue: true, "Set if only rows of additional inventory should be affected (rows 5+). [Synced with Server]", synchronizedSetting: true);
+            lightenedSlotsPlayerKey = config("Extra slots - Lightened slots", "Progression - Player key", defaultValue: "GP_Yagluth", "Comma-separated list of Player unique keys. [Synced with Server]" +
+                "\nLightened slots will be active only if any key is enabled or list is not set", synchronizedSetting: true);
+            lightenedSlotsItemDiscovered = config("Extra slots - Lightened slots", "Progression - Item", defaultValue: "YagluthDrop", "Comma-separated list of items. [Synced with Server]" +
+                "\nLightened slots will be active only if any item is discovered or list is not set.", synchronizedSetting: true);
 
-            equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalLeft, "Equipment slots alignment");
-            equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
-            quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle under equipment slots");
-            equipmentSlotsShowTooltip = config("Panels - Equipment slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
-            equipmentPanelTooltipOffset = config("Panels - Equipment slots", "Gamepad Tooltip Offset", Vector2.zero, "Offset relative to original position of tooltip at upper right corner of the inventory (side elements included)");
-            equipmentSlotsPreventStackAll = config("Panels - Equipment slots", "Prevent Stack All", defaultValue: true, "Prevent items from equipment slots to be placed into container when Stack All feature is used.");
-
-            vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
-            equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            equipmentPanelTooltipOffset.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
-
-            miscSlotsShowLabel = config("Panels - Misc slots", "Show label", defaultValue: false, "Show slot label");
-            miscSlotsShowHintImage = config("Panels - Misc slots", "Show hint image", defaultValue: true, "Show slot background hint image");
-            miscSlotsShowTooltip = config("Panels - Misc slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
-            miscSlotsStackColor = config("Panels - Misc slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
-            miscSlotsPreventStackAll = config("Panels - Misc slots", "Prevent Stack All", defaultValue: true, "Prevent items from misc slots to be placed into container when Stack All feature is used.");
-            miscSlotsItemList = config("Panels - Misc slots", "Custom item list", defaultValue: "AncientSeed,WitheredBone,BellFragment,DvergrKeyFragment",
-                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as misc items" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
-            miscSlotsItemBlackList = config("Panels - Misc slots", "Custom item black list", defaultValue: "",
-                    GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as misc items" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
-
-            miscSlotsItemList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
-            miscSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
+            lightenedSlotsStartIndex.SettingChanged += (s, e) => LightenedSlots.UpdateState();
+            lightenedSlotsWeightFactor.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
+            lightenedSlotsOnlyExtraRows.SettingChanged += (s, e) => LightenedSlots.UpdateState();
+            lightenedSlotsPlayerKey.SettingChanged += (s, e) => LightenedSlots.UpdateState();
+            lightenedSlotsItemDiscovered.SettingChanged += (s, e) => LightenedSlots.UpdateState();
 
             quickSlotHotKey1 = config("Hotkeys", "Quickslot 1", new KeyboardShortcut(KeyCode.Z, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
             quickSlotHotKey2 = config("Hotkeys", "Quickslot 2", new KeyboardShortcut(KeyCode.X, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
@@ -477,6 +471,36 @@ namespace ExtraSlots
             foodSlotHotKey1Text = config("Hotkeys", "Food 1 Text", "Alt + Q", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
             foodSlotHotKey2Text = config("Hotkeys", "Food 2 Text", "Alt + E", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
             foodSlotHotKey3Text = config("Hotkeys", "Food 3 Text", "Alt + R", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
+
+            vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder,
+                new ConfigDescription("Comma separated list defining order of vanilla equipment slots", null, new CustomConfigs.ConfigurationManagerAttributes { CustomDrawer = CustomConfigs.DrawOrderedFixedStrings(",") }));
+
+            equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalLeft, "Equipment slots alignment");
+            equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
+            quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle under equipment slots");
+            equipmentSlotsShowTooltip = config("Panels - Equipment slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
+            equipmentPanelTooltipOffset = config("Panels - Equipment slots", "Gamepad Tooltip Offset", Vector2.zero, "Offset relative to original position of tooltip at upper right corner of the inventory (side elements included)");
+            equipmentSlotsPreventStackAll = config("Panels - Equipment slots", "Prevent Stack All", defaultValue: true, "Prevent items from equipment slots to be placed into container when Stack All feature is used.");
+
+            vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
+            equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            equipmentPanelTooltipOffset.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
+
+            miscSlotsShowLabel = config("Panels - Misc slots", "Show label", defaultValue: false, "Show slot label");
+            miscSlotsShowHintImage = config("Panels - Misc slots", "Show hint image", defaultValue: true, "Show slot background hint image");
+            miscSlotsShowTooltip = config("Panels - Misc slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
+            miscSlotsStackColor = config("Panels - Misc slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
+            miscSlotsPreventStackAll = config("Panels - Misc slots", "Prevent Stack All", defaultValue: true, "Prevent items from misc slots to be placed into container when Stack All feature is used.");
+            miscSlotsItemList = config("Panels - Misc slots", "Custom item list", defaultValue: "AncientSeed,WitheredBone,BellFragment,DvergrKeyFragment",
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as misc items" +
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+            miscSlotsItemBlackList = config("Panels - Misc slots", "Custom item black list", defaultValue: "",
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as misc items" +
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+
+            miscSlotsItemList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
+            miscSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
 
             quickSlotsHotBarEnabled = config("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots");
             quickSlotsHotBarOffset = config("Panels - Quick slots", "Offset", defaultValue: new Vector2(230f, 156f), "On screen position of quick slots hotbar panel");
@@ -781,6 +805,7 @@ namespace ExtraSlots
             LoadIcon("ammoslot.png", ref EquipmentPanel.ammoSlot);
             LoadIcon("miscslot.png", ref EquipmentPanel.miscSlot);
             LoadIcon("quickslot.png", ref EquipmentPanel.quickSlot);
+            LoadIcon("lightenedslot.png", ref EquipmentPanel.lightenedSlot);
 
             LoadIcon("background.png", ref EquipmentPanel.background);
         }

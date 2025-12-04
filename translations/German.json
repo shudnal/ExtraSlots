@@ -8,7 +8,7 @@
     "exsl_slot_equipment_desc": "Ausrüstbare Ausrüstungsgegenstände",
     "exsl_slot_ammo": "Munitionsplatz",
     "exsl_slot_ammo_label": "Pfeile",
-    "exsl_slot_ammo_desc": "Munition und Angelköder",
+    "exsl_slot_ammo_desc": "Munition, Bomben und Angelköder",
     "exsl_slot_quick": "Schnellslot",
     "exsl_slot_quick_label": "Schnell",
     "exsl_slot_quick_desc": "Alle Elemente",
@@ -18,5 +18,7 @@
     "exsl_slot_food": "Essensplatz",
     "exsl_slot_food_label": "Essen",
     "exsl_slot_food_desc": "Essfertiges Essen",
-    "exsl_slot_equipment_trinket_label": "Schmuckstück"
+    "exsl_slot_equipment_trinket_label": "Schmuckstück",
+    "exsl_slot_lightened": "Leichter Slot",
+    "exsl_slot_lightened_desc": "Gewicht des Gegenstands um {0} reduziert"
 }

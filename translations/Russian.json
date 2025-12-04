@@ -3,7 +3,7 @@
     "exsl_slot_equipment_chest_label": "Грудь",
     "exsl_slot_equipment_legs_label": "Ноги",
     "exsl_slot_equipment_shoulders_label": "Спина",
-    "exsl_slot_equipment_utility_label": "Предмет",
+    "exsl_slot_equipment_utility_label": "Аксессуар",
     "exsl_slot_equipment": "Слот для экипировки",
     "exsl_slot_equipment_desc": "Надеваемые предметы снаряжения",
     "exsl_slot_ammo": "Слот для боеприпасов",
@@ -17,6 +17,8 @@
     "exsl_slot_misc_desc": "Предметы заданий, ключи, монеты, трофеи и рыба",
     "exsl_slot_food": "Слот для еды и медовух",
     "exsl_slot_food_label": "Еда",
-    "exsl_slot_food_desc": "Готовая к употреблению еда и напитки",
-    "exsl_slot_equipment_trinket_label": "Артефакт"
+    "exsl_slot_food_desc": "Съедобная пища и напитки",
+    "exsl_slot_equipment_trinket_label": "Артефакт",
+    "exsl_slot_lightened": "Облегченный слот",
+    "exsl_slot_lightened_desc": "Вес предмета снижен на {0}"
 }

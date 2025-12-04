@@ -8,15 +8,17 @@
     "exsl_slot_equipment_desc": "放置可穿戴的裝備",
     "exsl_slot_ammo": "彈藥欄",
     "exsl_slot_ammo_label": "彈藥",
-    "exsl_slot_ammo_desc": "放置彈藥或魚餌",
+    "exsl_slot_ammo_desc": "彈藥、炸彈或魚餌",
     "exsl_slot_quick": "快捷欄",
     "exsl_slot_quick_label": "快捷",
     "exsl_slot_quick_desc": "放置任何物品",
     "exsl_slot_misc": "雜物欄",
     "exsl_slot_misc_label": "雜物",
     "exsl_slot_misc_desc": "放置任務物品、鑰匙、金幣、戰利品或魚",
-    "exsl_slot_food": "食物欄",
+    "exsl_slot_food": "食物與蜂蜜酒欄",
     "exsl_slot_food_label": "食物",
     "exsl_slot_food_desc": "放置可消耗的食物",
-    "exsl_slot_equipment_trinket_label": "飾品"
+    "exsl_slot_equipment_trinket_label": "飾品",
+    "exsl_slot_lightened": "輕量槽",
+    "exsl_slot_lightened_desc": "物品重量減少 {0}"
 }

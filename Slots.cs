@@ -314,6 +314,7 @@ namespace ExtraSlots
         public static int InventoryWidth => PlayerInventory != null ? PlayerInventory.GetWidth() : VanillaInventoryWidth;
         public static int InventoryHeightPlayer => VanillaInventoryHeight + ExtraRowsPlayer;
         public static int InventoryHeightFull => InventoryHeightPlayer + GetTargetInventoryHeight(slots.Length, InventoryWidth);
+        public static int InventorySizeVanilla => VanillaInventoryHeight * InventoryWidth;
         public static int InventorySizePlayer => InventoryHeightPlayer * InventoryWidth;
         public static int InventorySizeFull => InventoryHeightFull * InventoryWidth;
         public static int InventorySizeActive => InventorySizePlayer + slots.Count(slot => slot.IsActive);

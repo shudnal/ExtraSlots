@@ -8,15 +8,17 @@
     "exsl_slot_equipment_desc": "Екіпіровані предмети",
     "exsl_slot_ammo": "Слот для стріл",
     "exsl_slot_ammo_label": "Стріли",
-    "exsl_slot_ammo_desc": "Стріли та рибацькі наживки",
+    "exsl_slot_ammo_desc": "Стріли, бомби та рибацькі наживки",
     "exsl_slot_quick": "Швидкий слот",
     "exsl_slot_quick_label": "Швидкий",
     "exsl_slot_quick_desc": "Будь-які предмети",
     "exsl_slot_misc": "Різне",
     "exsl_slot_misc_label": "Різне",
     "exsl_slot_misc_desc": "Квестові предмети, ключі, монети, трофеї та риба",
-    "exsl_slot_food": "Слот для їжі",
+    "exsl_slot_food": "Слот для їжі та медовух",
     "exsl_slot_food_label": "Їжа",
     "exsl_slot_food_desc": "Готова до вживання їжа",
-    "exsl_slot_equipment_trinket_label": "Посилювач"
+    "exsl_slot_equipment_trinket_label": "Посилювач",
+    "exsl_slot_lightened": "Полегшений слот",
+    "exsl_slot_lightened_desc": "Вага предмета зменшена на {0}"
 }

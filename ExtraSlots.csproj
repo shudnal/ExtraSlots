@@ -43,6 +43,7 @@
     <Compile Include="Compatibility\ZenBeehiveCompat.cs" />
     <Compile Include="DebugLogging.cs" />
     <Compile Include="ItemNameTokens.cs" />
+    <Compile Include="LightenedSlots.cs" />
     <Compile Include="LocalizationManager.cs" />
     <Compile Include="Compatibility\QuickStackStore.cs" />
     <Compile Include="Compatibility\AzuAutoStore.cs" />
@@ -155,53 +156,55 @@
     <EmbeddedResource Include="Assets\ammoslot.png" />
     <EmbeddedResource Include="Assets\miscslot.png" />
     <EmbeddedResource Include="Assets\quickslot.png" />
+    <EmbeddedResource Include="Assets\lightenedslot.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
+    <None Include="EmbeddedLocalizations.csv" />
     <None Include="ILRepack.targets" />
-    <EmbeddedResource Include="translations\English.json">
+    <EmbeddedResource Include="Translations\English.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\French.json">
+    <EmbeddedResource Include="Translations\French.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Chinese.json">
+    <EmbeddedResource Include="Translations\Chinese.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Dutch.json">
+    <EmbeddedResource Include="Translations\Dutch.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\German.json">
+    <EmbeddedResource Include="Translations\German.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Japanese.json">
+    <EmbeddedResource Include="Translations\Japanese.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Korean.json">
+    <EmbeddedResource Include="Translations\Korean.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Polish.json">
+    <EmbeddedResource Include="Translations\Polish.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Portuguese_Brazilian.json">
+    <EmbeddedResource Include="Translations\Portuguese_Brazilian.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Russian.json">
+    <EmbeddedResource Include="Translations\Russian.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Spanish.json">
+    <EmbeddedResource Include="Translations\Spanish.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Turkish.json">
+    <EmbeddedResource Include="Translations\Turkish.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Chinese_Trad.json">
+    <EmbeddedResource Include="Translations\Chinese_Trad.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Ukrainian.json">
+    <EmbeddedResource Include="Translations\Ukrainian.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="translations\Czech.json">
+    <EmbeddedResource Include="Translations\Czech.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>

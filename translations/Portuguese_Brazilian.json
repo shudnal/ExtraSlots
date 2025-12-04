@@ -8,15 +8,17 @@
     "exsl_slot_equipment_desc": "Itens de equipamento equipáveis",
     "exsl_slot_ammo": "Slot para munição",
     "exsl_slot_ammo_label": "Setas",
-    "exsl_slot_ammo_desc": "Munição e isca de pesca",
+    "exsl_slot_ammo_desc": "Munição, bombas e isca de pesca",
     "exsl_slot_quick": "Slot rápido",
     "exsl_slot_quick_label": "Rápido",
     "exsl_slot_quick_desc": "Qualquer item",
     "exsl_slot_misc": "Diversos",
     "exsl_slot_misc_label": "Diversos",
     "exsl_slot_misc_desc": "Itens de missão, chaves, moedas, troféus e peixes",
-    "exsl_slot_food": "Slot para alimentação",
+    "exsl_slot_food": "Slot para alimentação e hidromel",
     "exsl_slot_food_label": "Comida",
     "exsl_slot_food_desc": "Pronto para comer",
-    "exsl_slot_equipment_trinket_label": "Adereço"
+    "exsl_slot_equipment_trinket_label": "Adereço",
+    "exsl_slot_lightened": "Slot aliviado",
+    "exsl_slot_lightened_desc": "Peso do item reduzido em {0}"
 }

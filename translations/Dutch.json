@@ -8,7 +8,7 @@
     "exsl_slot_equipment_desc": "Uitrustbare uitrustingsitems",
     "exsl_slot_ammo": "Munitie slot",
     "exsl_slot_ammo_label": "Pijlen",
-    "exsl_slot_ammo_desc": "Munitie en visaas",
+    "exsl_slot_ammo_desc": "Munitie, bommen en visaas",
     "exsl_slot_quick": "Snel slot",
     "exsl_slot_quick_label": "Snel",
     "exsl_slot_quick_desc": "Alle items",
@@ -18,5 +18,7 @@
     "exsl_slot_food": "Etenslot",
     "exsl_slot_food_label": "Eten",
     "exsl_slot_food_desc": "Klaar om te eten",
-    "exsl_slot_equipment_trinket_label": "Snuisterij"
+    "exsl_slot_equipment_trinket_label": "Snuisterij",
+    "exsl_slot_lightened": "Verlichte slot",
+    "exsl_slot_lightened_desc": "Gewicht van item verminderd met {0}"
 }

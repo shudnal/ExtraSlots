@@ -8,15 +8,17 @@
     "exsl_slot_equipment_desc": "Převlékatelné předměty",
     "exsl_slot_ammo": "Slot pro munici",
     "exsl_slot_ammo_label": "Munice",
-    "exsl_slot_ammo_desc": "Střelivo a rybářské návnady",
+    "exsl_slot_ammo_desc": "Střelivo, bomby a rybářské návnady",
     "exsl_slot_quick": "Rychlý slot",
     "exsl_slot_quick_label": "Rychlý",
     "exsl_slot_quick_desc": "Jakékoli položky",
-    "exsl_slot_misc": "Různé sloty",
+    "exsl_slot_misc": "Různé",
     "exsl_slot_misc_label": "Různé",
     "exsl_slot_misc_desc": "Předměty úkolů, klíče, mince, trofeje a ryby",
-    "exsl_slot_food": "Slot pro jídlo",
+    "exsl_slot_food": "Slot pro jídlo a medovinu",
     "exsl_slot_food_label": "Jídlo",
     "exsl_slot_food_desc": "Jídlo určené ke spotřebě",
-    "exsl_slot_equipment_trinket_label": "Tretka"
+    "exsl_slot_equipment_trinket_label": "Tretka",
+    "exsl_slot_lightened": "Odlehčený slot",
+    "exsl_slot_lightened_desc": "Hmotnost předmětu snížena o {0}"
 }

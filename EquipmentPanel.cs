@@ -54,6 +54,7 @@ namespace ExtraSlots
         internal static Sprite ammoSlot;
         internal static Sprite miscSlot;
         internal static Sprite quickSlot;
+        internal static Sprite lightenedSlot;
         internal static Sprite background;
 
         public class SidePanelDefaults
@@ -119,6 +120,9 @@ namespace ExtraSlots
             int startIndex = InventorySizePlayer;
             for (int i = 0; i < Math.Min(slots.Length, InventoryGui.instance.m_playerGrid.m_elements.Count - startIndex); ++i)
                 SetSlotBackgroundImage(InventoryGui.instance.m_playerGrid.m_elements[startIndex + i], slots[i]);
+
+            for (int i = 0; i < Math.Min(startIndex, InventoryGui.instance.m_playerGrid.m_elements.Count); ++i)
+                SetInventorySlotBackgroundImage(InventoryGui.instance.m_playerGrid.m_elements[i], LightenedSlots.IsRowAffected(i / InventoryWidth));
 
             if (!isDirty)
                 return;
@@ -232,6 +236,26 @@ namespace ExtraSlots
             buttonColors.normalColor = useUnfitColor ? normalColorUnfit : normalColor;
             buttonColors.highlightedColor = useUnfitColor ? highlightedColorUnfit : highlightedColor;
             button.colors = buttonColors;
+        }
+
+        private static void SetInventorySlotBackgroundImage(InventoryGrid.Element element, bool weightReduction)
+        {
+            if (iconMaterial == null && element.m_icon.material != null)
+                iconMaterial = element.m_icon.material;
+
+            if (element.m_icon.material == null)
+                element.m_icon.material = iconMaterial;
+
+            if (element.m_used || !weightReduction)
+                return;
+
+            element.m_icon.enabled = quickSlotsShowHintImage.Value;
+            element.m_icon.material = null;
+            element.m_icon.sprite = lightenedSlot;
+            element.m_icon.transform.localScale = Vector3.one * 0.7f;
+            element.m_icon.color = Color.grey - new Color(0f, 0f, 0f, 0.7f);
+            if (quickSlotsShowTooltip.Value)
+                element.m_tooltip.Set("$exsl_slot_lightened", string.Format("$exsl_slot_lightened_desc", $"{1f - LightenedSlots.WeightFactor:P0}"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
         }
 
         private static void SetSlotBackgroundImage(InventoryGrid.Element element, Slot slot)
