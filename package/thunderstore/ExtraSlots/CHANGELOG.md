@@ -1,3 +1,10 @@
+# 1.1.0
+* more translations and current translations polished a bit
+* new feature: lightened slots. Make regular inventory rows to have reduced item weight. By default config is set for last two extra inventory rows to have item weight reduction. You can configure extra inventory rows to work as kinda embedded backpack upgraded on boss kills. If you are interested but confused by configs pls feel free to contact me at discord.
+* new config: black lists for items in food, ammo, misc slots
+* fixed mouse side buttons not available to bind
+* increased performance when looking at Fermenter with AzuCraftyBoxes and BowBeforeHoes enabled
+
 # 1.0.51
 * rehauled approach to repositioning of side panels with reduced inventory size
 

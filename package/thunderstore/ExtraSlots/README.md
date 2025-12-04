@@ -91,8 +91,9 @@ In case mod installed on a server, some crucial config values will be synchroniz
 * should misc slots be enabled
 * should slots backup be enabled
 * should slot progression be enabled and its details
+* should rows progression be enabled and its details
 
-Everything else is not server synced and can differ on every client. It means you can change appearance and hotkeys as you wish.
+Most other configs are not server synced and can differ on every client. It means you can change appearance and hotkeys as you wish.
 
 ## Slots backup
 
@@ -227,6 +228,9 @@ Mod is incompatible with other mods altering inventory in similar way or allowin
 * [EquipMultipleUtilityItems (toombe)](https://thunderstore.io/c/valheim/p/JackFrostCC/ToombeEquipMultipleUtilityItemsUnofficialUpdate/)
 
 ## Localization
+
+The mod is localized on every official and unofficial language you can choose in the game. Some translations are hand made, other made with LLM and cross check on terms and cultural consistency.
+
 To add your own localization create a file with the name **Extra Slots.LanguageName.yml** or **Extra Slots.LanguageName.json** anywhere inside of the Bepinex folder.
 For example, to add a French translation you could create a **Extra Slots.French.yml** file inside of the config folder and add French translations there.
 
