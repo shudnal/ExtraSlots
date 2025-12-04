@@ -18,7 +18,7 @@
     "exsl_slot_food": "Слот для їжі та медовух",
     "exsl_slot_food_label": "Їжа",
     "exsl_slot_food_desc": "Готова до вживання їжа",
-    "exsl_slot_equipment_trinket_label": "Посилювач",
+    "exsl_slot_equipment_trinket_label": "Оберіг",
     "exsl_slot_lightened": "Полегшений слот",
-    "exsl_slot_lightened_desc": "Вага предмета зменшена на {0}"
+    "exsl_slot_lightened_desc": "Вага предмета зменшена на $1"
 }

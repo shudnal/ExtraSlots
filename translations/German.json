@@ -18,7 +18,7 @@
     "exsl_slot_food": "Essensplatz",
     "exsl_slot_food_label": "Essen",
     "exsl_slot_food_desc": "Essfertiges Essen",
-    "exsl_slot_equipment_trinket_label": "Schmuckstück",
+    "exsl_slot_equipment_trinket_label": "Schmuck",
     "exsl_slot_lightened": "Leichter Slot",
-    "exsl_slot_lightened_desc": "Gewicht des Gegenstands um {0} reduziert"
+    "exsl_slot_lightened_desc": "Gewicht des Gegenstands um $1 reduziert"
 }

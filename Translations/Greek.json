@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "Καταναλώσιμη τροφή και υδρόμελο",
     "exsl_slot_equipment_trinket_label": "Κειμήλιο",
     "exsl_slot_lightened": "Ελαφρύς χώρος",
-    "exsl_slot_lightened_desc": "Βάρος μειώθηκε κατά {0}"
+    "exsl_slot_lightened_desc": "Βάρος μειώθηκε κατά $1"
 }

@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "სამომხმარებლო საკვები და თაფლის ღვინო",
     "exsl_slot_equipment_trinket_label": "ამულეტი",
     "exsl_slot_lightened": "შემსუბუქებული სლოტი",
-    "exsl_slot_lightened_desc": "წონა შემცირდა {0}"
+    "exsl_slot_lightened_desc": "წონა შემცირდა $1"
 }

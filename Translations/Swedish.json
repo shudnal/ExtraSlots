@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "Ätbar mat",
     "exsl_slot_equipment_trinket_label": "Klenod",
     "exsl_slot_lightened": "Lättad slot",
-    "exsl_slot_lightened_desc": "Föremålets vikt minskad med {0}"
+    "exsl_slot_lightened_desc": "Föremålets vikt minskad med $1"
 }

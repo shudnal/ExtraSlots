@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "음식을 먹을 준비가 되었습니다.",
     "exsl_slot_equipment_trinket_label": "장신구",
     "exsl_slot_lightened": "경량 슬롯",
-    "exsl_slot_lightened_desc": "아이템 무게가 {0} 감소합니다"
+    "exsl_slot_lightened_desc": "아이템 무게가 $1 감소합니다"
 }

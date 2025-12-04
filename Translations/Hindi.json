@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "मधु मद्य और खाद्य पदार्थ",
     "exsl_slot_equipment_trinket_label": "ताबीज",
     "exsl_slot_lightened": "हल्का स्लॉट",
-    "exsl_slot_lightened_desc": "वजन {0} कम किया गया"
+    "exsl_slot_lightened_desc": "वजन $1 कम किया गया"
 }

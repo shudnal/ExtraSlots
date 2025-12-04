@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "すぐに食べられる食べ物",
     "exsl_slot_equipment_trinket_label": "装飾品",
     "exsl_slot_lightened": "軽量スロット",
-    "exsl_slot_lightened_desc": "アイテムの重量が{0}減少"
+    "exsl_slot_lightened_desc": "アイテムの重量が$1減少"
 }

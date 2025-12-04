@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "Consumable food",
     "exsl_slot_equipment_trinket_label": "Trinket",
     "exsl_slot_lightened": "Lightened slot",
-    "exsl_slot_lightened_desc": "Item weight reduced by {0}"
+    "exsl_slot_lightened_desc": "Item weight reduced by $1"
 }

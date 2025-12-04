@@ -18,7 +18,7 @@
     "exsl_slot_food": "Slot na jedzenie i miód pitny",
     "exsl_slot_food_label": "Jedzenie",
     "exsl_slot_food_desc": "Jedzenie gotowe do spożycia",
-    "exsl_slot_equipment_trinket_label": "Talizman",
+    "exsl_slot_equipment_trinket_label": "Błyskotka",
     "exsl_slot_lightened": "Odciążony slot",
-    "exsl_slot_lightened_desc": "Waga przedmiotu zmniejszona o {0}"
+    "exsl_slot_lightened_desc": "Waga przedmiotu zmniejszona o $1"
 }

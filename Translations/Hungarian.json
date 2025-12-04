@@ -18,7 +18,7 @@
     "exsl_slot_food": "Étel és mézhely",
     "exsl_slot_food_label": "Étel",
     "exsl_slot_food_desc": "Fogyasztható étel",
-    "exsl_slot_equipment_trinket_label": "Ékszer",
+    "exsl_slot_equipment_trinket_label": "Csecsebecse",
     "exsl_slot_lightened": "Könnyített hely",
-    "exsl_slot_lightened_desc": "Tárgy súlya csökkentve {0}"
+    "exsl_slot_lightened_desc": "Tárgy súlya csökkentve $1"
 }

@@ -18,7 +18,7 @@
     "exsl_slot_food": "Ruoka ja sima",
     "exsl_slot_food_label": "Ruoka",
     "exsl_slot_food_desc": "Syötävä ruoka ja sima",
-    "exsl_slot_equipment_trinket_label": "Koriste",
+    "exsl_slot_equipment_trinket_label": "Hely",
     "exsl_slot_lightened": "Kevennetty paikka",
-    "exsl_slot_lightened_desc": "Esineen paino vähennetty {0}"
+    "exsl_slot_lightened_desc": "Esineen paino vähennetty $1"
 }

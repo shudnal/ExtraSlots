@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "อาหารและเหล้าน้ำผึ้งที่บริโภคได้",
     "exsl_slot_equipment_trinket_label": "เครื่องราง",
     "exsl_slot_lightened": "ช่องเบา",
-    "exsl_slot_lightened_desc": "น้ำหนักลดลง {0}"
+    "exsl_slot_lightened_desc": "น้ำหนักลดลง $1"
 }

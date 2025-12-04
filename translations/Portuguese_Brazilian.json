@@ -18,7 +18,7 @@
     "exsl_slot_food": "Slot para alimentação e hidromel",
     "exsl_slot_food_label": "Comida",
     "exsl_slot_food_desc": "Pronto para comer",
-    "exsl_slot_equipment_trinket_label": "Adereço",
+    "exsl_slot_equipment_trinket_label": "Amuleto",
     "exsl_slot_lightened": "Slot aliviado",
-    "exsl_slot_lightened_desc": "Peso do item reduzido em {0}"
+    "exsl_slot_lightened_desc": "Peso do item reduzido em $1"
 }

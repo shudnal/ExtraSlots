@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "放置可消耗的食物",
     "exsl_slot_equipment_trinket_label": "飾品",
     "exsl_slot_lightened": "輕量槽",
-    "exsl_slot_lightened_desc": "物品重量減少 {0}"
+    "exsl_slot_lightened_desc": "物品重量減少 $1"
 }

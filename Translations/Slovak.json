@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "Konzumovateľné jedlo",
     "exsl_slot_equipment_trinket_label": "Ozdoba",
     "exsl_slot_lightened": "Odľahčený slot",
-    "exsl_slot_lightened_desc": "Hmotnosť znížená o {0}"
+    "exsl_slot_lightened_desc": "Hmotnosť znížená o $1"
 }

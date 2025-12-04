@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "Nourriture prête à manger",
     "exsl_slot_equipment_trinket_label": "Bibelot",
     "exsl_slot_lightened": "Emplacement allégé",
-    "exsl_slot_lightened_desc": "Poids de l\u0027objet réduit de {0}"
+    "exsl_slot_lightened_desc": "Poids de l\u0027objet réduit de $1"
 }

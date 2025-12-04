@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "Spiselig mad",
     "exsl_slot_equipment_trinket_label": "Smykke",
     "exsl_slot_lightened": "Let slot",
-    "exsl_slot_lightened_desc": "Genstandens vægt reduceret med {0}"
+    "exsl_slot_lightened_desc": "Genstandens vægt reduceret med $1"
 }

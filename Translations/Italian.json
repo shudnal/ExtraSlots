@@ -18,7 +18,7 @@
     "exsl_slot_food": "Slot cibo e idromele",
     "exsl_slot_food_label": "Cibo",
     "exsl_slot_food_desc": "Cibo consumabile",
-    "exsl_slot_equipment_trinket_label": "Gioiello",
+    "exsl_slot_equipment_trinket_label": "Gingillo",
     "exsl_slot_lightened": "Slot alleggerito",
-    "exsl_slot_lightened_desc": "Peso ridotto di {0}"
+    "exsl_slot_lightened_desc": "Peso ridotto di $1"
 }

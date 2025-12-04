@@ -18,7 +18,7 @@
     "exsl_slot_food": "Слот для еды и медовух",
     "exsl_slot_food_label": "Еда",
     "exsl_slot_food_desc": "Съедобная пища и напитки",
-    "exsl_slot_equipment_trinket_label": "Артефакт",
+    "exsl_slot_equipment_trinket_label": "Оберег",
     "exsl_slot_lightened": "Облегченный слот",
-    "exsl_slot_lightened_desc": "Вес предмета снижен на {0}"
+    "exsl_slot_lightened_desc": "Вес предмета снижен на $1"
 }

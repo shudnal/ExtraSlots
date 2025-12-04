@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "Patērējama pārtika un hidromelis",
     "exsl_slot_equipment_trinket_label": "Rotas",
     "exsl_slot_lightened": "Vieglināts slots",
-    "exsl_slot_lightened_desc": "Svars samazināts par {0}"
+    "exsl_slot_lightened_desc": "Svars samazināts par $1"
 }

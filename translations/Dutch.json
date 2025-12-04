@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "Klaar om te eten",
     "exsl_slot_equipment_trinket_label": "Snuisterij",
     "exsl_slot_lightened": "Verlichte slot",
-    "exsl_slot_lightened_desc": "Gewicht van item verminderd met {0}"
+    "exsl_slot_lightened_desc": "Gewicht van item verminderd met $1"
 }

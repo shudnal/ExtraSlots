@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "Comida consumível",
     "exsl_slot_equipment_trinket_label": "Adereço",
     "exsl_slot_lightened": "Slot aliviado",
-    "exsl_slot_lightened_desc": "Peso reduzido em {0}"
+    "exsl_slot_lightened_desc": "Peso reduzido em $1"
 }

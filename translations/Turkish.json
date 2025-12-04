@@ -20,5 +20,5 @@
     "exsl_slot_food_desc": "Yemek yemeye hazır",
     "exsl_slot_equipment_trinket_label": "Süs",
     "exsl_slot_lightened": "Hafifletilmiş slot",
-    "exsl_slot_lightened_desc": "Öğe ağırlığı {0} azaltıldı"
+    "exsl_slot_lightened_desc": "Öğe ağırlığı $1 azaltıldı"
 }
