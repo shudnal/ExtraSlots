@@ -32,6 +32,9 @@ namespace ExtraSlots
         public static readonly HashSet<string> miscItemsList = new HashSet<string>();
         public static readonly HashSet<string> ammoItemsList = new HashSet<string>();
         public static readonly HashSet<string> foodItemsList = new HashSet<string>();
+        public static readonly HashSet<string> miscItemsBlackList = new HashSet<string>();
+        public static readonly HashSet<string> ammoItemsBlackList = new HashSet<string>();
+        public static readonly HashSet<string> foodItemsBlackList = new HashSet<string>();
 
         public const string customKeyPlayerID = "ExtraSlotsEquippedBy";
         public const string customKeySlotID = "ExtraSlotsEquippedSlot";
@@ -627,6 +630,8 @@ namespace ExtraSlots
             UpdateSlotsGridPosition();
 
             UpdateMiscSlotCustomItemList();
+            UpdateAmmoSlotCustomItemList();
+            UpdateFoodSlotCustomItemList();
 
             HotBars.QuickSlotsHotBar.UpdateSlots();
             HotBars.AmmoSlotsHotBar.UpdateSlots();
@@ -685,11 +690,21 @@ namespace ExtraSlots
         {
             AddItemsToList(miscSlotsItemList, miscItemsList);
             miscItemsList.Add("$item_coins");
+
+            AddItemsToList(miscSlotsItemBlackList, miscItemsBlackList);
         }
 
-        internal static void UpdateAmmoSlotCustomItemList() => AddItemsToList(ammoSlotsItemList, ammoItemsList);
+        internal static void UpdateAmmoSlotCustomItemList()
+        {
+            AddItemsToList(ammoSlotsItemList, ammoItemsList);
+            AddItemsToList(ammoSlotsItemBlackList, ammoItemsBlackList);
+        }
 
-        internal static void UpdateFoodSlotCustomItemList() => AddItemsToList(foodSlotsItemList, foodItemsList);
+        internal static void UpdateFoodSlotCustomItemList()
+        {
+            AddItemsToList(foodSlotsItemList, foodItemsList);
+            AddItemsToList(foodSlotsItemBlackList, foodItemsBlackList);
+        }
 
         internal static void AddItemsToList(ConfigEntry<string> configEntry, HashSet<string> strings)
         {
@@ -710,7 +725,7 @@ namespace ExtraSlots
 
         public static bool IsAmmoSlotItem(ItemDrop.ItemData item)
         {
-            return item != null &&
+            return item != null && !ammoItemsBlackList.Contains(item.m_shared.m_name) &&
                    (
                        item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo ||
                        ammoItemsList.Contains(item.m_shared.m_name) ||
@@ -724,7 +739,7 @@ namespace ExtraSlots
 
         public static bool IsMiscSlotItem(ItemDrop.ItemData item)
         {
-            return item != null &&
+            return item != null && !miscItemsBlackList.Contains(item.m_shared.m_name) &&
                    (
                        item.m_shared.m_questItem ||
                        item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trophy ||
@@ -736,7 +751,7 @@ namespace ExtraSlots
 
         public static bool IsFoodSlotItem(ItemDrop.ItemData item)
         {
-            return item != null &&
+            return item != null && !foodItemsBlackList.Contains(item.m_shared.m_name) &&
                    (
                        item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable &&
                        (

@@ -111,6 +111,7 @@ namespace ExtraSlots
         public static ConfigEntry<Color> foodSlotsStackColor;
         public static ConfigEntry<bool> foodSlotsPreventStackAll;
         public static ConfigEntry<string> foodSlotsItemList;
+        public static ConfigEntry<string> foodSlotsItemBlackList;
 
         public static ConfigEntry<KeyboardShortcut> foodSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> foodSlotHotKey2;
@@ -126,6 +127,7 @@ namespace ExtraSlots
         public static ConfigEntry<Color> miscSlotsStackColor;
         public static ConfigEntry<bool> miscSlotsPreventStackAll;
         public static ConfigEntry<string> miscSlotsItemList;
+        public static ConfigEntry<string> miscSlotsItemBlackList;
 
         public static ConfigEntry<bool> ammoSlotsHotBarEnabled;
         public static ConfigEntry<Vector2> ammoSlotsHotBarOffset;
@@ -143,6 +145,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> ammoSlotsPreventStackAll;
         public static ConfigEntry<string> ammoSlotsItemList;
         public static ConfigEntry<bool> ammoSlotsAllowThrowables;
+        public static ConfigEntry<string> ammoSlotsItemBlackList;
 
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey1;
         public static ConfigEntry<KeyboardShortcut> ammoSlotHotKey2;
@@ -362,7 +365,7 @@ namespace ExtraSlots
             preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "BeltStrength:BeltYmir_TW", 
                 GetDescriptionSeparatedStrings("Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
                                             "\nIf you just want one item to be unique-equipped just add its name without \":\"" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength).") , synchronizedSetting: true);
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
 
 
             useSingleHotbarItem = config("Extra slots", "Use single hotbar item", defaultValue: true, "Enabled - only item from the first slot will be used with slots priority (Quick -> Ammo -> Food)\n" +
@@ -437,9 +440,13 @@ namespace ExtraSlots
             miscSlotsPreventStackAll = config("Panels - Misc slots", "Prevent Stack All", defaultValue: true, "Prevent items from misc slots to be placed into container when Stack All feature is used.");
             miscSlotsItemList = config("Panels - Misc slots", "Custom item list", defaultValue: "AncientSeed,WitheredBone,BellFragment,DvergrKeyFragment",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as misc items" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."));
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+            miscSlotsItemBlackList = config("Panels - Misc slots", "Custom item black list", defaultValue: "",
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as misc items" +
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
 
             miscSlotsItemList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
+            miscSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
 
             quickSlotHotKey1 = config("Hotkeys", "Quickslot 1", new KeyboardShortcut(KeyCode.Z, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
             quickSlotHotKey2 = config("Hotkeys", "Quickslot 2", new KeyboardShortcut(KeyCode.X, KeyCode.LeftAlt), "Use configuration manager to set shortcuts.");
@@ -505,12 +512,16 @@ namespace ExtraSlots
             ammoSlotsTooltipNameFormat = config("Panels - Ammo slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
             ammoSlotsStackColor = config("Panels - Ammo slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             ammoSlotsPreventStackAll = config("Panels - Ammo slots", "Prevent Stack All", defaultValue: true, "Prevent items from ammo slots to be placed into container when Stack All feature is used.");
+            ammoSlotsAllowThrowables = config("Panels - Ammo slots", "Allow throwables", defaultValue: true, "Should bombs and other throwables be allowed to be placed into ammo slots");
             ammoSlotsItemList = config("Panels - Ammo slots", "Custom item list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in ammo slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."));
-            ammoSlotsAllowThrowables = config("Panels - Ammo slots", "Allow throwables", defaultValue: true, "Should bombs and other throwables be allowed to be placed into ammo slots");
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+            ammoSlotsItemBlackList = config("Panels - Ammo slots", "Custom item black list", defaultValue: "",
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as ammo items to fit in ammo slots" +
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
 
             ammoSlotsItemList.SettingChanged += (s, e) => Slots.UpdateAmmoSlotCustomItemList();
+            ammoSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateAmmoSlotCustomItemList();
 
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
             ammoSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
@@ -533,9 +544,14 @@ namespace ExtraSlots
             foodSlotsPreventStackAll = config("Panels - Food slots", "Prevent Stack All", defaultValue: true, "Prevent items from food slots to be placed into container when Stack All feature is used.");
             foodSlotsItemList = config("Panels - Food slots", "Custom item list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in food slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."));
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+            foodSlotsItemBlackList = config("Panels - Food slots", "Custom item black list", defaultValue: "",
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as ammo items to fit in food slots" +
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
 
             foodSlotsItemList.SettingChanged += (s, e) => Slots.UpdateFoodSlotCustomItemList();
+            foodSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateFoodSlotCustomItemList();
+
             foodSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
             foodSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
             foodSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
