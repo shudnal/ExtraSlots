@@ -7,7 +7,7 @@
     "exsl_slot_equipment": "장비 슬롯",
     "exsl_slot_equipment_desc": "장착 가능한 장비 아이템",
     "exsl_slot_ammo": "탄약 슬롯",
-    "exsl_slot_ammo_label": "화살표",
+    "exsl_slot_ammo_label": "탄약",
     "exsl_slot_ammo_desc": "탄약, 폭탄 및 낚시 미끼",
     "exsl_slot_quick": "퀵 슬롯",
     "exsl_slot_quick_label": "빠른",
@@ -17,7 +17,7 @@
     "exsl_slot_misc_desc": "퀘스트 아이템, 열쇠, 동전, 트로피 및 물고기",
     "exsl_slot_food": "음식 및 미드 슬롯",
     "exsl_slot_food_label": "음식",
-    "exsl_slot_food_desc": "음식을 먹을 준비が 되었습니다.",
+    "exsl_slot_food_desc": "음식을 먹을 준비가 되었습니다.",
     "exsl_slot_equipment_trinket_label": "장신구",
     "exsl_slot_lightened": "경량 슬롯",
     "exsl_slot_lightened_desc": "아이템 무게가 {0} 감소합니다"

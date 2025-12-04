@@ -255,7 +255,7 @@ namespace ExtraSlots
             element.m_icon.transform.localScale = Vector3.one * 0.7f;
             element.m_icon.color = Color.grey - new Color(0f, 0f, 0f, 0.7f);
             if (quickSlotsShowTooltip.Value)
-                element.m_tooltip.Set("$exsl_slot_lightened", string.Format("$exsl_slot_lightened_desc", $"{1f - LightenedSlots.WeightFactor:P0}"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                element.m_tooltip.Set("$exsl_slot_lightened", Localization.instance.Localize("$exsl_slot_lightened_desc", $"{1f - LightenedSlots.WeightFactor:P0}"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
         }
 
         private static void SetSlotBackgroundImage(InventoryGrid.Element element, Slot slot)
