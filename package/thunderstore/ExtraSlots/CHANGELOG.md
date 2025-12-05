@@ -1,3 +1,7 @@
+# 1.1.2
+* fixed item icons in lightened slot visuals (less saturated and less size)
+* new configs to show/hide lightened slots background icon and tooltip
+
 # 1.1.1
 * fixed issue with progression based on item name not working in some cases
 

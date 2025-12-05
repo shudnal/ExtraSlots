@@ -113,9 +113,9 @@ namespace ExtraSlots
             InventoryGui.instance.m_playerGrid.m_gridRoot.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, InventoryHeightPlayer * InventoryGui.instance.m_playerGrid.m_elementSpace);
 
             if (originalScale == Vector3.zero && InventoryGui.instance.m_playerGrid.m_elements.Count > 0 
-                                              && InventoryGui.instance.m_playerGrid.m_elements[0].m_icon.material != null 
-                                              && InventoryGui.instance.m_playerGrid.m_elements[0].m_icon.transform.localScale != Vector3.one)
-                originalScale = InventoryGui.instance.m_playerGrid.m_elements[0].m_icon.transform.localScale;
+                                              && InventoryGui.instance.m_playerGrid.m_elements[0].m_icon is Image icon 
+                                              && icon.material != null)
+                originalScale = icon.transform.localScale;
 
             int startIndex = InventorySizePlayer;
             for (int i = 0; i < Math.Min(slots.Length, InventoryGui.instance.m_playerGrid.m_elements.Count - startIndex); ++i)
@@ -247,14 +247,18 @@ namespace ExtraSlots
                 element.m_icon.material = iconMaterial;
 
             if (element.m_used || !weightReduction)
+            {
+                element.m_icon.material = iconMaterial;
+                element.m_icon.transform.localScale = originalScale == Vector3.zero ? Vector3.one : originalScale;
                 return;
+            }
 
-            element.m_icon.enabled = quickSlotsShowHintImage.Value;
+            element.m_icon.enabled = lightenedSlotsShowHintImage.Value;
             element.m_icon.material = null;
             element.m_icon.sprite = lightenedSlot;
             element.m_icon.transform.localScale = Vector3.one * 0.7f;
             element.m_icon.color = Color.grey - new Color(0f, 0f, 0f, 0.7f);
-            if (quickSlotsShowTooltip.Value)
+            if (lightenedSlotsShowTooltip.Value)
                 element.m_tooltip.Set("$exsl_slot_lightened", Localization.instance.Localize("$exsl_slot_lightened_desc", $"{1f - LightenedSlots.WeightFactor:P0}"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
         }
 
@@ -274,6 +278,7 @@ namespace ExtraSlots
                     element.m_tooltip.Set(item.m_shared.m_name, item.GetTooltip(), InventoryGui.instance.m_playerGrid.m_tooltipAnchor); // Fix possible tooltip loss
 
                 element.m_icon.transform.localScale = originalScale == Vector3.zero ? Vector3.one: originalScale;
+                element.m_icon.material = iconMaterial;
 
                 if (slot.IsEquipmentSlot && Compatibility.EpicLootCompat.isEnabled && epicLootMagicItemUnequippedAlpha.Value != 1f && !item.m_equipped && element.m_go.transform.Find("magicItem") is Transform magicItem && magicItem.GetComponent<Image>() is Image magicItemImage)
                     magicItemImage.color = new Color(magicItemImage.color.r, magicItemImage.color.g, magicItemImage.color.b, epicLootMagicItemUnequippedAlpha.Value);

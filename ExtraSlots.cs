@@ -39,7 +39,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.1.1";
+        public const string pluginVersion = "1.1.2";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -93,6 +93,8 @@ namespace ExtraSlots
         public static ConfigEntry<bool> lightenedSlotsOnlyExtraRows;
         public static ConfigEntry<string> lightenedSlotsPlayerKey;
         public static ConfigEntry<string> lightenedSlotsItemDiscovered;
+        public static ConfigEntry<bool> lightenedSlotsShowHintImage;
+        public static ConfigEntry<bool> lightenedSlotsShowTooltip;
 
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
@@ -435,6 +437,9 @@ namespace ExtraSlots
                 "\nLightened slots will be active only if any key is enabled or list is not set", synchronizedSetting: true);
             lightenedSlotsItemDiscovered = config("Extra slots - Lightened slots", "Progression - Item", defaultValue: "YagluthDrop", "Comma-separated list of items. [Synced with Server]" +
                 "\nLightened slots will be active only if any item is discovered or list is not set.", synchronizedSetting: true);
+
+            lightenedSlotsShowHintImage = config("Extra slots - Lightened slots", "Show hint image", defaultValue: true, "Show slot background hint image");
+            lightenedSlotsShowTooltip = config("Extra slots - Lightened slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
 
             lightenedSlotsStartIndex.SettingChanged += (s, e) => LightenedSlots.UpdateState();
             lightenedSlotsWeightFactor.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
