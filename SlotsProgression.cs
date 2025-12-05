@@ -180,9 +180,9 @@ namespace ExtraSlots
             if (keys.Count() == 0)
                 return true;
             else if (CurrentPlayer && !CurrentPlayer.m_isLoading)
-                return keys.Any(s => CurrentPlayer.IsMaterialKnown(s));
+                return keys.Any(s => CurrentPlayer.IsMaterialKnown(s.GetItemName()));
             else
-                return keys.Any(s => m_knownMaterialCache.Contains(s));
+                return keys.Any(s => m_knownMaterialCache.Contains(s.GetItemName()));
         }
 
         internal static bool IsRowProgressionActive() => rowsProgressionEnabled.Value && (CurrentPlayer && !CurrentPlayer.m_isLoading || m_knownMaterialCache.Count + m_uniquesCache.Count > 0);

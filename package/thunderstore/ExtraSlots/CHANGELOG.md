@@ -1,3 +1,6 @@
+# 1.1.1
+* fixed issue with progression based on item name not working in some cases
+
 # 1.1.0
 * more translations and current translations polished a bit
 * new feature: lightened slots. Make regular inventory rows to have reduced item weight. By default config is set for last two extra inventory rows to have item weight reduction. You can configure extra inventory rows to work as kinda embedded backpack upgraded on boss kills. If you are interested but confused by configs pls feel free to contact me at discord.
