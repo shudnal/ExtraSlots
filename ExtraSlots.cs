@@ -370,7 +370,7 @@ namespace ExtraSlots
                                                                                         "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.", synchronizedSetting: true);
             slotsProgressionEnabled = config("Extra slots", "Slots progression enabled", defaultValue: true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]", synchronizedSetting: true);
             rowsProgressionEnabled = config("Extra slots", "Inventory rows progression enabled", defaultValue: false, "Enabled inventory rows obtaining progression. [Synced with Server]", synchronizedSetting: true);
-            preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "BeltStrength:BeltYmir_TW", 
+            preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "BeltStrength:BeltYmir_TW:InfusedBeltStrength", 
                 GetDescriptionSeparatedStrings("Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
                                             "\nIf you just want one item to be unique-equipped just add its name without \":\"" +
                                             "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
