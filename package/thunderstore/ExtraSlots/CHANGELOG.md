@@ -1,3 +1,9 @@
+# 1.1.3
+* new config for Death Tweaks and Tombstone Auto Equip - item list. You can set your custom items to be kept on death or auto equipped
+* Infused Megingjord from NorseDemigods added to unique-equipped items along with other belts increasing carry weight
+* added support of equippable items with custom "increase carry weight" algorithms (like said Infused Megingjord from NorseDemigods)
+* items auto equip after tombstone pickup was improved a bit for better support of mods altering respawning or tombstone interaction (like Afterdeath and Resurrection)
+
 # 1.1.2
 * fixed item icons in lightened slot visuals (less saturated and less size)
 * new configs to show/hide lightened slots background icon and tooltip

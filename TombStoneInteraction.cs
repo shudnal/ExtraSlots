@@ -1,7 +1,9 @@
 ﻿using BepInEx.Configuration;
 using HarmonyLib;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 using static ExtraSlots.ExtraSlots;
 using static ExtraSlots.Slots;
 
@@ -12,28 +14,38 @@ namespace ExtraSlots
         private static readonly List<ItemDrop.ItemData> itemsToKeep = new List<ItemDrop.ItemData>();
         private static readonly HashSet<Slot> takenSlots = new HashSet<Slot>();
 
+        public static List<string> autoEquipItemList = new List<string>();
         public static List<string> autoEquipWhiteList = new List<string>();
         public static List<string> autoEquipBlackList = new List<string>();
-        
+
+        public static List<string> keepItemList = new List<string>();
         public static List<string> keepItemWhiteList = new List<string>();
         public static List<string> keepItemBlackList = new List<string>();
 
-        public static void UpdateBlackAndWhiteItemLists()
+        public static readonly int AfterdeathGhost = "Afterdeath Ghost".GetStableHashCode();
+
+        public static void UpdateItemLists()
         {
+            UpdateItemList(autoEquipItemList, slotsTombstoneAutoEquipItemList);
             UpdateItemList(autoEquipWhiteList, slotsTombstoneAutoEquipWhiteList);
             UpdateItemList(autoEquipBlackList, slotsTombstoneAutoEquipBlackList);
+            UpdateItemList(keepItemList, keepOnDeathItemList);
             UpdateItemList(keepItemWhiteList, keepOnDeathWhiteList);
             UpdateItemList(keepItemBlackList, keepOnDeathBlackList);
         }
+
         private static void UpdateItemList(List<string> list, ConfigEntry<string> config)
         {
             list.Clear();
             config.Value.Split(',').Select(p => p.GetItemName()).Where(p => !string.IsNullOrWhiteSpace(p)).Do(list.Add);
         }
 
-        internal static bool ItemFitBlackWhiteLists(ItemDrop.ItemData item, List<string> whiteList, List<string> blackList)
+        internal static bool ItemFitLists(ItemDrop.ItemData item, List<string> itemList, List<string> whiteList, List<string> blackList)
         {
             if (item == null)
+                return true;
+
+            if (itemList.Contains(item.m_shared.m_name.ToLower()))
                 return true;
 
             if (whiteList.Contains(item.m_shared.m_name.ToLower()))
@@ -48,10 +60,18 @@ namespace ExtraSlots
             return true;
         }
 
-        public static void EquipItemsInSlots()
+        public static IEnumerator EquipItemsInSlots()
         {
             ClearCachedItems();
-            GetEquipmentSlots(onlyActive: false).Select(slot => slot.Item).Where(IsItemToEquip).Do(TryEquipItem);
+            foreach (Slot slot in GetEquipmentSlots(onlyActive: false).ToList())
+            {
+                var item = slot.Item;
+
+                if (IsItemToEquip(item))
+                    TryEquipItem(item);
+
+                yield return null;
+            }
         }
 
         private static bool IsItemToEquip(ItemDrop.ItemData item)
@@ -62,10 +82,10 @@ namespace ExtraSlots
             if (!slotsTombstoneAutoEquipEnabled.Value)
                 return false;
 
-            return ItemFitBlackWhiteLists(item, autoEquipWhiteList, autoEquipBlackList);
+            return ItemFitLists(item, autoEquipItemList, autoEquipWhiteList, autoEquipBlackList);
         }
-        
-        private static bool IsWeaponShieldToEquip(ItemDrop.ItemData item) => slotsTombstoneAutoEquipWeaponShield.Value && 
+
+        private static bool IsWeaponShieldToEquip(ItemDrop.ItemData item) => slotsTombstoneAutoEquipWeaponShield.Value &&
                 item.m_customData.TryGetValue(customKeyWeaponShield, out string value) && value == Game.instance.GetPlayerProfile().GetPlayerID().ToString();
 
         private static void TryEquipItem(ItemDrop.ItemData item)
@@ -75,9 +95,17 @@ namespace ExtraSlots
                     LogDebug($"Item {item.m_shared.m_name} was equipped on tombstone interaction");
         }
 
-        public static void EquipWeaponShield()
+        public static IEnumerator EquipWeaponShield()
         {
-            PlayerInventory.GetAllItems().Where(IsWeaponShieldToEquip).Do(TryEquipItem);
+            var items = PlayerInventory.GetAllItems()
+                .Where(IsWeaponShieldToEquip)
+                .ToList();
+
+            foreach (var item in items)
+            {
+                TryEquipItem(item);
+                yield return null;
+            }
         }
 
         public static void OnDeathPrefix(Player player)
@@ -114,7 +142,7 @@ namespace ExtraSlots
             if (!keepSlot)
                 return false;
 
-            return ItemFitBlackWhiteLists(slot.Item, keepItemWhiteList, keepItemBlackList);
+            return ItemFitLists(slot.Item, keepItemList, keepItemWhiteList, keepItemBlackList);
         }
 
         public static void OnDeathPostfix(Player player)
@@ -144,10 +172,22 @@ namespace ExtraSlots
                     UnityEngine.Object.Destroy(__instance.m_body?.gameObject);
                 }
 
-                EquipItemsInSlots();
-
-                EquipWeaponShield();
+                CurrentPlayer?.StartCoroutine(AutoEquipItemsOnTombstoneTakeAll());
             }
+        }
+
+        public static IEnumerator AutoEquipItemsOnTombstoneTakeAll()
+        {
+            float timeoutTime = Time.time + 5f;
+
+            yield return new WaitUntil(() =>
+                CurrentPlayer?.GetSEMan()?.HaveStatusEffect(AfterdeathGhost) == false && CurrentPlayer?.IsDead() == false || Time.time >= timeoutTime);
+
+            yield return null;
+
+            yield return EquipItemsInSlots();
+
+            yield return EquipWeaponShield();
         }
 
         [HarmonyPatch(typeof(Container), nameof(Container.Awake))]
@@ -211,6 +251,13 @@ namespace ExtraSlots
         [HarmonyPatch(typeof(TombStone), nameof(TombStone.EasyFitInInventory))]
         private static class TombStone_EasyFitInInventory_HeightAdjustment
         {
+            private static float GetDynamicWeightChange(StatusEffect se)
+            {
+                float limit = 0f;
+                se.ModifyMaxCarryWeight(0f, ref limit);
+                return limit;
+            }
+
             private static void Prefix(TombStone __instance, Player player, ref float __state)
             {
                 if (!IsValidPlayer(player))
@@ -221,8 +268,8 @@ namespace ExtraSlots
                 if (slotsTombstoneAutoEquipCarryWeightItemsEnabled.Value || slotsTombstoneAutoEquipEnabled.Value)
                 {
                     __state += __instance.m_container.GetInventory().GetAllItems()
-                        .Where(item => item != null && item.m_shared.m_equipStatusEffect is SE_Stats se && se.m_addMaxCarryWeight > 0 && GetSlotInGrid(item.m_gridPos) is Slot slot && slot.IsEquipmentSlot)
-                        .Sum(item => (item.m_shared.m_equipStatusEffect as SE_Stats).m_addMaxCarryWeight);
+                        .Where(item => item != null && item.m_shared.m_equipStatusEffect is SE_Stats se && GetSlotInGrid(item.m_gridPos) is Slot slot && slot.IsEquipmentSlot)
+                        .Sum(item => GetDynamicWeightChange(item.m_shared.m_equipStatusEffect));
                 };
 
                 Player.m_localPlayer.m_maxCarryWeight += __state;
