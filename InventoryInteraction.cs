@@ -347,6 +347,8 @@ namespace ExtraSlots
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.CanAddItem), typeof(ItemDrop.ItemData), typeof(int))]
         private static class Inventory_CanAddItem_ItemData_TryFindAppropriateExtraSlot
         {
+            private static readonly List<ItemDrop.ItemData> tempItems = new();
+
             [HarmonyPriority(Priority.First)]
             private static void Prefix(Inventory __instance)
             {
@@ -354,6 +356,20 @@ namespace ExtraSlots
                     return;
 
                 __instance.m_height = InventoryHeightPlayer;
+
+                tempItems.Clear();
+
+                for (int i = __instance.m_inventory.Count - 1; i >= 0; i--)
+                {
+                    ItemDrop.ItemData invItem = __instance.m_inventory[i];
+                    if (API.IsItemInSlot(invItem))
+                    {
+                        tempItems.Add(invItem);
+                        __instance.m_inventory.RemoveAt(i);
+                    }
+                }
+
+                tempItems.Reverse();
             }
 
             [HarmonyPriority(Priority.First)]
@@ -364,14 +380,26 @@ namespace ExtraSlots
 
                 __instance.m_height = InventoryHeightFull;
 
+                if (tempItems.Count > 0)
+                {
+                    __instance.m_inventory.AddRange(tempItems);
+                    tempItems.Clear();
+                }
+
                 if (__result)
                     return;
 
                 int freeStackSpace = __instance.FindFreeStackSpace(item.m_shared.m_name, item.m_worldLevel);
                 int freeQuickSlotStackSpace = __instance.GetEmptySlots() * item.m_shared.m_maxStackSize;
 
-                if (__result = freeStackSpace + freeQuickSlotStackSpace >= stack)
+                int sizeCombined = freeStackSpace + freeQuickSlotStackSpace;
+                if (sizeCombined < 0)
+                    sizeCombined = int.MaxValue;
+
+                if (__result = sizeCombined >= stack)
+                {
                     LogDebug($"Inventory.CanAddItem_ItemData_int item {item.m_shared.m_name} result {__result}, free stack space: {freeStackSpace}, free quick slot stack space: {freeQuickSlotStackSpace}, have free stack space");
+                }
                 else if (stack <= item.m_shared.m_maxStackSize && !Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem)
                 {
                     if (__result = TryFindFreeSlotForItem(item, out Slot slot))
@@ -379,7 +407,7 @@ namespace ExtraSlots
                 }
             }
         }
-        
+
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(ItemDrop.ItemData))]
         private static class Inventory_AddItem_ItemData_TryFindAppropriateExtraSlot
         {
