@@ -149,8 +149,26 @@ public class Localizer
             localizationData = File.ReadAllText(localizationFiles[defaultLanguage]);
 
         if (localizationData is not null)
-            foreach (KeyValuePair<string, string> kv in new DeserializerBuilder().IgnoreFields().Build().Deserialize<Dictionary<string, string>?>(localizationData) ?? new Dictionary<string, string>())
+        {
+            Dictionary<string, string> overrideTexts;
+
+            try
+            {
+                overrideTexts = new DeserializerBuilder()
+                    .IgnoreFields()
+                    .Build()
+                    .Deserialize<Dictionary<string, string>?>(localizationData)
+                    ?? new Dictionary<string, string>();
+            }
+            catch (Exception ex)
+            {
+                ExtraSlots.ExtraSlots.LogWarning($"Failed to deserialize localization for language '{language}'. Using base localization only.\n{ex}");
+                overrideTexts = new Dictionary<string, string>();
+            }
+
+            foreach (KeyValuePair<string, string> kv in overrideTexts)
                 localizationTexts[kv.Key] = kv.Value;
+        }
 
         loadedTexts[language] = localizationTexts;
         foreach (KeyValuePair<string, string> s in localizationTexts)
