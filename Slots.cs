@@ -108,7 +108,7 @@ namespace ExtraSlots
                 _index = index;
             }
 
-            public bool IsVanillaEquipment() => vanillaSlots.Contains(_id);
+            public bool IsVanillaEquipment() => IsVanillaSlotID(_id);
 
             public bool IsShortcutDown() => IsActive && _getShortcut != null && Player.m_localPlayer?.TakeInput() == true && IsShortcutDown(_getShortcut());
             public bool IsShortcutDownWithItem() => IsShortcutDown() && Item != null;
@@ -175,6 +175,8 @@ namespace ExtraSlots
             public override string ToString() => (Name == "" ? ID : Name) + (IsActive ? "" : " (inactive)");
 
             public static bool IsShortcutDown(KeyboardShortcut shortcut) => shortcut.MainKey != KeyCode.None && ZInput.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(key => ZInput.GetKey(key));
+
+            public static bool IsVanillaSlotID(string id) => vanillaSlots.Contains(id);
         }
 
         internal static class CustomSlot
@@ -711,12 +713,6 @@ namespace ExtraSlots
         {
             strings.Clear();
             configEntry.Value.Split(',', StringSplitOptions.RemoveEmptyEntries).Do(item => strings.Add(item.GetItemName()));
-        }
-
-        internal static void SwapSlots(int index, int indexToExchange)
-        {
-            (slots[index], slots[indexToExchange]) = (slots[indexToExchange], slots[index]);
-            slots[index].SwapIndexWith(slots[indexToExchange]);
         }
 
         public static bool IsEquipmentSlotItem(ItemDrop.ItemData item)

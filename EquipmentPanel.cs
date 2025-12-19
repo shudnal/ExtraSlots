@@ -79,23 +79,58 @@ namespace ExtraSlots
 
         internal static void ReorderVanillaSlots()
         {
-            string[] newSlotsOrder = vanillaSlotsOrder.Value.Split(',').Select(str => str.Trim()).Distinct().ToArray();
-            Slot[] currentOrder = slots.Where(slot => slot != null && slot.IsVanillaEquipment()).ToArray();
+            var vanillaOrder = VanillaOrder.Split(',').ToList();
 
-            for (int i = 0; i < Mathf.Min(newSlotsOrder.Length, currentOrder.Length); i++)
+            var desiredOrder = vanillaSlotsOrder.Value
+                .Split(',')
+                .Select(s => s.Trim())
+                .Where(s => Slot.IsVanillaSlotID(s))
+                .Distinct()
+                .ToList();
+
+            foreach (var id in vanillaOrder)
+                if (!desiredOrder.Contains(id))
+                    desiredOrder.Add(id);
+
+            var vanillaSlotsCurrent = slots
+                .Where(s => s != null && s.IsVanillaEquipment())
+                .ToList();
+
+            vanillaSlotsCurrent.Do(slot => slot.CacheItem());
+
+            var reordered = new List<Slot>();
+
+            foreach (string id in desiredOrder)
             {
-                int newSlotIndex = Array.FindIndex(slots, slot => slot.ID == newSlotsOrder[i]);
-                if (newSlotIndex < 0)
+                var slot = vanillaSlotsCurrent.FirstOrDefault(s => s.ID == id);
+                if (slot != null)
+                    reordered.Add(slot);
+            }
+
+            reordered.AddRange(vanillaSlotsCurrent.Except(reordered));
+
+            int v = 0;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i] != null && slots[i].IsVanillaEquipment())
+                    slots[i] = reordered[v++];
+            }
+
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i] == null || !slots[i].IsVanillaEquipment())
                     continue;
 
-                int currentSlotIndex = Array.IndexOf(slots, currentOrder[i]);
-                if (currentSlotIndex < 0)
-                    continue;
-
-                SwapSlots(newSlotIndex, currentSlotIndex);
+                slots[i].SetSlotIndex(i);
+                slots[i].UpdateGridPosition();
             }
 
             SetSlotsPositions();
+
+            PlayerInventory?.Changed();
+
+            if (vanillaSlotsOrder.Value != VanillaOrder)
+                LogInfo($"Vanilla slots reordered: {desiredOrder.Join()}");
         }
 
         internal static void UpdatePanel()
