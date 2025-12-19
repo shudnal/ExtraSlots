@@ -420,11 +420,16 @@ namespace ExtraSlots
             keepOnDeathWhiteList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateItemLists();
             keepOnDeathBlackList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateItemLists();
 
-            itemWeightFactorEquipmentSlots = config("Extra slots - Item weight factor", "Equipment slots", defaultValue: 1.0f, "Weight factor for items in equipment slots. [Synced with Server]", synchronizedSetting: true);
-            itemWeightFactorQuickSlots = config("Extra slots - Item weight factor", "Quick slots", defaultValue: 1.0f, "Weight factor for items in quick slots. [Synced with Server]", synchronizedSetting: true);
-            itemWeightFactorFoodSlots = config("Extra slots - Item weight factor", "Food slots", defaultValue: 1.0f, "Weight factor for items in food slots. [Synced with Server]", synchronizedSetting: true);
-            itemWeightFactorAmmoSlots = config("Extra slots - Item weight factor", "Ammo slots", defaultValue: 1.0f, "Weight factor for items in ammo slots. [Synced with Server]", synchronizedSetting: true);
-            itemWeightFactorMiscSlots = config("Extra slots - Item weight factor", "Misc slots", defaultValue: 1.0f, "Weight factor for items in misc slots. [Synced with Server]", synchronizedSetting: true);
+            itemWeightFactorEquipmentSlots = config("Extra slots - Item weight factor", "Equipment slots", defaultValue: 1.0f, 
+                              new ConfigDescription("Weight factor for items in equipment slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
+            itemWeightFactorQuickSlots = config("Extra slots - Item weight factor", "Quick slots", defaultValue: 1.0f, 
+                              new ConfigDescription("Weight factor for items in quick slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
+            itemWeightFactorFoodSlots = config("Extra slots - Item weight factor", "Food slots", defaultValue: 1.0f, 
+                              new ConfigDescription("Weight factor for items in food slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
+            itemWeightFactorAmmoSlots = config("Extra slots - Item weight factor", "Ammo slots", defaultValue: 1.0f, 
+                              new ConfigDescription("Weight factor for items in ammo slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
+            itemWeightFactorMiscSlots = config("Extra slots - Item weight factor", "Misc slots", defaultValue: 1.0f, 
+                              new ConfigDescription("Weight factor for items in misc slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
 
             itemWeightFactorEquipmentSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
             itemWeightFactorQuickSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();

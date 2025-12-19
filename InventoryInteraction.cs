@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace ExtraSlots
 {
-    internal static class InventoryInteraction
+    public static class InventoryInteraction
     {
         public static void UpdatePlayerInventorySize()
         {
@@ -25,6 +25,26 @@ namespace ExtraSlots
                 tombstone.m_height = Mathf.Max(tombstone.m_height, InventoryHeightFull);
 
             ItemsSlotsValidation.ValidateItems();
+        }
+
+        public static float GetItemWeightFactor(Slot slot)
+        {
+            if (slot.IsEquipmentSlot)
+                return itemWeightFactorEquipmentSlots.Value;
+
+            if (slot.IsQuickSlot)
+                return itemWeightFactorQuickSlots.Value;
+
+            if (slot.IsAmmoSlot)
+                return itemWeightFactorAmmoSlots.Value;
+
+            if (slot.IsFoodSlot)
+                return itemWeightFactorFoodSlots.Value;
+
+            if (slot.IsMiscSlot)
+                return itemWeightFactorMiscSlots.Value;
+
+            return 1f;
         }
 
         [HarmonyPatch(typeof(Player), nameof(Player.Awake))]
@@ -545,26 +565,6 @@ namespace ExtraSlots
         [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetWeight))]
         public static class ItemDrop_ItemData_GetWeight_UpdateTotalWeight_ApplyWeightFactor
         {
-            private static float GetItemWeightFactor(Slot slot)
-            {
-                if (slot.IsEquipmentSlot)
-                    return itemWeightFactorEquipmentSlots.Value;
-
-                if (slot.IsQuickSlot)
-                    return itemWeightFactorQuickSlots.Value;
-
-                if (slot.IsAmmoSlot)
-                    return itemWeightFactorAmmoSlots.Value;
-
-                if (slot.IsFoodSlot)
-                    return itemWeightFactorFoodSlots.Value;
-                
-                if (slot.IsMiscSlot)
-                    return itemWeightFactorMiscSlots.Value;
-
-                return 1f;
-            }
-
             private static void Postfix(ItemDrop.ItemData __instance, ref float __result)
             {
                 if (!Inventory_UpdateTotalWeight_ApplyWeightFactor.inCall)

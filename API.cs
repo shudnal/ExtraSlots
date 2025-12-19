@@ -202,6 +202,7 @@ public static class API
     {
         UpdateSlotsGridPosition();
         EquipmentPanel.UpdatePanel();
+        LightenedSlots.UpdateState();
         HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
         LightenedSlots.UpdateState();
     }

@@ -323,7 +323,7 @@ namespace ExtraSlots
             if (slot.IsEquipmentSlot)
             {
                 if (equipmentSlotsShowTooltip.Value)
-                    element.m_tooltip.Set("$exsl_slot_equipment", "$exsl_slot_equipment_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    SetTooltip("$exsl_slot_equipment", "$exsl_slot_equipment_desc");
             }
             else if (slot.IsAmmoSlot)
             {
@@ -333,7 +333,7 @@ namespace ExtraSlots
                 element.m_icon.transform.localScale = Vector3.one * 0.8f;
                 element.m_icon.color = Color.grey - new Color(0f, 0f, 0f, 0.1f);
                 if (ammoSlotsShowTooltip.Value)
-                    element.m_tooltip.Set(string.Format(ammoSlotsTooltipNameFormat.Value, "$exsl_slot_ammo", slot.GetShortcutText()), "$exsl_slot_ammo_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    SetTooltip(string.Format(ammoSlotsTooltipNameFormat.Value, "$exsl_slot_ammo", slot.GetShortcutText()), "$exsl_slot_ammo_desc");
             }
             else if (slot.IsQuickSlot)
             {
@@ -343,7 +343,7 @@ namespace ExtraSlots
                 element.m_icon.transform.localScale = Vector3.one * 0.6f;
                 element.m_icon.color = Color.grey - new Color(0f, 0f, 0f, 0.6f);
                 if (quickSlotsShowTooltip.Value)
-                    element.m_tooltip.Set(string.Format(quickSlotsTooltipNameFormat.Value, "$exsl_slot_quick", slot.GetShortcutText()), "$exsl_slot_quick_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    SetTooltip(string.Format(quickSlotsTooltipNameFormat.Value, "$exsl_slot_quick", slot.GetShortcutText()), "$exsl_slot_quick_desc");
             }
             else if (slot.IsMiscSlot)
             {
@@ -353,15 +353,26 @@ namespace ExtraSlots
                 element.m_icon.transform.localScale = Vector3.one * 0.8f;
                 element.m_icon.color = Color.grey - new Color(0f, 0f, 0f, 0.75f);
                 if (miscSlotsShowTooltip.Value)
-                    element.m_tooltip.Set("$exsl_slot_misc", "$exsl_slot_misc_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    SetTooltip("$exsl_slot_misc", "$exsl_slot_misc_desc");
             }
             else if (slot.IsFoodSlot && freeSlot)
             {
                 element.m_food.enabled = foodSlotsShowHintImage.Value;
                 element.m_food.color = Color.grey - new Color(0f, 0f, 0f, 0.5f);
                 if (foodSlotsShowTooltip.Value)
-                    element.m_tooltip.Set(string.Format(foodSlotsTooltipNameFormat.Value, "$exsl_slot_food", slot.GetShortcutText()), "$exsl_slot_food_desc", InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+                    SetTooltip(string.Format(foodSlotsTooltipNameFormat.Value, "$exsl_slot_food", slot.GetShortcutText()), "$exsl_slot_food_desc");
             }
+
+            void SetTooltip(string topic, string description) => element.m_tooltip.Set(topic, GetCombinedTooltip(description, slot), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
+        }
+
+        private static string GetCombinedTooltip(string tooltip, Slot slot)
+        {
+            float weightFactor = InventoryInteraction.GetItemWeightFactor(slot);
+            if (weightFactor == 1f)
+                return tooltip;
+
+            return ($"{tooltip}\n{Localization.instance.Localize("$exsl_slot_lightened_desc", $"{1f - weightFactor:P0}")}").Trim();
         }
 
         private static void SetSlotStackColor(TMP_Text text, Slot slot)
