@@ -204,6 +204,5 @@ public static class API
         EquipmentPanel.UpdatePanel();
         LightenedSlots.UpdateState();
         HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
-        LightenedSlots.UpdateState();
     }
 }

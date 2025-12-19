@@ -1,3 +1,9 @@
+# 1.1.4
+* item weight reduction percent in slots tooltip (if set)
+* a bit more compatible CanAddItem algorithm with support of absurdly high item stack sizes causing signed integer overflow
+* fixed mod breaking on startup if localization file is incorrect
+* fixed vanilla slots reordering not working properly
+
 # 1.1.3
 * new config for Death Tweaks and Tombstone Auto Equip - item list. You can set your custom items to be kept on death or auto equipped
 * Infused Megingjord from NorseDemigods added to unique-equipped items along with other belts increasing carry weight
