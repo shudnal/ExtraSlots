@@ -130,19 +130,20 @@ namespace ExtraSlots
 
         public static bool IsSlotToKeep(Slot slot)
         {
-            if (slot.IsFree)
+            if (slot.Item is not ItemDrop.ItemData item)
                 return false;
 
             bool keepSlot = slot.IsEquipmentSlot && keepOnDeathEquipmentSlots.Value ||
                             slot.IsQuickSlot && keepOnDeathQuickSlots.Value ||
                             slot.IsAmmoSlot && keepOnDeathAmmoSlots.Value ||
                             slot.IsFoodSlot && keepOnDeathFoodSlots.Value ||
-                            slot.IsMiscSlot && keepOnDeathMiscSlots.Value;
+                            slot.IsMiscSlot && keepOnDeathMiscSlots.Value ||
+                            keepItemList.Contains(item.m_shared.m_name.ToLower());
 
             if (!keepSlot)
                 return false;
 
-            return ItemFitLists(slot.Item, keepItemList, keepItemWhiteList, keepItemBlackList);
+            return ItemFitLists(item, keepItemList, keepItemWhiteList, keepItemBlackList);
         }
 
         public static void OnDeathPostfix(Player player)

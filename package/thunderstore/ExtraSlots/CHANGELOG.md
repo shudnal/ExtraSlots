@@ -1,3 +1,6 @@
+# 1.1.5
+* changed behaviour of "fixed item list" in "Death tweaks" section to always keep configured items regardless of group configs "Keep items at X slots".
+
 # 1.1.4
 * item weight reduction percent in slots tooltip (if set)
 * a bit more compatible CanAddItem algorithm with support of absurdly high item stack sizes causing signed integer overflow
