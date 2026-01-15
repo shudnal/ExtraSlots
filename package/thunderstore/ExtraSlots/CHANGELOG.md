@@ -1,3 +1,6 @@
+# 1.1.6
+* fixed hovers for custom slot items making backpacks unusable in certain circumstances
+
 # 1.1.5
 * changed behaviour of "fixed item list" in "Death tweaks" section to always keep configured items regardless of group configs "Keep items at X slots".
 

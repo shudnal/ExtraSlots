@@ -390,6 +390,8 @@ namespace ExtraSlots
             SetPosition(GetAmmoSlots(), SlotPositions.GetAmmoSlotTileOffset);
             SetPosition(GetMiscSlots(), SlotPositions.GetMiscSlotTileOffset);
 
+            GetInactiveSlots().Do(slot => slot.SetPosition(Vector2.zero));
+
             static void SetPosition(Slot[] collection, Func<int, Vector2> offsetFunc)
             {
                 for (int i = 0; i < collection.Length; i++)

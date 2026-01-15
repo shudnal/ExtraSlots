@@ -334,6 +334,7 @@ namespace ExtraSlots
         public static Slot[] GetAmmoSlots() => Array.FindAll(slots, slot => slot.IsAmmoSlot);
         public static Slot[] GetMiscSlots() => Array.FindAll(slots, slot => slot.IsMiscSlot);
         public static Slot[] GetCustomSlots(bool onlyActive = true) => Array.FindAll(slots, slot => slot.IsCustomSlot && (!onlyActive || slot.IsActive));
+        public static Slot[] GetInactiveSlots() => Array.FindAll(slots, slot => !slot.IsActive);
 
         public static bool TryGetSavedPlayerSlot(ItemDrop.ItemData item, out Slot slot)
         {
