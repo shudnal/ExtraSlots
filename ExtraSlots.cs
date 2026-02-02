@@ -39,7 +39,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.1.6";
+        public const string pluginVersion = "1.1.7";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -299,8 +299,6 @@ namespace ExtraSlots
 
         private void Awake()
         {
-            Localizer.Load();
-
             instance = this;
 
             ConfigInit();
@@ -322,6 +320,8 @@ namespace ExtraSlots
             Compatibility.CompatibilityHelper.CheckForCompatibility();
 
             harmony.PatchAll();
+
+            StartCoroutine(Localizer.Load());
         }
 
         private void LateUpdate()

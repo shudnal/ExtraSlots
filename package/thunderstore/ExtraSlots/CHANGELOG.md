@@ -1,3 +1,6 @@
+# 1.1.7
+* patch 0.221.10
+
 # 1.1.6
 * fixed hovers for custom slot items making backpacks unusable in certain circumstances
 
