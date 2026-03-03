@@ -1,3 +1,7 @@
+# 1.1.8
+* fixed ZenBeehive compat
+* minor fixes
+
 # 1.1.7
 * patch 0.221.10
 

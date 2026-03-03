@@ -118,12 +118,20 @@ namespace ExtraSlots
                 }
 
                 foreach (ItemDrop.ItemData backupItem in backup.GetAllItemsInGridOrder().Reverse<ItemDrop.ItemData>())
-                    if (inventory.AddItem(backupItem.Clone(), new Vector2i(backupItem.m_gridPos.x, backupItem.m_gridPos.y + InventoryHeightPlayer)))
-                    {
-                        ItemDrop.ItemData item = inventory.GetAllItems().Last();
-                        if (item.IsEquipable() && item.m_equipped && !player.EquipItem(item, triggerEquipEffects: false))
-                            item.m_equipped = false;
-                    }
+                {
+                    Vector2i restoredPosition = new Vector2i(backupItem.m_gridPos.x, backupItem.m_gridPos.y + InventoryHeightPlayer);
+                    ItemDrop.ItemData restoredItem = backupItem.Clone();
+
+                    if (!inventory.AddItem(restoredItem, restoredPosition))
+                        continue;
+
+                    // AddItem can place references in the inventory list; re-resolve by position instead of
+                    // scanning the entire list and taking Last() for each restored item.
+                    restoredItem = inventory.GetItemAt(restoredPosition.x, restoredPosition.y) ?? restoredItem;
+
+                    if (restoredItem.IsEquipable() && restoredItem.m_equipped && !player.EquipItem(restoredItem, triggerEquipEffects: false))
+                        restoredItem.m_equipped = false;
+                }
             }
             catch (Exception ex)
             {
