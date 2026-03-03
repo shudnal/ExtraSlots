@@ -12,14 +12,15 @@ namespace ExtraSlots
     public static class SlotsProgression
     {
         private static readonly HashSet<ItemDrop.ItemData.ItemType> itemTypes = new HashSet<ItemDrop.ItemData.ItemType>();
-        private static readonly Dictionary<string, IEnumerable<string>> keysCache = new Dictionary<string, IEnumerable<string>>();
+        private static readonly Dictionary<string, string[]> keysCache = new Dictionary<string, string[]>();
 
-        private static IEnumerable<string> GetKeys(string configValue)
+        private static string[] GetKeys(string configValue)
         {
-            if (keysCache.TryGetValue(configValue, out IEnumerable<string> keys))
+            configValue = configValue.Trim();
+            if (keysCache.TryGetValue(configValue, out string[] keys))
                 return keys;
 
-            return keysCache[configValue] = configValue.Split(',').Select(s => s.Trim()).Where(s => !s.IsNullOrWhiteSpace());
+            return keysCache[configValue] = configValue.Split(',').Select(s => s.Trim()).Where(s => !s.IsNullOrWhiteSpace()).ToArray();
         }
 
         public static bool IsAnyGlobalKeyActive(string requiredKeys)
@@ -27,9 +28,21 @@ namespace ExtraSlots
             if (!slotsProgressionEnabled.Value || !CurrentPlayer || CurrentPlayer.m_isLoading || string.IsNullOrEmpty(requiredKeys))
                 return true;
 
-            IEnumerable<string> keys = GetKeys(requiredKeys);
+            string[] keys = GetKeys(requiredKeys);
 
-            return keys.Count() == 0 || ZoneSystem.instance && keys.Any(s => ZoneSystem.instance.GetGlobalKey(s)) || keys.Any(s => CurrentPlayer.HaveUniqueKey(s));
+            if (keys.Length == 0)
+                return true;
+
+            if (ZoneSystem.instance)
+                for (int i = 0; i < keys.Length; i++)
+                    if (ZoneSystem.instance.GetGlobalKey(keys[i]))
+                        return true;
+
+            for (int i = 0; i < keys.Length; i++)
+                if (CurrentPlayer.HaveUniqueKey(keys[i]))
+                    return true;
+
+            return false;
         }
 
         public static bool IsItemTypeKnown(ItemDrop.ItemData.ItemType itemType)
@@ -45,9 +58,16 @@ namespace ExtraSlots
             if (!slotsProgressionEnabled.Value || !CurrentPlayer || CurrentPlayer.m_isLoading || string.IsNullOrEmpty(itemNames))
                 return true;
 
-            IEnumerable<string> keys = GetKeys(itemNames);
+            string[] keys = GetKeys(itemNames);
 
-            return keys.Count() == 0 || keys.Any(s => CurrentPlayer.IsMaterialKnown(s.GetItemName()));
+            if (keys.Length == 0)
+                return true;
+
+            for (int i = 0; i < keys.Length; i++)
+                if (CurrentPlayer.IsMaterialKnown(keys[i].GetItemName()))
+                    return true;
+
+            return false;
         }
 
         public static bool IsAmmoSlotKnown() => !ammoSlotsAvailableAfterDiscovery.Value || IsItemTypeKnown(ItemDrop.ItemData.ItemType.Ammo);
@@ -160,14 +180,24 @@ namespace ExtraSlots
             if (string.IsNullOrEmpty(requiredKeys))
                 return true;
 
-            IEnumerable<string> keys = GetKeys(requiredKeys);
+            string[] keys = GetKeys(requiredKeys);
 
-            if (keys.Count() == 0)
+            if (keys.Length == 0)
                 return true;
             else if (CurrentPlayer && !CurrentPlayer.m_isLoading)
-                return keys.Any(s => CurrentPlayer.HaveUniqueKey(s));
+            {
+                for (int i = 0; i < keys.Length; i++)
+                    if (CurrentPlayer.HaveUniqueKey(keys[i]))
+                        return true;
+            }
             else
-                return keys.Any(s => m_uniquesCache.Contains(s));
+            {
+                for (int i = 0; i < keys.Length; i++)
+                    if (m_uniquesCache.Contains(keys[i]))
+                        return true;
+            }
+
+            return false;
         }
 
         // Check for cache currently loaded mats and keys
@@ -176,13 +206,24 @@ namespace ExtraSlots
             if (string.IsNullOrEmpty(itemNames))
                 return true;
 
-            IEnumerable<string> keys = GetKeys(itemNames);
-            if (keys.Count() == 0)
+            string[] keys = GetKeys(itemNames);
+
+            if (keys.Length == 0)
                 return true;
             else if (CurrentPlayer && !CurrentPlayer.m_isLoading)
-                return keys.Any(s => CurrentPlayer.IsMaterialKnown(s.GetItemName()));
+            {
+                for (int i = 0; i < keys.Length; i++)
+                    if (CurrentPlayer.IsMaterialKnown(keys[i].GetItemName()))
+                        return true;
+            }
             else
-                return keys.Any(s => m_knownMaterialCache.Contains(s.GetItemName()));
+            {
+                for (int i = 0; i < keys.Length; i++)
+                    if (m_knownMaterialCache.Contains(keys[i].GetItemName()))
+                        return true;
+            }
+
+            return false;
         }
 
         internal static bool IsRowProgressionActive() => rowsProgressionEnabled.Value && (CurrentPlayer && !CurrentPlayer.m_isLoading || m_knownMaterialCache.Count + m_uniquesCache.Count > 0);

@@ -183,15 +183,6 @@ namespace ExtraSlots
         {
             internal static int customSlotStartingIndex = 24;
 
-            internal static bool TryAddNewSlotBefore(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
-            {
-                Slot slotToAdd = slots.FirstOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(slot.ID));
-                if (slotToAdd != null)
-                    return TryAddNewSlotWithIndex(slotID, slotToAdd.Index, getName, itemIsValid, isActive);
-
-                return TryAddNewSlotWithIndex(slotID, -1, getName, itemIsValid, isActive);
-            }
-
             internal static bool TryAddNewSlotAfter(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
                 Slot slotToAdd = slots.LastOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(slot.ID));
@@ -259,7 +250,7 @@ namespace ExtraSlots
                 for (int i = index; i < slots.Length; i++)
                     slots[i].UpdateGridPosition();
 
-                if (item != null && TryFindFreeSlotForItem(slots[index].Item, out Slot newSlot))
+                if (item != null && TryFindFreeSlotForItem(item, out Slot newSlot))
                 {
                     LogInfo($"While removing slot {slotID} item {item.m_shared.m_name} from {item.m_gridPos} was moved into first empty slot {newSlot} {newSlot.GridPosition}");
                     item.m_gridPos = newSlot.GridPosition;

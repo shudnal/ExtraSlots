@@ -25,14 +25,14 @@ internal static class ZenBeehiveCompat
 
         assembly ??= Assembly.GetAssembly(zenBeehivePlugin.Instance.GetType());
 
-        Type beehiveRules = assembly.GetType("ZenBeehive.BeehiveRules");
-        if (beehiveRules == null)
+        Type beehiveUI = assembly.GetType("ZenBeehive.BeehiveUI");
+        if (beehiveUI == null)
             return;
 
-        MethodInfo isHoneyOpenMethod = AccessTools.Method(beehiveRules, "IsHoneyOpen");
+        MethodInfo isHoneyOpenMethod = AccessTools.Method(beehiveUI, "IsHoneyOpen", Type.EmptyTypes);
         if (isHoneyOpenMethod != null)
         {
-            isHoneyOpen = (Func<bool>)Delegate.CreateDelegate(typeof(Func<bool>), isHoneyOpenMethod);
+            isHoneyOpen = (Func<bool>)isHoneyOpenMethod.CreateDelegate(typeof(Func<bool>));
             ExtraSlots.LogInfo("ZenBeehive beehive take all compatibility enabled");
         }
     }

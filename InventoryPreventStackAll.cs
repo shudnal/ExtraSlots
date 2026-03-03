@@ -62,7 +62,7 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.First)]
             private static void Prefix(Inventory fromInventory)
             {
-                if ((inCall = fromInventory == PlayerInventory && !Compatibility.ZenBeehiveCompat.IsHoneyOpen) == false)
+                if ((inCall = (fromInventory == PlayerInventory && !Compatibility.ZenBeehiveCompat.IsHoneyOpen)) == false)
                     return;
 
                 RemoveItemsFromPlayerInventory();
@@ -76,6 +76,9 @@ namespace ExtraSlots
 
                 inCall = false;
             }
+
+            // Just in case to prevent item loss in case of error
+            private static void Finally() => Postfix();
         }
 
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.Changed))]

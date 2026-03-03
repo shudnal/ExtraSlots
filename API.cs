@@ -169,9 +169,10 @@ public static class API
     /// <param name="isActive">function to check if slot should be available in equipment panel. If you need live update - call UpdateSlots.</param>
     /// <param name="slotIDs">slot IDs to add the slot before</param>
     /// <returns></returns>
+    [Obsolete("Use AddSlotAfter instead.")]
     public static bool AddSlotBefore(string slotID, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive, params string[] slotIDs)
     {
-        return CustomSlot.TryAddNewSlotBefore(slotIDs, slotID, getName, itemIsValid, isActive);
+        return AddSlotAfter(slotID, getName, itemIsValid, isActive, slotIDs);
     }
 
     /// <summary>
