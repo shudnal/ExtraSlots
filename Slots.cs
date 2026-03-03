@@ -185,7 +185,7 @@ namespace ExtraSlots
 
             internal static bool TryAddNewSlotBefore(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
-                Slot slotToAdd = slots.FirstOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(GetSlotID(slotID)));
+                Slot slotToAdd = slots.FirstOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(slot.ID));
                 if (slotToAdd != null)
                     return TryAddNewSlotWithIndex(slotID, slotToAdd.Index, getName, itemIsValid, isActive);
 
@@ -194,7 +194,7 @@ namespace ExtraSlots
 
             internal static bool TryAddNewSlotAfter(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
-                Slot slotToAdd = slots.LastOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(GetSlotID(slotID)));
+                Slot slotToAdd = slots.LastOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(slot.ID));
                 if (slotToAdd != null)
                     return TryAddNewSlotWithIndex(slotID, slotToAdd.Index, getName, itemIsValid, isActive);
 
