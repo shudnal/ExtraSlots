@@ -54,6 +54,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> fixContainerPosition;
         public static ConfigEntry<bool> hotbarPreventStackAll;
         public static ConfigEntry<bool> preventAutoPickup;
+        public static ConfigEntry<bool> preventSimilarHotkeys;
 
         public static ConfigEntry<int> extraRows;
         public static ConfigEntry<int> quickSlotsAmount;
@@ -354,6 +355,8 @@ namespace ExtraSlots
             hotbarPreventStackAll = config("General", "Prevent Stack All of hotbar items", defaultValue: true, "Prevent items from hotbar slots (1-8) to be placed into container when Stack All feature is used.");
             preventAutoPickup = config("General", "Prevent items auto pickup in extra slots", defaultValue: false, "Should extra slots be used for items auto pickup. If enabled - item from ground will not be put into extra slots." +
                                                                                                                    "\nIt will not prevent autostacking similar items.");
+            preventSimilarHotkeys = config("General", "Prevent game actions with similar hotkey binds", defaultValue: true, "Prevent game actions binded on the same hotkeys as this mod hotbars. " +
+                                                                                                                            "\nWhen you have [X] bind to Sit, and you press [Alt + X] quick slot hotkey then Sit action will not be performed.");
 
             loggingEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
             loggingDebugEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();

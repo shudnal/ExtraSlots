@@ -149,6 +149,9 @@ public static class PreventSimilarHotkeys
     {
         private static bool Prefix(string name)
         {
+            if (!ExtraSlots.preventSimilarHotkeys.Value)
+                return true;
+
             if (ZInput.IsGamepadActive())
                 return true;
 
