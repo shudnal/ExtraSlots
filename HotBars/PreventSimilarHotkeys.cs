@@ -118,14 +118,12 @@ public static class PreventSimilarHotkeys
     private static void UpdateHotkeyDownCache()
     {
         int frame = Time.frameCount;
-        if (_frameUpdated != frame)
-        {
-            _frameUpdated = frame;
-            _anyExtraSlotsHotkeyDown = false;
-            blockStateByButtonName.Clear();
-        }
-        else if (_anyExtraSlotsHotkeyDown)
+        if (_frameUpdated == frame)
             return;
+
+        _frameUpdated = frame;
+        _anyExtraSlotsHotkeyDown = false;
+        blockStateByButtonName.Clear();
 
         foreach (Slot slot in slots)
         {
@@ -154,8 +152,20 @@ public static class PreventSimilarHotkeys
             if (ZInput.IsGamepadActive())
                 return true;
 
-            if (!IsAnyExtraSlotsHotkeyDown())
-                return true;
+            UpdateHotkeyDownCache();
+
+            if (!_anyExtraSlotsHotkeyDown)
+            {
+                if (!similarHotkey.TryGetValue(name, out List<Slot> slotsWithHotkeyFallback))
+                    return true;
+
+                if (!slotsWithHotkeyFallback.Any(slot => slot.IsShortcutDownWithItem()))
+                    return true;
+
+                _anyExtraSlotsHotkeyDown = true;
+                blockStateByButtonName[name] = true;
+                return false;
+            }
 
             if (!similarHotkey.TryGetValue(name, out List<Slot> slotsWithHotkey))
                 return true;
