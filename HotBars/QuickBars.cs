@@ -110,6 +110,9 @@ public static class QuickBars
         if (!Player.m_localPlayer.TakeInput())
             return;
 
+        if (!PreventSimilarHotkeys.IsAnyExtraSlotsHotkeyDown())
+            return;
+
         if (!ExtraSlots.useSingleHotbarItem.Value)
             GetItemsToUse().Do(item => Player.m_localPlayer.UseItem(PlayerInventory, item, fromInventoryGui: false));
         else if (GetItemToUse() is ItemDrop.ItemData item)
