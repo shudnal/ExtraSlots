@@ -118,12 +118,14 @@ public static class PreventSimilarHotkeys
     private static void UpdateHotkeyDownCache()
     {
         int frame = Time.frameCount;
-        if (_frameUpdated == frame)
+        if (_frameUpdated != frame)
+        {
+            _frameUpdated = frame;
+            _anyExtraSlotsHotkeyDown = false;
+            blockStateByButtonName.Clear();
+        }
+        else if (_anyExtraSlotsHotkeyDown)
             return;
-
-        _frameUpdated = frame;
-        _anyExtraSlotsHotkeyDown = false;
-        blockStateByButtonName.Clear();
 
         foreach (Slot slot in slots)
         {
