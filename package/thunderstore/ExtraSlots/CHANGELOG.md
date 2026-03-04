@@ -1,3 +1,6 @@
+# 1.1.9
+* minor optimizations to hotkey usage and similar hotkey prevention
+
 # 1.1.8
 * fixed ZenBeehive compat
 * minor fixes
