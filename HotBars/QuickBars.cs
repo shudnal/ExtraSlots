@@ -55,20 +55,21 @@ public static class QuickBars
 
     private static List<HotkeyBar> GetHotKeyBarsToControl() => Hud.instance ? Hud.instance.m_rootObject.GetComponentsInChildren<HotkeyBar>().Where(IsBarToControl).OrderBy(bar => Vector3.Distance(bar.transform.localPosition, LeftTopPoint)).ToList() : null;
 
-    private static bool UpdateCurrentHotkeyBar()
+    private static bool UpdateCurrentHotkeyBar(bool joyHotbarLeft, bool joyHotbarRight, bool joyHotbarUse)
     {
         if (_currentBarIndex < 0 || _currentBarIndex > bars.Count - 1)
             return false;
 
         HotkeyBar hotkeyBar = bars[_currentBarIndex];
-        if (hotkeyBar.m_selected < 0 || hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1 || !IsHotkeyBarsActive())
-            return !IsHotkeyBarsActive();
+        bool isHotkeyBarsActive = IsHotkeyBarsActive();
+        if (hotkeyBar.m_selected < 0 || hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1 || !isHotkeyBarsActive)
+            return !isHotkeyBarsActive;
 
-        if (GetJoyButtonDown("JoyHotbarLeft") && --hotkeyBar.m_selected < 0)
+        if (joyHotbarLeft && --hotkeyBar.m_selected < 0)
             ChangeActiveHotkeyBar(next: false);
-        else if (GetJoyButtonDown("JoyHotbarRight") && ++hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1)
+        else if (joyHotbarRight && ++hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1)
             ChangeActiveHotkeyBar(next: true);
-        else if (GetJoyButtonDown("JoyHotbarUse"))
+        else if (joyHotbarUse)
             if (hotkeyBar.name == QuickSlotsHotBar.barName)
                 Player.m_localPlayer.UseItem(Player.m_localPlayer.GetInventory(), QuickSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), fromInventoryGui: false);
             else if (hotkeyBar.name == AmmoSlotsHotBar.barName)
@@ -108,6 +109,9 @@ public static class QuickBars
     internal static void UpdateItemUse()
     {
         if (!Player.m_localPlayer.TakeInput())
+            return;
+
+        if (!PreventSimilarHotkeys.IsAnyExtraSlotsHotkeyDown())
             return;
 
         if (!ExtraSlots.useSingleHotbarItem.Value)
@@ -201,7 +205,11 @@ public static class QuickBars
             if (NoBarsToControl())
                 return;
 
-            if (!UpdateCurrentHotkeyBar() && (GetJoyButtonDown("JoyHotbarLeft") || GetJoyButtonDown("JoyHotbarRight") || GetJoyButtonDown("JoyHotbarUse")))
+            bool joyHotbarLeft = GetJoyButtonDown("JoyHotbarLeft");
+            bool joyHotbarRight = GetJoyButtonDown("JoyHotbarRight");
+            bool joyHotbarUse = GetJoyButtonDown("JoyHotbarUse");
+
+            if (!UpdateCurrentHotkeyBar(joyHotbarLeft, joyHotbarRight, joyHotbarUse) && (joyHotbarLeft || joyHotbarRight || joyHotbarUse))
                 ChangeActiveHotkeyBar();
 
             bool clearBars = false;
