@@ -16,14 +16,27 @@ public static class PreventSimilarHotkeys
     private static readonly Dictionary<string, List<Slot>> similarHotkey = new Dictionary<string, List<Slot>>();
     private static readonly HashSet<string> blockedButtonsThisFrame = new HashSet<string>();
     private static bool _anyExtraSlotsHotkeyDown;
-    private static int _frameUpdated = -1;
+    private static int _cacheUpdatedToken = -1;
 
     public static void FillSimilarHotkey() => FillSimilarHotkey(ZInput.instance);
+
+    private static bool IsEnabled() => ExtraSlots.preventSimilarHotkeys?.Value != false;
+
+    private static int GetCacheToken() => (Time.frameCount << 1) | (Time.inFixedTimeStep ? 1 : 0);
 
     internal static void FillSimilarHotkey(ZInput __instance)
     {
         if (ExtraSlots.IsDedicated)
             return;
+
+        if (!IsEnabled())
+        {
+            similarHotkey.Clear();
+            blockedButtonsThisFrame.Clear();
+            _anyExtraSlotsHotkeyDown = false;
+            _cacheUpdatedToken = -1;
+            return;
+        }
 
         SanitizeShortcutsKeys();
 
@@ -60,6 +73,8 @@ public static class PreventSimilarHotkeys
             else
                 similarHotkey[buttonName] = new List<Slot>() { slot };
         }
+
+        _cacheUpdatedToken = -1;
     }
 
     private static void SanitizeShortcutsKeys()
@@ -117,11 +132,14 @@ public static class PreventSimilarHotkeys
 
     private static void UpdateHotkeyDownCache()
     {
-        int frame = Time.frameCount;
-        if (_frameUpdated == frame)
+        if (!IsEnabled())
             return;
 
-        _frameUpdated = frame;
+        int token = GetCacheToken();
+        if (_cacheUpdatedToken == token)
+            return;
+
+        _cacheUpdatedToken = token;
         _anyExtraSlotsHotkeyDown = false;
         blockedButtonsThisFrame.Clear();
 
@@ -141,6 +159,9 @@ public static class PreventSimilarHotkeys
 
     internal static bool IsAnyExtraSlotsHotkeyDown()
     {
+        if (!IsEnabled())
+            return false;
+
         UpdateHotkeyDownCache();
         return _anyExtraSlotsHotkeyDown;
     }
@@ -150,10 +171,7 @@ public static class PreventSimilarHotkeys
     {
         private static bool Prefix(string name)
         {
-            if (!ExtraSlots.preventSimilarHotkeys.Value)
-                return true;
-
-            if (ZInput.IsGamepadActive())
+            if (!IsEnabled() || ZInput.IsGamepadActive())
                 return true;
 
             UpdateHotkeyDownCache();
@@ -164,13 +182,13 @@ public static class PreventSimilarHotkeys
     [HarmonyPatch(typeof(ZInput), nameof(ZInput.InternalUpdate))]
     private static class ZInput_InternalUpdate_PrecomputeSimilarHotkeys
     {
-        private static void Postfix() => UpdateHotkeyDownCache();
+        private static void Postfix() { if (!IsEnabled()) return; UpdateHotkeyDownCache(); }
     }
 
     [HarmonyPatch(typeof(ZInput), nameof(ZInput.InternalUpdateFixed))]
     private static class ZInput_InternalUpdateFixed_PrecomputeSimilarHotkeys
     {
-        private static void Postfix() => UpdateHotkeyDownCache();
+        private static void Postfix() { if (!IsEnabled()) return; UpdateHotkeyDownCache(); }
     }
 
     [HarmonyPatch]
