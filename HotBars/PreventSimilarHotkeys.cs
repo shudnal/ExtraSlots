@@ -14,7 +14,7 @@ namespace ExtraSlots.HotBars;
 public static class PreventSimilarHotkeys
 {
     private static readonly Dictionary<string, List<Slot>> similarHotkey = new Dictionary<string, List<Slot>>();
-    private static readonly Dictionary<string, bool> blockStateByButtonName = new Dictionary<string, bool>();
+    private static readonly HashSet<string> blockedButtonsThisFrame = new HashSet<string>();
     private static bool _anyExtraSlotsHotkeyDown;
     private static int _frameUpdated = -1;
 
@@ -123,18 +123,19 @@ public static class PreventSimilarHotkeys
 
         _frameUpdated = frame;
         _anyExtraSlotsHotkeyDown = false;
-        blockStateByButtonName.Clear();
+        blockedButtonsThisFrame.Clear();
 
-        foreach (Slot slot in slots)
+        foreach (KeyValuePair<string, List<Slot>> hotkey in similarHotkey)
         {
-            if (!slot.IsHotkeySlot)
-                continue;
+            foreach (Slot slot in hotkey.Value)
+            {
+                if (!slot.IsShortcutDownWithItem())
+                    continue;
 
-            if (!slot.IsShortcutDownWithItem())
-                continue;
-
-            _anyExtraSlotsHotkeyDown = true;
-            break;
+                _anyExtraSlotsHotkeyDown = true;
+                blockedButtonsThisFrame.Add(hotkey.Key);
+                break;
+            }
         }
     }
 
@@ -156,31 +157,20 @@ public static class PreventSimilarHotkeys
                 return true;
 
             UpdateHotkeyDownCache();
-
-            if (!_anyExtraSlotsHotkeyDown)
-            {
-                if (!similarHotkey.TryGetValue(name, out List<Slot> slotsWithHotkeyFallback))
-                    return true;
-
-                if (!slotsWithHotkeyFallback.Any(slot => slot.IsShortcutDownWithItem()))
-                    return true;
-
-                _anyExtraSlotsHotkeyDown = true;
-                blockStateByButtonName[name] = true;
-                return false;
-            }
-
-            if (!similarHotkey.TryGetValue(name, out List<Slot> slotsWithHotkey))
-                return true;
-
-            if (!blockStateByButtonName.TryGetValue(name, out bool isBlocked))
-            {
-                isBlocked = slotsWithHotkey.Any(slot => slot.IsShortcutDownWithItem());
-                blockStateByButtonName[name] = isBlocked;
-            }
-
-            return !isBlocked;
+            return !_anyExtraSlotsHotkeyDown || !blockedButtonsThisFrame.Contains(name);
         }
+    }
+
+    [HarmonyPatch(typeof(ZInput), nameof(ZInput.InternalUpdate))]
+    private static class ZInput_InternalUpdate_PrecomputeSimilarHotkeys
+    {
+        private static void Postfix() => UpdateHotkeyDownCache();
+    }
+
+    [HarmonyPatch(typeof(ZInput), nameof(ZInput.InternalUpdateFixed))]
+    private static class ZInput_InternalUpdateFixed_PrecomputeSimilarHotkeys
+    {
+        private static void Postfix() => UpdateHotkeyDownCache();
     }
 
     [HarmonyPatch]
