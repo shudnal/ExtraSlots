@@ -13,34 +13,41 @@ namespace ExtraSlots.HotBars;
 
 public static class PreventSimilarHotkeys
 {
-    private static readonly Dictionary<string, List<Slot>> similarHotkey = new Dictionary<string, List<Slot>>();
-    private static readonly HashSet<string> blockedButtonsThisFrame = new HashSet<string>();
+    private static readonly HashSet<string> similarName = new HashSet<string>();
+    private static readonly HashSet<KeyCode> similarKeyCode = new HashSet<KeyCode>();
     private static bool _anyExtraSlotsHotkeyDown;
     private static int _cacheUpdatedToken = -1;
 
-    public static void FillSimilarHotkey() => FillSimilarHotkey(ZInput.instance);
+    private static bool _skipPrevention;
 
-    private static bool IsEnabled() => ExtraSlots.preventSimilarHotkeys?.Value != false;
+    public static bool IsShortcutDown(KeyboardShortcut shortcut)
+    {
+        _skipPrevention = true;
+        bool result = shortcut.MainKey != KeyCode.None && ZInput.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(key => ZInput.GetKey(key));
+        _skipPrevention = false;
+
+        return result;
+    }
 
     private static int GetCacheToken() => (Time.frameCount << 1) | (Time.inFixedTimeStep ? 1 : 0);
+
+    private static void ResetHotkeyState()
+    {
+        _cacheUpdatedToken = -1;
+        _anyExtraSlotsHotkeyDown = false;
+    }
+
+    public static void FillSimilarHotkey() => FillSimilarHotkey(ZInput.instance);
 
     internal static void FillSimilarHotkey(ZInput __instance)
     {
         if (ExtraSlots.IsDedicated)
             return;
 
-        if (!IsEnabled())
-        {
-            similarHotkey.Clear();
-            blockedButtonsThisFrame.Clear();
-            _anyExtraSlotsHotkeyDown = false;
-            _cacheUpdatedToken = -1;
-            return;
-        }
-
         SanitizeShortcutsKeys();
 
-        similarHotkey.Clear();
+        similarName.Clear();
+        similarKeyCode.Clear();
         if (__instance == null)
             return;
 
@@ -61,20 +68,21 @@ public static class PreventSimilarHotkeys
 
         foreach (Slot slot in slots.Where(slot => slot.IsHotkeySlot))
         {
-            if (!ZInput.TryKeyCodeToKey(slot.GetShortcut().MainKey, out Key key))
+            KeyCode mainKey = slot.GetShortcut().MainKey;
+            
+            similarKeyCode.Add(mainKey);
+
+            if (!ZInput.TryKeyCodeToKey(mainKey, out Key key))
                 continue;
 
             string keyPath = ZInput.KeyToPath(key);
             if (!pathToButtonName.TryGetValue(keyPath, out string buttonName))
                 continue;
 
-            if (similarHotkey.TryGetValue(buttonName, out List<Slot> slotsWithHotkey))
-                slotsWithHotkey.Add(slot);
-            else
-                similarHotkey[buttonName] = new List<Slot>() { slot };
+            similarName.Add(buttonName);
         }
 
-        _cacheUpdatedToken = -1;
+        ResetHotkeyState();
     }
 
     private static void SanitizeShortcutsKeys()
@@ -130,65 +138,70 @@ public static class PreventSimilarHotkeys
                key == KeyCode.RightWindows;
     }
 
-    private static void UpdateHotkeyDownCache()
+    internal static bool IsAnyExtraSlotsHotkeyDown()
     {
-        if (!IsEnabled())
-            return;
-
         int token = GetCacheToken();
         if (_cacheUpdatedToken == token)
-            return;
+            return _anyExtraSlotsHotkeyDown;
 
         _cacheUpdatedToken = token;
         _anyExtraSlotsHotkeyDown = false;
-        blockedButtonsThisFrame.Clear();
 
-        foreach (KeyValuePair<string, List<Slot>> hotkey in similarHotkey)
+        foreach (Slot slot in slots.Where(slot => slot.IsHotkeySlot))
         {
-            foreach (Slot slot in hotkey.Value)
-            {
-                if (!slot.IsShortcutDownWithItem())
-                    continue;
+            if (!slot.IsShortcutDownWithItem())
+                continue;
 
-                _anyExtraSlotsHotkeyDown = true;
-                blockedButtonsThisFrame.Add(hotkey.Key);
-                break;
-            }
+            _anyExtraSlotsHotkeyDown = true;
+            break;
         }
-    }
 
-    internal static bool IsAnyExtraSlotsHotkeyDown()
-    {
-        if (!IsEnabled())
-            return false;
-
-        UpdateHotkeyDownCache();
         return _anyExtraSlotsHotkeyDown;
     }
 
     [HarmonyPatch(typeof(ZInput), nameof(ZInput.TryGetButtonState))]
     private static class ZInput_TryGetButtonState_PreventSimilarHotkeys
     {
-        private static bool Prefix(string name)
+        private static void Postfix(string name, ref bool __result)
         {
-            if (!IsEnabled() || ZInput.IsGamepadActive())
-                return true;
+            if (!__result)
+                return;
 
-            UpdateHotkeyDownCache();
-            return !_anyExtraSlotsHotkeyDown || !blockedButtonsThisFrame.Contains(name);
+            if (!similarName.Contains(name))
+                return;
+
+            __result = !IsAnyExtraSlotsHotkeyDown();
         }
     }
 
-    [HarmonyPatch(typeof(ZInput), nameof(ZInput.InternalUpdate))]
-    private static class ZInput_InternalUpdate_PrecomputeSimilarHotkeys
+    [HarmonyPatch(typeof(ZInput), nameof(ZInput.TryGetKeyStateLowLevel))]
+    private static class ZInput_TryGetKeyStateLowLevel_PreventSimilarHotkeys
     {
-        private static void Postfix() { if (!IsEnabled()) return; UpdateHotkeyDownCache(); }
+        private static void Postfix(KeyCode keyCode, ref bool __result)
+        {
+            if (_skipPrevention)
+                return;
+
+            if (!__result)
+                return;
+
+            if (!similarKeyCode.Contains(keyCode))
+                return;
+
+            __result = !IsAnyExtraSlotsHotkeyDown();
+        }
     }
 
-    [HarmonyPatch(typeof(ZInput), nameof(ZInput.InternalUpdateFixed))]
-    private static class ZInput_InternalUpdateFixed_PrecomputeSimilarHotkeys
+    [HarmonyPatch]
+    public static class ZInput_InternalUpdate_ResetSimilarHotkeyState
     {
-        private static void Postfix() { if (!IsEnabled()) return; UpdateHotkeyDownCache(); }
+        private static IEnumerable<MethodBase> TargetMethods()
+        {
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.InternalUpdate));
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.InternalUpdateFixed));
+        }
+
+        private static void Finalizer() => ResetHotkeyState();
     }
 
     [HarmonyPatch]

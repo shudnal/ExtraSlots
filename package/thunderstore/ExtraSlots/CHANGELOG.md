@@ -1,3 +1,6 @@
+# 1.1.10
+* fixed hotkeys issues, final optimizations
+
 # 1.1.9
 * minor optimizations to hotkey usage and similar hotkey prevention
 

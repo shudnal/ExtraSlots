@@ -174,7 +174,7 @@ namespace ExtraSlots
 
             public override string ToString() => (Name == "" ? ID : Name) + (IsActive ? "" : " (inactive)");
 
-            public static bool IsShortcutDown(KeyboardShortcut shortcut) => shortcut.MainKey != KeyCode.None && ZInput.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(key => ZInput.GetKey(key));
+            public static bool IsShortcutDown(KeyboardShortcut shortcut) => HotBars.PreventSimilarHotkeys.IsShortcutDown(shortcut);
 
             public static bool IsVanillaSlotID(string id) => vanillaSlots.Contains(id);
         }
