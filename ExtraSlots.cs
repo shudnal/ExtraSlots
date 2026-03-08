@@ -39,7 +39,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.1.10";
+        public const string pluginVersion = "1.1.11";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -510,15 +510,15 @@ namespace ExtraSlots
             miscSlotsPreventStackAll = config("Panels - Misc slots", "Prevent Stack All", defaultValue: true, "Prevent items from misc slots to be placed into container when Stack All feature is used.");
             miscSlotsItemList = config("Panels - Misc slots", "Custom item list", defaultValue: "AncientSeed,WitheredBone,BellFragment,DvergrKeyFragment",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as misc items" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
             miscSlotsItemBlackList = config("Panels - Misc slots", "Custom item black list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as misc items" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
 
             miscSlotsItemList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
             miscSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
 
-            quickSlotsHotBarEnabled = config("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots");
+            quickSlotsHotBarEnabled = config("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots [Synced with Server]", synchronizedSetting: true);
             quickSlotsHotBarOffset = config("Panels - Quick slots", "Offset", defaultValue: new Vector2(230f, 156f), "On screen position of quick slots hotbar panel");
             quickSlotsHotBarAnchor = config("Panels - Quick slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for quick slots hotbar panel");
             quickSlotsHotBarScale = config("Panels - Quick slots", "Scale", defaultValue: 1f, "Relative size");
@@ -538,7 +538,7 @@ namespace ExtraSlots
             quickSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarScale.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
 
-            ammoSlotsHotBarEnabled = config("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots");
+            ammoSlotsHotBarEnabled = config("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots [Synced with Server]", synchronizedSetting: true);
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 228f), "On screen position of ammo slots hotbar panel");
             ammoSlotsHotBarAnchor = config("Panels - Ammo slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for ammo slots hotbar panel");
             ammoSlotsHotBarScale = config("Panels - Ammo slots", "Scale", defaultValue: 1f, "Relative size");
@@ -555,10 +555,10 @@ namespace ExtraSlots
             ammoSlotsAllowThrowables = config("Panels - Ammo slots", "Allow throwables", defaultValue: true, "Should bombs and other throwables be allowed to be placed into ammo slots");
             ammoSlotsItemList = config("Panels - Ammo slots", "Custom item list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in ammo slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
             ammoSlotsItemBlackList = config("Panels - Ammo slots", "Custom item black list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as ammo items to fit in ammo slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
 
             ammoSlotsItemList.SettingChanged += (s, e) => Slots.UpdateAmmoSlotCustomItemList();
             ammoSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateAmmoSlotCustomItemList();
@@ -568,7 +568,7 @@ namespace ExtraSlots
             ammoSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
             ammoSlotsHotBarScale.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
 
-            foodSlotsHotBarEnabled = config("Panels - Food slots", "Enabled", defaultValue: true, "Enable hotbar with Food slots");
+            foodSlotsHotBarEnabled = config("Panels - Food slots", "Enabled", defaultValue: true, "Enable hotbar with Food slots [Synced with Server]", synchronizedSetting: true);
             foodSlotsHotBarOffset = config("Panels - Food slots", "Offset", defaultValue: new Vector2(230f, 84f), "On screen position of Food slots hotbar panel");
             foodSlotsHotBarAnchor = config("Panels - Food slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for Food slots hotbar panel");
             foodSlotsHotBarScale = config("Panels - Food slots", "Scale", defaultValue: 1f, "Relative size");
@@ -584,10 +584,10 @@ namespace ExtraSlots
             foodSlotsPreventStackAll = config("Panels - Food slots", "Prevent Stack All", defaultValue: true, "Prevent items from food slots to be placed into container when Stack All feature is used.");
             foodSlotsItemList = config("Panels - Food slots", "Custom item list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in food slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
             foodSlotsItemBlackList = config("Panels - Food slots", "Custom item black list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as ammo items to fit in food slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
 
             foodSlotsItemList.SettingChanged += (s, e) => Slots.UpdateFoodSlotCustomItemList();
             foodSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateFoodSlotCustomItemList();

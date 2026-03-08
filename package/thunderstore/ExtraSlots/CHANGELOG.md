@@ -1,3 +1,6 @@
+# 1.1.11
+* hotbar visibility for quick, ammo, and food slots is now server-synced
+
 # 1.1.10
 * fixed hotkeys issues, final optimizations
 
