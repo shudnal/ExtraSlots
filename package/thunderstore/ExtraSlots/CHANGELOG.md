@@ -1,3 +1,6 @@
+# 1.1.12
+* fixed rare issue with this mod allowing adding to an extra slot an item that was declined by another mod
+
 # 1.1.11
 * hotbar visibility for quick, ammo, and food slots is now server-synced
 

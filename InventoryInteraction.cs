@@ -432,12 +432,12 @@ namespace ExtraSlots
         private static class Inventory_AddItem_ItemData_TryFindAppropriateExtraSlot
         {
             [HarmonyPriority(Priority.First)]
-            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, ref bool __result)
+            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, bool __runOriginal, ref bool __result)
             {
                 if (__instance != PlayerInventory)
                     return;
 
-                if (__result)
+                if (__result || !__runOriginal)
                     return;
 
                 if (Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem)
