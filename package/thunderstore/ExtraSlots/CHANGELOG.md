@@ -1,3 +1,7 @@
+# 1.1.13
+* fixed custom item lists in several configs not applied initially if set up with prefab names
+* minor optimizations here and there
+
 # 1.1.12
 * fixed rare issue with this mod allowing adding to an extra slot an item that was declined by another mod
 

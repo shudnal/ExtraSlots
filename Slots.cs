@@ -624,9 +624,7 @@ namespace ExtraSlots
 
             UpdateSlotsGridPosition();
 
-            UpdateMiscSlotCustomItemList();
-            UpdateAmmoSlotCustomItemList();
-            UpdateFoodSlotCustomItemList();
+            UpdateCustomItemLists();
 
             HotBars.QuickSlotsHotBar.UpdateSlots();
             HotBars.AmmoSlotsHotBar.UpdateSlots();
@@ -644,6 +642,13 @@ namespace ExtraSlots
                 slots[index] = new Slot(id, index, getName, itemIsValid, isActive, getShortcut, getShortcutText);
                 index++;
             }
+        }
+
+        internal static void UpdateCustomItemLists()
+        {
+            UpdateMiscSlotCustomItemList();
+            UpdateAmmoSlotCustomItemList();
+            UpdateFoodSlotCustomItemList();
         }
 
         internal static bool IsQuickSlotAvailable(int index) => quickSlotsAmount.Value > index && IsQuickSlotKnown(index) && (index == 0 || IsQuickSlotAvailable(index - 1));

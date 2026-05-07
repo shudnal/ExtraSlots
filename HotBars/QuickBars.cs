@@ -174,13 +174,16 @@ public static class QuickBars
     {
         itemsToUse.Clear();
         if (QuickSlotsHotBar.GetSlotsWithShortcutDown() is IEnumerable<Slot> quickItems)
-            itemsToUse.AddRange(quickItems.Select(slot => slot.Item));
+            foreach (Slot slot in quickItems)
+                itemsToUse.Add(slot.Item);
 
         if (AmmoSlotsHotBar.GetSlotsWithShortcutDown() is IEnumerable<Slot> ammoItems)
-            itemsToUse.AddRange(ammoItems.Select(slot => slot.Item));
+            foreach (Slot slot in ammoItems)
+                itemsToUse.Add(slot.Item);
 
         if (FoodSlotsHotBar.GetSlotsWithShortcutDown() is IEnumerable<Slot> foodItems)
-            itemsToUse.AddRange(foodItems.Select(slot => slot.Item));
+            foreach (Slot slot in foodItems)
+                itemsToUse.Add(slot.Item);
 
         return itemsToUse;
     }
@@ -228,7 +231,15 @@ public static class QuickBars
             }
 
             if (clearBars)
-                bars.Do(bar => { bar.m_items.Clear(); bar.UpdateIcons(null); });
+                for (int i = 0; i < bars.Count; i++)
+                {
+                    HotkeyBar bar = bars[i];
+                    if (bar)
+                    {
+                        bar.m_items.Clear();
+                        bar.UpdateIcons(null);
+                    }
+                }
         }
     }
 

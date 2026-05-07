@@ -31,6 +31,12 @@ namespace ExtraSlots
                 itemNames[item.name] = shared.m_name;
                 itemNames[shared.m_name] = shared.m_name;
             }
+
+            Slots.UpdateCustomItemLists();
+
+            ExtraUtilitySlots.UpdateUniqueEquipped();
+
+            TombStoneInteraction.UpdateItemLists();
         }
 
         public static string GetItemName(this string input) => itemNames.GetValueOrDefault(input.Trim(), input);

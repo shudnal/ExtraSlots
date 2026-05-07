@@ -238,7 +238,7 @@ namespace ExtraSlots
         
         private static bool IsSlotAvailable(int index) => IsExtraUtilitySlotAvailable(index) && GetItem(index) == null;
 
-        public static IEnumerable<ItemDrop.ItemData> GetEquippedItems()
+        public static List<ItemDrop.ItemData> GetEquippedItems()
         {
             tempItems.Clear();
 
@@ -285,7 +285,7 @@ namespace ExtraSlots
 
                     tempEffects.Clear();
 
-                    foreach(ItemDrop.ItemData item in GetEquippedItems().ToArray())
+                    foreach(ItemDrop.ItemData item in GetEquippedItems())
                     {
                         if ((bool)item.m_shared.m_equipStatusEffect)
                             tempEffects.Add(item.m_shared.m_equipStatusEffect);
@@ -328,7 +328,8 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    __result += GetEquippedItems().Sum(item => item.m_shared.m_weight);
+                    foreach (ItemDrop.ItemData item in GetEquippedItems())
+                        __result += item.m_shared.m_weight;
                 }
             }
 
@@ -405,7 +406,8 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    GetEquippedItems().ToArray().Do(item => __instance.UnequipItem(item, triggerEquipEffects: false));
+                    foreach (ItemDrop.ItemData item in GetEquippedItems())
+                        __instance.UnequipItem(item, triggerEquipEffects: false);
                 }
             }
 
@@ -451,7 +453,8 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    __result += GetEquippedItems().Sum(item => item.m_shared.m_eitrRegenModifier);
+                    foreach (ItemDrop.ItemData item in GetEquippedItems())
+                        __result += item.m_shared.m_eitrRegenModifier;
                 }
             }
 
@@ -463,7 +466,9 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    GetEquippedItems().DoIf(item => item.m_shared.m_useDurability, item => __instance.DrainEquipedItemDurability(item, dt));
+                    foreach (ItemDrop.ItemData item in GetEquippedItems())
+                        if (item.m_shared.m_useDurability)
+                            __instance.DrainEquipedItemDurability(item, dt);
                 }
             }
 
@@ -475,7 +480,8 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    GetEquippedItems().Select(item => item.m_shared.m_damageModifiers).Do(mods.Apply);
+                    foreach (ItemDrop.ItemData item in GetEquippedItems())
+                        mods.Apply(item.m_shared.m_damageModifiers);
                 }
             }
 
@@ -491,7 +497,14 @@ namespace ExtraSlots
                         return;
 
                     for (int i = 0; i < __instance.m_equipmentModifierValues.Length; i++)
-                        GetEquippedItems().Do(item => __instance.m_equipmentModifierValues[i] += (float)Player.s_equipmentModifierSourceFields[i].GetValue(item.m_shared));
+                    {
+                        float extraValue = 0f;
+                        for (int slotIndex = 0; slotIndex < ActiveSlots; slotIndex++)
+                            if (GetItem(slotIndex) is ItemDrop.ItemData utilityItem)
+                                extraValue += (float)Player.s_equipmentModifierSourceFields[i].GetValue(utilityItem.m_shared);
+
+                        __instance.m_equipmentModifierValues[i] += extraValue;
+                    }
                 }
             }
 
@@ -524,14 +537,10 @@ namespace ExtraSlots
                     if (!IsValidPlayer(__instance))
                         return;
 
-                    __result += GetEquippedItems().Count(item => item.m_shared.m_setName == setName);
+                    foreach (ItemDrop.ItemData item in GetEquippedItems())
+                        if (item.m_shared.m_setName == setName)
+                            __result++;
                 }
-            }
-
-            [HarmonyPatch(typeof(Player), nameof(Player.OnSpawned))]
-            private static class Player_OnSpawned_UpdateUniqueEquippedItems
-            {
-                private static void Postfix() => UpdateUniqueEquipped();
             }
         }
     }
