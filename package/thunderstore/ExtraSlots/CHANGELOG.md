@@ -1,3 +1,6 @@
+# 1.1.14
+* fixed on death issue and upgraded code for extra utility slots
+
 # 1.1.13
 * fixed custom item lists in several configs not applied initially if set up with prefab names
 * minor optimizations here and there
