@@ -21,7 +21,7 @@ internal static class PlantEasilyCompat
 
         assembly ??= Assembly.GetAssembly(plantEasilyPlugin.Instance.GetType());
 
-        Type pluginPlantEasily = assembly.GetType("Advize_PlantEasily.PlantEasily");
+        Type pluginPlantEasily = assembly.GetType("Advize_PlantEasily.InputPatches");
         if (pluginPlantEasily == null)
             return;
 

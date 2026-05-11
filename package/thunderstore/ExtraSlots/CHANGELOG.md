@@ -1,3 +1,6 @@
+# 1.1.15
+* fixed lost compatibility with PlantEasily overriding gamepad input
+
 # 1.1.14
 * fixed on death issue and upgraded code for extra utility slots
 

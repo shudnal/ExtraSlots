@@ -1,0 +1,10 @@
+{
+    "name": "ExtraSlots",
+    "description": "fixed lost compatibility with PlantEasily overriding gamepad input",
+    "version": "1.1.15",
+    "file_category": "main",
+    "allow_mod_manager_download": true,
+    "show_requirements_pop_up": false,
+    "archive_existing_file": true,
+    "primary_mod_manager_download": true
+}
