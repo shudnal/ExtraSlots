@@ -16,19 +16,9 @@ public static class FoodSlotsHotBar
     private static HotkeyBar hotBar = null;
     private static RectTransform hotBarRect = null;
     private static Slot[] hotBarSlots = Array.Empty<Slot>();
-    private static Dictionary<ItemDrop.ItemData, Vector2i> realPositions = new Dictionary<ItemDrop.ItemData, Vector2i>();
+    private static readonly Dictionary<ItemDrop.ItemData, Vector2i> realPositions = new Dictionary<ItemDrop.ItemData, Vector2i>();
 
     internal static void UpdateSlots() => hotBarSlots = GetFoodSlots();
-
-    public static void GetItems(List<ItemDrop.ItemData> bound)
-    {
-        if (PlayerInventory == null)
-            return;
-
-        bound.AddRange(GetItems());
-
-        AdaptGridPos(bound);
-    }
 
     private static void AdaptGridPos(List<ItemDrop.ItemData> items)
     {
@@ -36,24 +26,58 @@ public static class FoodSlotsHotBar
         if (offsetX == 0)
             return;
 
-        realPositions.Clear();
-
         foreach (ItemDrop.ItemData item in items)
         {
-            realPositions[item] = item.m_gridPos;
-            item.m_gridPos.x -= offsetX;
+            if (item == null)
+                continue;
+
+            if (!realPositions.TryGetValue(item, out Vector2i realPosition))
+            {
+                realPosition = item.m_gridPos;
+                realPositions[item] = realPosition;
+            }
+
+            item.m_gridPos = new Vector2i(realPosition.x - offsetX, realPosition.y);
         }
     }
 
     public static void RestoreGridPos()
     {
-        realPositions.Do(item => item.Key.m_gridPos = item.Value);
+        foreach (KeyValuePair<ItemDrop.ItemData, Vector2i> item in realPositions)
+            if (item.Key != null)
+                item.Key.m_gridPos = item.Value;
+
         realPositions.Clear();
+    }
+
+    public static void GetItems(List<ItemDrop.ItemData> bound, bool adaptGridPos = false)
+    {
+        if (PlayerInventory == null)
+            return;
+
+        for (int i = 0; i < hotBarSlots.Length; i++)
+        {
+            Slot slot = hotBarSlots[i];
+
+            if (slot == null || !slot.IsActive)
+                continue;
+
+            ItemDrop.ItemData item = slot.Item;
+            if (item != null)
+                bound.Add(item);
+        }
+
+        if (adaptGridPos)
+            AdaptGridPos(bound);
     }
 
     public static List<ItemDrop.ItemData> GetItems()
     {
-        return hotBarSlots.Where(slot => slot.IsActive).Select(slot => slot.Item).Where(item => item != null).ToList();
+        List<ItemDrop.ItemData> result = new List<ItemDrop.ItemData>();
+
+        GetItems(result, adaptGridPos: false);
+
+        return result;
     }
 
     public static ItemDrop.ItemData GetItemInSlot(int slotIndex) => slots[slotIndex + barSlotIndex].Item;

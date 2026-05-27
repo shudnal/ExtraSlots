@@ -1,3 +1,7 @@
+# 1.1.16
+* fixed compatibility with balrond_Runeforging and potentially other mods changing inventory items visuals
+* minor optimizations
+
 # 1.1.15
 * fixed lost compatibility with PlantEasily overriding gamepad input
 

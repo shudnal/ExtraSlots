@@ -21,8 +21,20 @@ public static class QuickBars
             AmmoSlotsHotBar.barName,
             FoodSlotsHotBar.barName,
         };
-    private static readonly Dictionary<GameObject, Tuple<RectTransform, TMP_Text>> elementsExtraData = new Dictionary<GameObject, Tuple<RectTransform, TMP_Text>>();
 
+    private readonly struct ElementExtraData
+    {
+        public readonly RectTransform BindingRect;
+        public readonly TMP_Text BindingText;
+
+        public ElementExtraData(RectTransform bindingRect, TMP_Text bindingText)
+        {
+            BindingRect = bindingRect;
+            BindingText = bindingText;
+        }
+    }
+
+    private static readonly Dictionary<GameObject, ElementExtraData> elementsExtraData = new Dictionary<GameObject, ElementExtraData>(32);
     private static readonly List<ItemDrop.ItemData> itemsToUse = new List<ItemDrop.ItemData>();
 
     public static RectTransform InstantiateHotKeyBar(string barName)
@@ -49,6 +61,25 @@ public static class QuickBars
     public static void UseCustomBarItem(HotkeyBar bar)
     {
         // Patch this method to use selected item from your hotbar
+    }
+
+    private static ElementExtraData GetElementExtraData(HotkeyBar.ElementData elementData)
+    {
+        GameObject go = elementData.m_go;
+
+        if (elementsExtraData.TryGetValue(go, out ElementExtraData extraData))
+            return extraData;
+
+        Transform binding = go.transform.Find("binding");
+
+        extraData = new ElementExtraData(
+            binding.GetComponent<RectTransform>(),
+            binding.GetComponent<TMP_Text>()
+        );
+
+        elementsExtraData.Add(go, extraData);
+
+        return extraData;
     }
 
     private static Vector3 LeftTopPoint => Hud.instance ? new Vector3(-Hud.instance.m_rootObject.transform.position.x, Hud.instance.m_rootObject.transform.position.y, 0) : new Vector3(-1280, 720, 0);
@@ -115,9 +146,16 @@ public static class QuickBars
             return;
 
         if (!ExtraSlots.useSingleHotbarItem.Value)
-            GetItemsToUse().Do(item => Player.m_localPlayer.UseItem(PlayerInventory, item, fromInventoryGui: false));
+        {
+            List<ItemDrop.ItemData> items = GetItemsToUse();
+
+            for (int i = 0; i < items.Count; i++)
+                Player.m_localPlayer.UseItem(PlayerInventory, items[i], fromInventoryGui: false);
+        }
         else if (GetItemToUse() is ItemDrop.ItemData item)
+        {
             Player.m_localPlayer.UseItem(PlayerInventory, item, fromInventoryGui: false);
+        }
     }
 
     private static ItemDrop.ItemData GetItemToUse()
@@ -170,7 +208,7 @@ public static class QuickBars
         return null;
     }
 
-    private static IEnumerable<ItemDrop.ItemData> GetItemsToUse()
+    private static List<ItemDrop.ItemData> GetItemsToUse()
     {
         itemsToUse.Clear();
         if (QuickSlotsHotBar.GetSlotsWithShortcutDown() is IEnumerable<Slot> quickItems)
@@ -200,7 +238,7 @@ public static class QuickBars
             if (!Player.m_localPlayer)
                 return;
 
-            if (QuickSlotsHotBar.Refresh() || AmmoSlotsHotBar.Refresh() || FoodSlotsHotBar.Refresh())
+            if (QuickSlotsHotBar.Refresh() | AmmoSlotsHotBar.Refresh() | FoodSlotsHotBar.Refresh())
                 ResetBars();
             
             bars ??= GetHotKeyBarsToControl();
@@ -255,57 +293,111 @@ public static class QuickBars
         [HarmonyPriority(Priority.First)]
         public static bool Prefix() => NoBarsToControl();
     }
-
+    
     [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.UpdateIcons))]
     public static class HotkeyBar_UpdateIcons_QuickBarsUpdate
     {
         public static bool inCall;
         public static string barName;
 
+        private static bool IsExtraSlotsHotBar(string name)
+        {
+            return name == QuickSlotsHotBar.barName
+                || name == AmmoSlotsHotBar.barName
+                || name == FoodSlotsHotBar.barName;
+        }
+
         public static void Prefix(HotkeyBar __instance)
         {
-            if (__instance.name != QuickSlotsHotBar.barName && __instance.name != AmmoSlotsHotBar.barName && __instance.name != FoodSlotsHotBar.barName)
+            if (!__instance || !IsExtraSlotsHotBar(__instance.name))
                 return;
 
             barName = __instance.name;
-
             inCall = true;
         }
 
+        [HarmonyPriority(Priority.First)]
         public static void Postfix(HotkeyBar __instance)
         {
-            if (!inCall)
+            if (!inCall || !__instance || !IsExtraSlotsHotBar(__instance.name))
                 return;
 
-            inCall = false;
+            string currentBarName = barName;
 
-            if (__instance.name == QuickSlotsHotBar.barName || __instance.name == AmmoSlotsHotBar.barName || __instance.name == FoodSlotsHotBar.barName)
-                for (int index = 0; index < __instance.m_elements.Count; index++)
+            if (currentBarName == FoodSlotsHotBar.barName)
+                FoodSlotsHotBar.RestoreGridPos();
+
+            int slotOffset;
+            bool hideStackSize;
+            int widthInElements;
+            bool fillUp;
+            float elementSpace;
+
+            if (currentBarName == FoodSlotsHotBar.barName)
+            {
+                slotOffset = FoodSlotsHotBar.barSlotIndex;
+                hideStackSize = ExtraSlots.foodSlotsHideStackSize.Value;
+                widthInElements = ExtraSlots.foodSlotsWidthInElements.Value;
+                fillUp = ExtraSlots.foodSlotsFillDirectionUp.Value;
+                elementSpace = ExtraSlots.foodSlotsElementSpace.Value;
+            }
+            else if (currentBarName == AmmoSlotsHotBar.barName)
+            {
+                slotOffset = AmmoSlotsHotBar.barSlotIndex;
+                hideStackSize = ExtraSlots.ammoSlotsHideStackSize.Value;
+                widthInElements = ExtraSlots.ammoSlotsWidthInElements.Value;
+                fillUp = ExtraSlots.ammoSlotsFillDirectionUp.Value;
+                elementSpace = ExtraSlots.ammoSlotsElementSpace.Value;
+            }
+            else
+            {
+                slotOffset = QuickSlotsHotBar.barSlotIndex;
+                hideStackSize = ExtraSlots.quickSlotsHideStackSize.Value;
+                widthInElements = ExtraSlots.quickSlotsWidthInElements.Value;
+                fillUp = ExtraSlots.quickSlotsFillDirectionUp.Value;
+                elementSpace = ExtraSlots.quickSlotsElementSpace.Value;
+            }
+
+            widthInElements = Mathf.Max(1, widthInElements);
+
+            for (int index = 0; index < __instance.m_elements.Count; index++)
+            {
+                HotkeyBar.ElementData elementData = __instance.m_elements[index];
+
+                if (elementData == null || !elementData.m_go)
+                    continue;
+
+                int slotIndex = index + slotOffset;
+                if (slotIndex < 0 || slotIndex >= slots.Length)
+                    continue;
+
+                Slot slot = slots[slotIndex];
+
+                ElementExtraData extraData = GetElementExtraData(elementData);
+                EquipmentPanel.SetSlotLabel(extraData.BindingRect, extraData.BindingText, slot, hotbarElement: true);
+
+                if (hideStackSize
+                    && elementData.m_amount.gameObject.activeInHierarchy
+                    && slot.Item is ItemDrop.ItemData item
+                    && (item.IsEquipable() || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable))
                 {
-                    HotkeyBar.ElementData elementData = __instance.m_elements[index];
-                    if (!elementsExtraData.ContainsKey(elementData.m_go))
-                    {
-                        Transform binding = elementData.m_go.transform.Find("binding");
-                        elementsExtraData[elementData.m_go] = Tuple.Create(binding.GetComponent<RectTransform>(), binding.GetComponent<TMP_Text>());
-                    }
-
-                    Tuple<RectTransform, TMP_Text> extraData = elementsExtraData[elementData.m_go];
-
-                    Slot slot = slots[index + (__instance.name == FoodSlotsHotBar.barName ? FoodSlotsHotBar.barSlotIndex : __instance.name == AmmoSlotsHotBar.barName ? AmmoSlotsHotBar.barSlotIndex : QuickSlotsHotBar.barSlotIndex)];
-                    EquipmentPanel.SetSlotLabel(extraData.Item1, extraData.Item2, slot, hotbarElement: true);
-
-                    bool hideStackSize = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsHideStackSize.Value : __instance.name == AmmoSlotsHotBar.barName ? ExtraSlots.ammoSlotsHideStackSize.Value : ExtraSlots.foodSlotsHideStackSize.Value;
-                    if (hideStackSize && elementData.m_amount.gameObject.activeInHierarchy && (slot.Item is ItemDrop.ItemData item) && (item.IsEquipable() || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable))
-                        elementData.m_amount.SetText(elementData.m_stackText.ToFastString());
-                    
-                    int widthInElements = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsWidthInElements.Value : __instance.name == AmmoSlotsHotBar.barName ? ExtraSlots.ammoSlotsWidthInElements.Value : ExtraSlots.foodSlotsWidthInElements.Value;
-                    bool fillUp = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsFillDirectionUp.Value : __instance.name == AmmoSlotsHotBar.barName ? ExtraSlots.ammoSlotsFillDirectionUp.Value : ExtraSlots.foodSlotsFillDirectionUp.Value;
-                    float elementSpace = __instance.name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsElementSpace.Value : __instance.name == AmmoSlotsHotBar.barName ? ExtraSlots.ammoSlotsElementSpace.Value : ExtraSlots.foodSlotsElementSpace.Value;
-                    elementData.m_go.transform.localPosition = new Vector3(index % widthInElements, (fillUp ? 1 : -1) * index / widthInElements, 0f) * elementSpace;
+                    elementData.m_amount.SetText(elementData.m_stackText.ToFastString());
                 }
 
-            if (__instance.name == FoodSlotsHotBar.barName)
+                elementData.m_go.transform.localPosition =
+                    new Vector3(index % widthInElements, (fillUp ? 1 : -1) * (index / widthInElements), 0f) * elementSpace;
+            }
+        }
+
+        public static Exception Finalizer(Exception __exception)
+        {
+            if (barName == FoodSlotsHotBar.barName)
                 FoodSlotsHotBar.RestoreGridPos();
+
+            inCall = false;
+            barName = null;
+
+            return __exception;
         }
     }
 
@@ -322,7 +414,7 @@ public static class QuickBars
                 else if (HotkeyBar_UpdateIcons_QuickBarsUpdate.barName == AmmoSlotsHotBar.barName)
                     AmmoSlotsHotBar.GetItems(bound);
                 else if (HotkeyBar_UpdateIcons_QuickBarsUpdate.barName == FoodSlotsHotBar.barName)
-                    FoodSlotsHotBar.GetItems(bound);
+                    FoodSlotsHotBar.GetItems(bound, adaptGridPos: true);
             }
         }
     }

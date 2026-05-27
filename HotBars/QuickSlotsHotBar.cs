@@ -23,12 +23,26 @@ public static class QuickSlotsHotBar
         if (PlayerInventory == null)
             return;
 
-        bound.AddRange(GetItems());
+        for (int i = 0; i < hotBarSlots.Length; i++)
+        {
+            Slot slot = hotBarSlots[i];
+
+            if (slot == null || !slot.IsActive)
+                continue;
+
+            ItemDrop.ItemData item = slot.Item;
+            if (item != null)
+                bound.Add(item);
+        }
     }
 
     public static List<ItemDrop.ItemData> GetItems()
     {
-        return hotBarSlots.Where(slot => slot.IsActive).Select(slot => slot.Item).Where(item => item != null).ToList();
+        List<ItemDrop.ItemData> result = new List<ItemDrop.ItemData>();
+
+        GetItems(result);
+
+        return result;
     }
 
     public static ItemDrop.ItemData GetItemInSlot(int slotIndex) => slots[slotIndex + barSlotIndex].Item;
