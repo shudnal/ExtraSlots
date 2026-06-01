@@ -1,5 +1,6 @@
 ﻿using BepInEx.Configuration;
 using HarmonyLib;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -110,7 +111,12 @@ namespace ExtraSlots
 
         public static void OnDeathPrefix(Player player)
         {
-            itemsToKeep.Clear();
+            if (itemsToKeep.Count != 0)
+            {
+                LogDebug($"Character.CheckDeath.Prefix: skipped because {itemsToKeep.Count} item(s) are already pending death cleanup.");
+                return;
+            }
+
             slots.DoIf(IsSlotToKeep, KeepItem);
             ClearCachedItems();
 
@@ -146,16 +152,18 @@ namespace ExtraSlots
             return ItemFitLists(item, keepItemList, keepItemWhiteList, keepItemBlackList);
         }
 
-        public static void OnDeathPostfix(Player player)
+        public static void OnDeathPostfix(Player player, string reason = "unknown")
         {
             if (itemsToKeep.Count == 0)
                 return;
 
             player.GetInventory().m_inventory.AddRange(itemsToKeep);
 
-            LogDebug($"Player.OnDeath.Postfix: {itemsToKeep.Count} item(s) returned to player inventory after preventing on death drop.");
+            LogDebug($"Death wrapping cleanup from {reason}: {itemsToKeep.Count} item(s) returned to player inventory.");
 
             itemsToKeep.Clear();
+
+            ClearCachedItems();
         }
 
         [HarmonyPatch(typeof(TombStone), nameof(TombStone.OnTakeAllSuccess))]
@@ -342,19 +350,40 @@ namespace ExtraSlots
                     return;
 
                 if (!__instance.IsDead() && __instance.GetHealth() <= 0f)
-                    OnDeathPrefix(__instance as Player);
+                    OnDeathPrefix((Player)__instance); // remove items before other mods can touch inventory
+            }
+
+            [HarmonyFinalizer]
+            [HarmonyPriority(Priority.Last)]
+            private static Exception Finalizer(Character __instance, Exception __exception)
+            {
+                if (IsValidPlayer(__instance))
+                    OnDeathPostfix((Player)__instance, "Character.CheckDeath.Finalizer");
+
+                return __exception;
             }
         }
 
         [HarmonyPatch(typeof(Player), nameof(Player.OnDeath))]
         private static class Player_OnDeath_RestoreItemsToKeep
         {
+            [HarmonyPriority(Priority.Last)]
             private static void Postfix(Player __instance)
             {
                 if (!IsValidPlayer(__instance))
                     return;
 
-                OnDeathPostfix(__instance);
+                OnDeathPostfix(__instance, "Player.OnDeath.Postfix");
+            }
+
+            [HarmonyFinalizer]
+            [HarmonyPriority(Priority.Last)]
+            private static Exception Finalizer(Player __instance, Exception __exception)
+            {
+                if (IsValidPlayer(__instance))
+                    OnDeathPostfix(__instance, "Player.OnDeath.Finalizer");
+
+                return __exception;
             }
         }
     }

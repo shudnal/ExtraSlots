@@ -1,7 +1,7 @@
 {
     "name":  "ExtraSlots",
-    "description":  "fixed compatibility with balrond_Runeforging, minor optimizations",
-    "version":  "1.1.16",
+    "description":  "improved items in extra slots from being lost of moved into a grave on death in certain scenarios",
+    "version":  "1.1.17",
     "file_category":  "main",
     "allow_mod_manager_download":  true,
     "show_requirements_pop_up":  false,

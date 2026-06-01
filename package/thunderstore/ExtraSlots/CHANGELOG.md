@@ -1,3 +1,6 @@
+# 1.1.17
+* improved items in extra slots from being lost of moved into a grave on death in certain scenarios
+
 # 1.1.16
 * fixed compatibility with balrond_Runeforging and potentially other mods changing inventory items visuals
 * minor optimizations
