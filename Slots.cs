@@ -365,6 +365,20 @@ namespace ExtraSlots
             return true;
         }
 
+        private static Slot FindEquipmentSlotByCustomFallback(ItemDrop.ItemData item, Func<Slot, bool> predicate)
+        {
+            Slot[] equipmentSlots = GetEquipmentSlots();
+
+            Slot customSlot = equipmentSlots.FirstOrDefault(slot => slot.IsCustomSlot && predicate(slot));
+            if (customSlot != null)
+                return customSlot;
+
+            if (IsCustomSlotItem(item) && !customSlotItemsCanUseRegularEquipmentSlots.Value)
+                return null;
+
+            return equipmentSlots.FirstOrDefault(slot => !slot.IsCustomSlot && predicate(slot));
+        }
+
         public static bool TryFindFreeEquipmentSlotForItem(ItemDrop.ItemData item, out Slot slot)
         {
             slot = null;
@@ -378,8 +392,7 @@ namespace ExtraSlots
                 return true;
             }
 
-            bool isCustomSlotItem = IsCustomSlotItem(item);
-            slot = GetEquipmentSlots().FirstOrDefault(slot => (!isCustomSlotItem || slot.IsCustomSlot) && slot.IsFree && slot.ItemFits(item));
+            slot = FindEquipmentSlotByCustomFallback(item, slot => slot.IsFree && slot.ItemFits(item));
             return slot != null;
         }
 
@@ -396,8 +409,7 @@ namespace ExtraSlots
                 return true;
             }
 
-            bool isCustomSlotItem = IsCustomSlotItem(item);
-            slot = GetEquipmentSlots().FirstOrDefault(slot => (!isCustomSlotItem || slot.IsCustomSlot) && !slot.IsFree && slot.ItemFits(item) && !CurrentPlayer.IsItemEquiped(slot.Item));
+            slot = FindEquipmentSlotByCustomFallback(item, slot => !slot.IsFree && slot.ItemFits(item) && !CurrentPlayer.IsItemEquiped(slot.Item));
             return slot != null;
         }
 

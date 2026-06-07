@@ -39,7 +39,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.1.17";
+        public const string pluginVersion = "1.1.18";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -65,6 +65,7 @@ namespace ExtraSlots
         public static ConfigEntry<string> preventUniqueUtilityItemsEquip;
         public static ConfigEntry<bool> useSingleHotbarItem;
         public static ConfigEntry<bool> showExtraUtilityItems;
+        public static ConfigEntry<bool> customSlotItemsCanUseRegularEquipmentSlots;
 
         public static ConfigEntry<bool> slotsTombstoneAutoEquipWeaponShield;
         public static ConfigEntry<bool> slotsTombstoneAutoEquipEnabled;
@@ -381,6 +382,9 @@ namespace ExtraSlots
             useSingleHotbarItem = config("Extra slots", "Use single hotbar item", defaultValue: true, "Enabled - only item from the first slot will be used with slots priority (Quick -> Ammo -> Food)\n" +
                                                                                                       "Disabled - all items with similar hotkey will be used at once. [Synced with Server]", synchronizedSetting: true);
             showExtraUtilityItems = config("Extra slots", "Show extra utility items", defaultValue: true, "Show extra utility items on player model. [Synced with Server]", synchronizedSetting: true);
+            customSlotItemsCanUseRegularEquipmentSlots = config("Extra slots", "Custom slot items can use regular equipment slots", defaultValue: false, "If enabled, items matching custom slots will try custom slots first and then fall back to regular compatible equipment slots. [Synced with Server]" +
+                                                                                                                                    "\nIf disabled, such items will only be placed into custom slots, unless they have a valid saved previous slot.", synchronizedSetting: true);
+
 
             extraRows.SettingChanged += (s, e) => API.UpdateSlots();
             rowsProgressionEnabled.SettingChanged += (s, e) => API.UpdateSlots();

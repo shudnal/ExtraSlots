@@ -1,3 +1,6 @@
+# 1.1.18
+* new config "Custom slot items can use regular equipment slots", disabled by default. Custom items go into custom slots only by default.
+
 # 1.1.17
 * improved items in extra slots from being lost of moved into a grave on death in certain scenarios
 
