@@ -111,7 +111,9 @@ namespace ExtraSlots
             public bool IsVanillaEquipment() => IsVanillaSlotID(_id);
 
             public bool IsShortcutDown() => IsActive && _getShortcut != null && Player.m_localPlayer?.TakeInput() == true && IsShortcutDown(_getShortcut());
-            public bool IsShortcutDownWithItem() => IsShortcutDown() && Item != null;
+            public bool IsShortcutDownWithItem() => Item != null && IsShortcutDown();
+            public bool IsShortcutPressed() => IsActive && _getShortcut != null && Player.m_localPlayer?.TakeInput() == true && IsShortcutPressed(_getShortcut());
+            public bool IsShortcutPressedWithItem() => Item != null && IsShortcutPressed();
 
             public KeyboardShortcut GetShortcut() => _getShortcut == null ? KeyboardShortcut.Empty : _getShortcut();
             public string GetShortcutText() => _getShortcutText == null ? Name : Localization.instance.Localize(_getShortcutText());
@@ -175,6 +177,8 @@ namespace ExtraSlots
             public override string ToString() => (Name == "" ? ID : Name) + (IsActive ? "" : " (inactive)");
 
             public static bool IsShortcutDown(KeyboardShortcut shortcut) => HotBars.PreventSimilarHotkeys.IsShortcutDown(shortcut);
+
+            public static bool IsShortcutPressed(KeyboardShortcut shortcut) => HotBars.PreventSimilarHotkeys.IsShortcutPressed(shortcut);
 
             public static bool IsVanillaSlotID(string id) => vanillaSlots.Contains(id);
         }

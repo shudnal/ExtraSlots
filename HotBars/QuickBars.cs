@@ -56,7 +56,7 @@ public static class QuickBars
     }
 
     // Patch this method if you want your bar to be controlled in the same way
-    public static bool IsBarToControl(HotkeyBar bar) => bar != null && barNames.Contains(bar.name);
+    public static bool IsBarToControl(HotkeyBar bar) => bar && barNames.Contains(bar.name);
 
     public static void UseCustomBarItem(HotkeyBar bar)
     {
@@ -228,20 +228,62 @@ public static class QuickBars
 
     private static bool GetJoyButtonDown(string name) => !Compatibility.PlantEasilyCompat.DisableGamepadInput && ZInput.GetButtonDown(name) && !ZInput.GetButton("JoyAltKeys");
 
-    private static bool NoBarsToControl() => bars == null || bars.Count == 0 || bars.Count == 1 && bars[0].name == vanillaBarName;
+    private static bool NoBarsToControl()
+    {
+        if (bars == null || bars.Count == 0)
+            return true;
+
+        if (bars.Count != 1)
+            return false;
+
+        HotkeyBar bar = bars[0];
+
+        return !bar || bar.name == vanillaBarName;
+    }
+
+    private static bool AreBarsValid()
+    {
+        if (bars == null)
+            return false;
+
+        for (int i = 0; i < bars.Count; i++)
+        {
+            HotkeyBar bar = bars[i];
+
+            if (!bar || bar.m_elements == null || bar.m_items == null)
+                return false;
+        }
+
+        return true;
+    }
 
     [HarmonyPatch(typeof(Hud), nameof(Hud.Update))]
     public static class Hud_Update_BarController
     {
         public static void Postfix()
         {
-            if (!Player.m_localPlayer)
+            Player player = Player.m_localPlayer;
+            if (!player)
                 return;
 
-            if (QuickSlotsHotBar.Refresh() | AmmoSlotsHotBar.Refresh() | FoodSlotsHotBar.Refresh())
+            bool barsRefreshed =
+                QuickSlotsHotBar.Refresh() |
+                AmmoSlotsHotBar.Refresh() |
+                FoodSlotsHotBar.Refresh();
+
+            if (barsRefreshed)
+            {
                 ResetBars();
-            
+                return;
+            }
+
             bars ??= GetHotKeyBarsToControl();
+
+            if (!AreBarsValid())
+            {
+                ResetBars();
+                return;
+            }
 
             if (NoBarsToControl())
                 return;
@@ -250,34 +292,25 @@ public static class QuickBars
             bool joyHotbarRight = GetJoyButtonDown("JoyHotbarRight");
             bool joyHotbarUse = GetJoyButtonDown("JoyHotbarUse");
 
-            if (!UpdateCurrentHotkeyBar(joyHotbarLeft, joyHotbarRight, joyHotbarUse) && (joyHotbarLeft || joyHotbarRight || joyHotbarUse))
-                ChangeActiveHotkeyBar();
-
-            bool clearBars = false;
-            for (int i = bars.Count - 1; i >= 0; i--)
+            if (!UpdateCurrentHotkeyBar(
+                    joyHotbarLeft,
+                    joyHotbarRight,
+                    joyHotbarUse)
+                && (joyHotbarLeft || joyHotbarRight || joyHotbarUse))
             {
-                if (bars[i] == null)
-                {
-                    bars.RemoveAt(i);
-                    clearBars = true;
-                    continue;
-                }
-
-                HotkeyBar bar = bars[i];
-                bar.m_selected = _currentBarIndex != i ? -1 : Mathf.Clamp(bar.m_selected, -1, bar.m_elements.Count - 1);
-                bar.UpdateIcons(Player.m_localPlayer);
+                ChangeActiveHotkeyBar();
             }
 
-            if (clearBars)
-                for (int i = 0; i < bars.Count; i++)
-                {
-                    HotkeyBar bar = bars[i];
-                    if (bar)
-                    {
-                        bar.m_items.Clear();
-                        bar.UpdateIcons(null);
-                    }
-                }
+            for (int i = 0; i < bars.Count; i++)
+            {
+                HotkeyBar bar = bars[i];
+
+                bar.m_selected = _currentBarIndex == i
+                    ? Mathf.Clamp(bar.m_selected, -1, bar.m_elements.Count - 1)
+                    : -1;
+
+                bar.UpdateIcons(player);
+            }
         }
     }
 
@@ -291,9 +324,11 @@ public static class QuickBars
     public static class HotkeyBar_Update_PreventCall
     {
         [HarmonyPriority(Priority.First)]
-        public static bool Prefix() => NoBarsToControl();
+        public static bool Prefix(HotkeyBar __instance)
+        {
+            return !IsBarToControl(__instance) || NoBarsToControl();
+        }
     }
-    
     [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.UpdateIcons))]
     public static class HotkeyBar_UpdateIcons_QuickBarsUpdate
     {
@@ -404,18 +439,35 @@ public static class QuickBars
     [HarmonyPatch(typeof(Inventory), nameof(Inventory.GetBoundItems))]
     public static class Inventory_GetBoundItems_QuickBarsItems
     {
-        public static void Postfix(Inventory __instance, List<ItemDrop.ItemData> bound)
+        public static bool Prefix(Inventory __instance, List<ItemDrop.ItemData> bound)
         {
-            if (__instance == PlayerInventory && HotkeyBar_UpdateIcons_QuickBarsUpdate.inCall)
+            if (__instance != PlayerInventory || !HotkeyBar_UpdateIcons_QuickBarsUpdate.inCall)
+                return true;
+
+            string currentBarName = HotkeyBar_UpdateIcons_QuickBarsUpdate.barName;
+
+            if (currentBarName == QuickSlotsHotBar.barName)
             {
                 bound.Clear();
-                if (HotkeyBar_UpdateIcons_QuickBarsUpdate.barName == QuickSlotsHotBar.barName)
-                    QuickSlotsHotBar.GetItems(bound);
-                else if (HotkeyBar_UpdateIcons_QuickBarsUpdate.barName == AmmoSlotsHotBar.barName)
-                    AmmoSlotsHotBar.GetItems(bound);
-                else if (HotkeyBar_UpdateIcons_QuickBarsUpdate.barName == FoodSlotsHotBar.barName)
-                    FoodSlotsHotBar.GetItems(bound, adaptGridPos: true);
+                QuickSlotsHotBar.GetItems(bound);
+                return false;
             }
+
+            if (currentBarName == AmmoSlotsHotBar.barName)
+            {
+                bound.Clear();
+                AmmoSlotsHotBar.GetItems(bound);
+                return false;
+            }
+
+            if (currentBarName == FoodSlotsHotBar.barName)
+            {
+                bound.Clear();
+                FoodSlotsHotBar.GetItems(bound, adaptGridPos: true);
+                return false;
+            }
+
+            return true;
         }
     }
 

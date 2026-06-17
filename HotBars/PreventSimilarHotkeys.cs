@@ -16,17 +16,46 @@ public static class PreventSimilarHotkeys
     private static readonly HashSet<string> similarName = new HashSet<string>();
     private static readonly HashSet<KeyCode> similarKeyCode = new HashSet<KeyCode>();
     private static bool _anyExtraSlotsHotkeyDown;
+    private static bool _anyExtraSlotsHotkeyHeld;
+
     private static int _cacheUpdatedToken = -1;
+    private static int _heldCacheUpdatedToken = -1;
 
-    private static bool _skipPrevention;
+    private static int _skipPreventionDepth;
+    private static bool SkipPrevention => _skipPreventionDepth > 0;
 
-    public static bool IsShortcutDown(KeyboardShortcut shortcut)
+    public static bool IsShortcutDown(KeyboardShortcut shortcut) => IsShortcutActive(shortcut, checkForHeld: false);
+
+    public static bool IsShortcutPressed(KeyboardShortcut shortcut) => IsShortcutActive(shortcut, checkForHeld: true);
+
+    private static bool IsShortcutActive(KeyboardShortcut shortcut, bool checkForHeld)
     {
-        _skipPrevention = true;
-        bool result = shortcut.MainKey != KeyCode.None && ZInput.GetKeyDown(shortcut.MainKey) && shortcut.Modifiers.All(key => ZInput.GetKey(key));
-        _skipPrevention = false;
+        if (shortcut.MainKey == KeyCode.None)
+            return false;
 
-        return result;
+        _skipPreventionDepth++;
+
+        try
+        {
+            bool mainKeyActive = checkForHeld
+                ? ZInput.GetKey(shortcut.MainKey)
+                : ZInput.GetKeyDown(shortcut.MainKey);
+
+            if (!mainKeyActive)
+                return false;
+
+            foreach (KeyCode modifier in shortcut.Modifiers)
+            {
+                if (!ZInput.GetKey(modifier))
+                    return false;
+            }
+
+            return true;
+        }
+        finally
+        {
+            _skipPreventionDepth--;
+        }
     }
 
     private static int GetCacheToken() => (Time.frameCount << 1) | (Time.inFixedTimeStep ? 1 : 0);
@@ -34,7 +63,16 @@ public static class PreventSimilarHotkeys
     private static void ResetHotkeyState()
     {
         _cacheUpdatedToken = -1;
+        _heldCacheUpdatedToken = -1;
+
         _anyExtraSlotsHotkeyDown = false;
+        _anyExtraSlotsHotkeyHeld = false;
+
+        ZInput_TryGetButtonState_PreventSimilarHotkeys.checkForHeld = false;
+        ZInput_TryGetButtonState_PreventSimilarHotkeys.skipCheck = false;
+
+        ZInput_TryGetKeyStateLowLevel_PreventSimilarHotkeys.checkForHeld = false;
+        ZInput_TryGetKeyStateLowLevel_PreventSimilarHotkeys.skipCheck = false;
     }
 
     public static void FillSimilarHotkey() => FillSimilarHotkey(ZInput.instance);
@@ -48,41 +86,51 @@ public static class PreventSimilarHotkeys
 
         similarName.Clear();
         similarKeyCode.Clear();
-        if (__instance == null)
+        ResetHotkeyState();
+
+        if (__instance?.m_buttons == null)
             return;
 
-        if (__instance.m_buttons == null)
-            return;
+        Dictionary<string, HashSet<string>> pathToButtonNames = new Dictionary<string, HashSet<string>>();
 
-        Dictionary<string, string> pathToButtonName = new Dictionary<string, string>();
         foreach (KeyValuePair<string, ZInput.ButtonDef> button in __instance.m_buttons)
         {
-            string effectivePath = button.Value.GetActionPath(effective: true);
-            if (!string.IsNullOrEmpty(effectivePath) && !pathToButtonName.ContainsKey(effectivePath))
-                pathToButtonName[effectivePath] = button.Key;
-
-            string defaultPath = button.Value.GetActionPath(effective: false);
-            if (!string.IsNullOrEmpty(defaultPath) && !pathToButtonName.ContainsKey(defaultPath))
-                pathToButtonName[defaultPath] = button.Key;
+            AddButtonPath(button.Value.GetActionPath(effective: true), button.Key);
+            AddButtonPath(button.Value.GetActionPath(effective: false), button.Key);
         }
 
-        foreach (Slot slot in slots.Where(slot => slot.IsHotkeySlot))
+        foreach (Slot slot in slots)
         {
+            if (!slot.IsHotkeySlot)
+                continue;
+
             KeyCode mainKey = slot.GetShortcut().MainKey;
-            
+
+            if (mainKey == KeyCode.None)
+                continue;
+
             similarKeyCode.Add(mainKey);
 
-            if (!ZInput.TryKeyCodeToKey(mainKey, out Key key))
+            string keyPath = ZInput.KeyCodeToPath(mainKey);
+            if (!pathToButtonNames.TryGetValue(keyPath, out HashSet<string> buttonNames))
                 continue;
 
-            string keyPath = ZInput.KeyToPath(key);
-            if (!pathToButtonName.TryGetValue(keyPath, out string buttonName))
-                continue;
-
-            similarName.Add(buttonName);
+            similarName.UnionWith(buttonNames);
         }
 
-        ResetHotkeyState();
+        void AddButtonPath(string path, string buttonName)
+        {
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            if (!pathToButtonNames.TryGetValue(path, out HashSet<string> buttonNames))
+            {
+                buttonNames = new HashSet<string>();
+                pathToButtonNames[path] = buttonNames;
+            }
+
+            buttonNames.Add(buttonName);
+        }
     }
 
     private static void SanitizeShortcutsKeys()
@@ -138,17 +186,44 @@ public static class PreventSimilarHotkeys
                key == KeyCode.RightWindows;
     }
 
-    internal static bool IsAnyExtraSlotsHotkeyDown()
+    internal static bool IsAnyExtraSlotsHotkeyDown(bool checkForHeld = false)
     {
         int token = GetCacheToken();
+
+        if (checkForHeld)
+        {
+            if (_heldCacheUpdatedToken == token)
+                return _anyExtraSlotsHotkeyHeld;
+
+            _heldCacheUpdatedToken = token;
+            _anyExtraSlotsHotkeyHeld = false;
+
+            foreach (Slot slot in slots)
+            {
+                if (!slot.IsHotkeySlot)
+                    continue;
+
+                if (!slot.IsShortcutPressedWithItem())
+                    continue;
+
+                _anyExtraSlotsHotkeyHeld = true;
+                break;
+            }
+
+            return _anyExtraSlotsHotkeyHeld;
+        }
+
         if (_cacheUpdatedToken == token)
             return _anyExtraSlotsHotkeyDown;
 
         _cacheUpdatedToken = token;
         _anyExtraSlotsHotkeyDown = false;
 
-        foreach (Slot slot in slots.Where(slot => slot.IsHotkeySlot))
+        foreach (Slot slot in slots)
         {
+            if (!slot.IsHotkeySlot)
+                continue;
+
             if (!slot.IsShortcutDownWithItem())
                 continue;
 
@@ -159,36 +234,77 @@ public static class PreventSimilarHotkeys
         return _anyExtraSlotsHotkeyDown;
     }
 
+    [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetButtonUp))]
+    private static class ZInput_GetButtonUp_PreventSimilarHotkeys
+    {
+        private static void Prefix() => ZInput_TryGetButtonState_PreventSimilarHotkeys.skipCheck = true;
+    }
+
+    [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetButton))]
+    private static class ZInput_GetButton_PreventSimilarHotkeys
+    {
+        private static void Prefix() => ZInput_TryGetButtonState_PreventSimilarHotkeys.checkForHeld = true;
+    }
+
+    [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetMouseButton))]
+    private static class ZInput_GetMouseButton_PreventSimilarHotkeys
+    {
+        private static void Prefix() => ZInput_TryGetButtonState_PreventSimilarHotkeys.checkForHeld = true;
+    }
+
+    [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetMouseButtonUp))]
+    private static class ZInput_GetMouseButtonUp_PreventSimilarHotkeys
+    {
+        private static void Prefix() => ZInput_TryGetButtonState_PreventSimilarHotkeys.skipCheck = true;
+    }
+
     [HarmonyPatch(typeof(ZInput), nameof(ZInput.TryGetButtonState))]
     private static class ZInput_TryGetButtonState_PreventSimilarHotkeys
     {
+        internal static bool checkForHeld = false;
+        internal static bool skipCheck = false;
+
         private static void Postfix(string name, ref bool __result)
         {
-            if (!__result)
-                return;
+            bool held = checkForHeld;
+            bool skip = skipCheck;
 
-            if (!similarName.Contains(name))
-                return;
+            checkForHeld = false;
+            skipCheck = false;
 
-            __result = !IsAnyExtraSlotsHotkeyDown();
+            if (!skip && __result && similarName.Contains(name))
+                __result = !IsAnyExtraSlotsHotkeyDown(held);
         }
+    }
+
+    [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetKey))]
+    private static class ZInput_GetKey_PreventSimilarHotkeys
+    {
+        private static void Prefix() => ZInput_TryGetKeyStateLowLevel_PreventSimilarHotkeys.checkForHeld = true;
+    }
+
+    [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetKeyUp))]
+    private static class ZInput_GetKeyUp_PreventSimilarHotkeys
+    {
+        private static void Prefix() => ZInput_TryGetKeyStateLowLevel_PreventSimilarHotkeys.skipCheck = true;
     }
 
     [HarmonyPatch(typeof(ZInput), nameof(ZInput.TryGetKeyStateLowLevel))]
     private static class ZInput_TryGetKeyStateLowLevel_PreventSimilarHotkeys
     {
+        internal static bool checkForHeld = false;
+        internal static bool skipCheck = false;
+
         private static void Postfix(KeyCode keyCode, ref bool __result)
         {
-            if (_skipPrevention)
-                return;
+            bool held = checkForHeld;
+            bool skip = skipCheck;
 
-            if (!__result)
-                return;
+            checkForHeld = false;
+            skipCheck = false;
 
-            if (!similarKeyCode.Contains(keyCode))
-                return;
-
-            __result = !IsAnyExtraSlotsHotkeyDown();
+            if (!SkipPrevention && !skip && __result && similarKeyCode.Contains(keyCode))
+                __result = !IsAnyExtraSlotsHotkeyDown(held);
         }
     }
 
