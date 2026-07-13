@@ -1,191 +1,210 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-	<PropertyGroup>
-		<ModName>ExtraSlots</ModName>
-		<LanguageFileName>Extra Slots.English.json</LanguageFileName>
-	</PropertyGroup>
+  <PropertyGroup>
+    <ModName>ExtraSlots</ModName>
+    <LanguageFileName>Extra Slots.English.json</LanguageFileName>
+  </PropertyGroup>
 
-	<Target Name="InitializePackagePublishProperties">
-		<PropertyGroup>
-			<EffectiveModName Condition="'$(ModName)' != ''">$(ModName)</EffectiveModName>
-			<EffectiveModName Condition="'$(EffectiveModName)' == '' and '$(TargetName)' != ''">$(TargetName)</EffectiveModName>
-			<EffectiveModName Condition="'$(EffectiveModName)' == '' and '$(AssemblyName)' != ''">$(AssemblyName)</EffectiveModName>
-			<EffectiveModName Condition="'$(EffectiveModName)' == '' and '$(MSBuildProjectName)' != ''">$(MSBuildProjectName)</EffectiveModName>
+  <Target Name="InitializeExtraSlotsPackageProperties">
+    <PropertyGroup>
+      <EffectiveModName Condition="'$(ModName)' != ''">$(ModName)</EffectiveModName>
+      <EffectiveModName Condition="'$(EffectiveModName)' == '' and '$(TargetName)' != ''">$(TargetName)</EffectiveModName>
+      <EffectiveModName Condition="'$(EffectiveModName)' == '' and '$(AssemblyName)' != ''">$(AssemblyName)</EffectiveModName>
+      <EffectiveModName Condition="'$(EffectiveModName)' == '' and '$(MSBuildProjectName)' != ''">$(MSBuildProjectName)</EffectiveModName>
 
-			<ThunderstoreRepackDir>$(TargetDir)thunderstore\</ThunderstoreRepackDir>
-			<ThunderstoreRepackDllPath>$(ThunderstoreRepackDir)$(TargetFileName)</ThunderstoreRepackDllPath>
+      <ResolvedR2ModManProfilePluginsDir Condition="'$(R2ModManProfilePluginsDir)' != ''">$(R2ModManProfilePluginsDir)</ResolvedR2ModManProfilePluginsDir>
+      <ResolvedR2ModManProfilePluginsDir Condition="'$(ResolvedR2ModManProfilePluginsDir)' == ''">D:\r2modman\Valheim\profiles\beta\BepInEx\plugins\shudnal-$(EffectiveModName)\</ResolvedR2ModManProfilePluginsDir>
 
-			<ThunderstorePackageDir>$(ProjectDir)package\thunderstore\$(EffectiveModName)\</ThunderstorePackageDir>
-			<ThunderstorePackageDllPath>$(ThunderstorePackageDir)$(TargetFileName)</ThunderstorePackageDllPath>
-			<ThunderstoreZipPath>$(ProjectDir)package\thunderstore\$(EffectiveModName).zip</ThunderstoreZipPath>
+      <ThunderstorePackageDir>$(ProjectDir)package\thunderstore\$(EffectiveModName)\</ThunderstorePackageDir>
+      <ThunderstoreZipPath>$(ProjectDir)package\thunderstore\$(EffectiveModName).zip</ThunderstoreZipPath>
+      <ThunderstoreManifestPath>$(ThunderstorePackageDir)manifest.json</ThunderstoreManifestPath>
 
-			<NexusPackageDir>$(ProjectDir)package\nexus\</NexusPackageDir>
-			<NexusPackageContentDir>$(ProjectDir)package\nexus\$(EffectiveModName)\</NexusPackageContentDir>
-			<NexusZipPath>$(ProjectDir)package\nexus\$(EffectiveModName).zip</NexusZipPath>
+      <NexusPackageRootDir>$(ProjectDir)package\nexus\</NexusPackageRootDir>
+      <NexusPackageDir>$(NexusPackageRootDir)$(EffectiveModName)\</NexusPackageDir>
+      <NexusZipPath>$(NexusPackageRootDir)$(EffectiveModName).zip</NexusZipPath>
+      <NexusManifestPath>$(NexusPackageRootDir)manifest.json</NexusManifestPath>
 
-			<LanguageSourcePath>$(ProjectDir)translations\English.json</LanguageSourcePath>
-			<ThunderstoreLanguageDestinationPath>$(ThunderstorePackageDir)$(LanguageFileName)</ThunderstoreLanguageDestinationPath>
-			<NexusLanguageDestinationPath>$(NexusPackageContentDir)$(LanguageFileName)</NexusLanguageDestinationPath>
-		</PropertyGroup>
+      <EnglishLocalizationSource>$(ProjectDir)Translations\English.json</EnglishLocalizationSource>
+      <ThunderstoreEnglishLocalizationDestination>$(ThunderstorePackageDir)$(LanguageFileName)</ThunderstoreEnglishLocalizationDestination>
+      <NexusEnglishLocalizationDestination>$(NexusPackageDir)$(LanguageFileName)</NexusEnglishLocalizationDestination>
 
-		<Error Condition="'$(EffectiveModName)' == ''" Text="Mod name was not resolved. Set &lt;ModName&gt;ExtraSlots&lt;/ModName&gt; in ILRepack.targets." />
-		<Error Condition="'$(ThunderstoreRepackDir)' == ''" Text="ThunderstoreRepackDir was not resolved." />
-		<Error Condition="'$(ThunderstoreRepackDllPath)' == ''" Text="ThunderstoreRepackDllPath was not resolved." />
-		<Error Condition="'$(ThunderstorePackageDir)' == ''" Text="ThunderstorePackageDir was not resolved." />
-		<Error Condition="'$(ThunderstorePackageDllPath)' == ''" Text="ThunderstorePackageDllPath was not resolved." />
-		<Error Condition="'$(ThunderstoreZipPath)' == ''" Text="ThunderstoreZipPath was not resolved." />
-		<Error Condition="'$(NexusPackageDir)' == ''" Text="NexusPackageDir was not resolved." />
-		<Error Condition="'$(NexusPackageContentDir)' == ''" Text="NexusPackageContentDir was not resolved." />
-		<Error Condition="'$(NexusZipPath)' == ''" Text="NexusZipPath was not resolved." />
-		<Error Condition="'$(LanguageSourcePath)' == ''" Text="LanguageSourcePath was not resolved." />
-	</Target>
+      <YamlDotNetAssemblyPath>$(TargetDir)YamlDotNet.dll</YamlDotNetAssemblyPath>
+    </PropertyGroup>
 
-	<Target Name="UpdateTranslations" BeforeTargets="CoreCompile">
-		<Error Condition="!Exists('$(ProjectDir)UpdateTranslations.ps1')" Text="UpdateTranslations.ps1 was not found in $(ProjectDir)." />
+    <Error Condition="'$(EffectiveModName)' == ''" Text="Mod name was not resolved. Set &lt;ModName&gt;ExtraSlots&lt;/ModName&gt; in ILRepack.targets." />
+    <Error Condition="'$(ThunderstorePackageDir)' == ''" Text="Thunderstore package directory was not resolved." />
+    <Error Condition="'$(ThunderstoreZipPath)' == ''" Text="Thunderstore ZIP path was not resolved." />
+    <Error Condition="'$(NexusPackageDir)' == ''" Text="Nexus package directory was not resolved." />
+    <Error Condition="'$(NexusZipPath)' == ''" Text="Nexus ZIP path was not resolved." />
+    <Error Condition="'$(ResolvedR2ModManProfilePluginsDir)' == ''" Text="r2modman profile plugins directory was not resolved." />
+  </Target>
 
-		<Exec
-			Command="powershell -ExecutionPolicy Bypass -NoProfile -File &quot;$(ProjectDir)UpdateTranslations.ps1&quot;"
-			WorkingDirectory="$(ProjectDir)" />
+  <Target
+    Name="UpdateExtraSlotsEmbeddedTranslationsBeforeBuild"
+    BeforeTargets="CoreCompile"
+    Condition="'$(DesignTimeBuild)' != 'true'">
 
-		<Message Text="Updated embedded translations before compile." Importance="High" />
-	</Target>
+    <Error Condition="!Exists('$(ProjectDir)UpdateTranslations.ps1')" Text="UpdateTranslations.ps1 was not found in $(ProjectDir)." />
+    <Error Condition="!Exists('$(ProjectDir)EmbeddedLocalizations.csv')" Text="EmbeddedLocalizations.csv was not found in $(ProjectDir)." />
 
-	<Target Name="ReadPackageVersion" AfterTargets="Build" DependsOnTargets="InitializePackagePublishProperties">
-		<GetAssemblyIdentity AssemblyFiles="$(TargetPath)">
-			<Output TaskParameter="Assemblies" ItemName="_PackageAssemblyIdentity" />
-		</GetAssemblyIdentity>
+    <Exec
+      WorkingDirectory="$(ProjectDir)"
+      Command="powershell -ExecutionPolicy Bypass -NoProfile -File &quot;$(ProjectDir)UpdateTranslations.ps1&quot;" />
 
-		<PropertyGroup>
-			<PackageVersion>%(_PackageAssemblyIdentity.Version)</PackageVersion>
-		</PropertyGroup>
+    <Message Text="Updated embedded translations before build." Importance="High" />
+  </Target>
 
-		<Error Condition="'$(PackageVersion)' == ''" Text="Package version was not resolved from $(TargetPath)." />
+  <Target
+    Name="ReadExtraSlotsPackageVersion"
+    DependsOnTargets="InitializeExtraSlotsPackageProperties">
 
-		<Message Text="Detected package version: $(PackageVersion)" Importance="High" />
-	</Target>
+    <Error Condition="!Exists('$(TargetPath)')" Text="Built mod DLL was not found: $(TargetPath)" />
 
-	<Target Name="RepackThunderstore" AfterTargets="ReadPackageVersion">
-		<MakeDir Directories="$(ThunderstoreRepackDir)" />
+    <GetAssemblyIdentity AssemblyFiles="$(TargetPath)">
+      <Output TaskParameter="Assemblies" ItemName="_ExtraSlotsPackageAssemblyIdentity" />
+    </GetAssemblyIdentity>
 
-		<ItemGroup>
-			<ThunderstoreInputAssemblies Include="$(TargetPath)" />
-			<ThunderstoreInputAssemblies Include="$(OutputPath)ServerSync.dll" />
-		</ItemGroup>
+    <PropertyGroup>
+      <PackageVersion>%(_ExtraSlotsPackageAssemblyIdentity.Version)</PackageVersion>
+    </PropertyGroup>
 
-		<ILRepack
-			Parallel="true"
-			DebugInfo="true"
-			Internalize="true"
-			InputAssemblies="@(ThunderstoreInputAssemblies)"
-			OutputFile="$(ThunderstoreRepackDllPath)"
-			TargetKind="SameAsPrimaryAssembly"
-			LibraryPath="$(OutputPath)" />
-	</Target>
+    <Error Condition="'$(PackageVersion)' == ''" Text="Package version was not resolved from $(TargetPath)." />
+    <Message Text="Detected package version from DLL: $(PackageVersion)" Importance="High" />
+  </Target>
 
-	<Target Name="CopyDLLThunderstore" AfterTargets="RepackThunderstore">
-		<MakeDir Directories="$(ThunderstorePackageDir)" />
+  <Target
+    Name="PrepareExtraSlotsThunderstorePackage"
+    DependsOnTargets="ReadExtraSlotsPackageVersion">
 
-		<Copy
-			SourceFiles="$(ThunderstoreRepackDllPath)"
-			DestinationFolder="$(ThunderstorePackageDir)" />
+    <Error Condition="!Exists('$(EnglishLocalizationSource)')" Text="English localization was not found: $(EnglishLocalizationSource)" />
 
-		<Message Text="Copied to thunderstore package folder: $(ThunderstorePackageDir)" Importance="High" />
-	</Target>
+    <MakeDir Directories="$(ThunderstorePackageDir)" />
 
-	<Target Name="CopyLanguageFileThunderstore" AfterTargets="CopyDLLThunderstore" DependsOnTargets="UpdateTranslations">
-		<Error Condition="!Exists('$(ProjectDir)translations\English.json')" Text="Language file was not found: $(ProjectDir)translations\English.json" />
+    <Copy
+      SourceFiles="$(TargetPath)"
+      DestinationFolder="$(ThunderstorePackageDir)"
+      OverwriteReadOnlyFiles="true" />
 
-		<ItemGroup>
-			<_ThunderstoreLanguageFile Include="$(ProjectDir)translations\English.json">
-				<TargetPath>$(ThunderstorePackageDir)Extra Slots.English.json</TargetPath>
-			</_ThunderstoreLanguageFile>
-		</ItemGroup>
+    <Copy
+      SourceFiles="$(EnglishLocalizationSource)"
+      DestinationFiles="$(ThunderstoreEnglishLocalizationDestination)"
+      OverwriteReadOnlyFiles="true" />
 
-		<Copy
-			SourceFiles="@(_ThunderstoreLanguageFile)"
-			DestinationFiles="@(_ThunderstoreLanguageFile->'%(TargetPath)')" />
+    <Message Text="Thunderstore package directory updated: $(ThunderstorePackageDir)" Importance="High" />
+  </Target>
 
-		<Message Text="Copied Extra Slots.English.json to thunderstore package folder." Importance="High" />
-	</Target>
-	
-	<Target Name="UpdateThunderstoreManifest" AfterTargets="CopyLanguageFileThunderstore">
-		<Error Condition="!Exists('$(ProjectDir)UpdateThunderstoreManifest.ps1')" Text="UpdateThunderstoreManifest.ps1 was not found in $(ProjectDir)." />
-		<Error Condition="!Exists('$(ThunderstorePackageDir)manifest.json')" Text="Thunderstore manifest was not found: $(ThunderstorePackageDir)manifest.json" />
+  <Target
+    Name="UpdateExtraSlotsThunderstoreManifest"
+    DependsOnTargets="PrepareExtraSlotsThunderstorePackage">
 
-		<Exec Command="powershell -ExecutionPolicy Bypass -NoProfile -File &quot;$(ProjectDir)UpdateThunderstoreManifest.ps1&quot; -ManifestPath &quot;$(ThunderstorePackageDir)manifest.json&quot; -Version &quot;$(PackageVersion)&quot;" />
-	</Target>
+    <Error Condition="!Exists('$(ProjectDir)UpdateThunderstoreManifest.ps1')" Text="UpdateThunderstoreManifest.ps1 was not found in $(ProjectDir)." />
+    <Error Condition="!Exists('$(ThunderstoreManifestPath)')" Text="Thunderstore manifest was not found: $(ThunderstoreManifestPath)" />
 
-	<Target Name="ZipThunderstore" AfterTargets="UpdateThunderstoreManifest">
-		<ZipDirectory
-			SourceDirectory="$(ThunderstorePackageDir)"
-			DestinationFile="$(ThunderstoreZipPath)"
-			Overwrite="true" />
-	</Target>
+    <Exec
+      WorkingDirectory="$(ProjectDir)"
+      Command="powershell -ExecutionPolicy Bypass -NoProfile -File &quot;$(ProjectDir)UpdateThunderstoreManifest.ps1&quot; -ManifestPath &quot;$(ThunderstoreManifestPath)&quot; -Version &quot;$(PackageVersion)&quot;" />
+  </Target>
 
-	<Target Name="RepackNexus" AfterTargets="ZipThunderstore">
-		<ItemGroup>
-			<NexusInputAssemblies Include="$(TargetPath)" />
-			<NexusInputAssemblies Include="$(OutputPath)ServerSync.dll" />
-			<NexusInputAssemblies Include="$(OutputPath)YamlDotNet.dll" />
-		</ItemGroup>
+  <Target
+    Name="ZipExtraSlotsThunderstorePackage"
+    DependsOnTargets="UpdateExtraSlotsThunderstoreManifest">
 
-		<ILRepack
-			Parallel="true"
-			DebugInfo="true"
-			Internalize="true"
-			InputAssemblies="@(NexusInputAssemblies)"
-			OutputFile="$(TargetPath)"
-			TargetKind="SameAsPrimaryAssembly"
-			LibraryPath="$(OutputPath)" />
-	</Target>
+    <ZipDirectory
+      SourceDirectory="$(ThunderstorePackageDir)"
+      DestinationFile="$(ThunderstoreZipPath)"
+      Overwrite="true" />
 
-	<Target Name="CopyDLLNexus" AfterTargets="RepackNexus">
-		<MakeDir Directories="$(NexusPackageContentDir)" />
+    <Message Text="Thunderstore archive created: $(ThunderstoreZipPath)" Importance="High" />
+  </Target>
 
-		<Copy
-			SourceFiles="$(TargetPath)"
-			DestinationFolder="$(NexusPackageContentDir)" />
+  <Target
+    Name="CopyExtraSlotsToR2ModMan"
+    DependsOnTargets="ZipExtraSlotsThunderstorePackage">
 
-		<Message Text="Copied to nexus package folder: $(NexusPackageContentDir)" Importance="High" />
-	</Target>
+    <MakeDir Directories="$(ResolvedR2ModManProfilePluginsDir)" />
 
-	<Target Name="CopyLanguageFileNexus" AfterTargets="CopyDLLNexus" DependsOnTargets="UpdateTranslations">
-		<Error Condition="!Exists('$(ProjectDir)translations\English.json')" Text="Language file was not found: $(ProjectDir)translations\English.json" />
+    <Copy
+      SourceFiles="$(TargetPath)"
+      DestinationFolder="$(ResolvedR2ModManProfilePluginsDir)"
+      OverwriteReadOnlyFiles="true" />
 
-		<ItemGroup>
-			<_NexusLanguageFile Include="$(ProjectDir)translations\English.json">
-				<TargetPath>$(NexusPackageContentDir)Extra Slots.English.json</TargetPath>
-			</_NexusLanguageFile>
-		</ItemGroup>
+    <Message Text="Copied ExtraSlots.dll to r2modman profile: $(ResolvedR2ModManProfilePluginsDir)" Importance="High" />
+  </Target>
 
-		<Copy
-			SourceFiles="@(_NexusLanguageFile)"
-			DestinationFiles="@(_NexusLanguageFile->'%(TargetPath)')" />
+  <Target
+    Name="RepackExtraSlotsForNexus"
+    DependsOnTargets="CopyExtraSlotsToR2ModMan">
 
-		<Message Text="Copied Extra Slots.English.json to nexus package folder." Importance="High" />
-	</Target>
-	
-	<Target Name="UpdateNexusManifest" AfterTargets="CopyLanguageFileNexus">
-		<Error Condition="!Exists('$(ProjectDir)UpdateNexusManifest.ps1')" Text="UpdateNexusManifest.ps1 was not found in $(ProjectDir)." />
-		<Error Condition="!Exists('$(NexusPackageDir)manifest.json')" Text="Nexus manifest was not found: $(NexusPackageDir)manifest.json" />
+    <Error Condition="!Exists('$(YamlDotNetAssemblyPath)')" Text="YamlDotNet.dll was not found: $(YamlDotNetAssemblyPath)" />
 
-		<Exec Command="powershell -ExecutionPolicy Bypass -NoProfile -File &quot;$(ProjectDir)UpdateNexusManifest.ps1&quot; -ManifestPath &quot;$(NexusPackageDir)manifest.json&quot; -Version &quot;$(PackageVersion)&quot; -Name &quot;$(EffectiveModName)&quot;" />
-	</Target>
+    <ItemGroup>
+      <_ExtraSlotsNexusInputAssemblies Include="$(TargetPath)" />
+      <_ExtraSlotsNexusInputAssemblies Include="$(YamlDotNetAssemblyPath)" />
+    </ItemGroup>
 
-	<Target Name="ZipNexus" AfterTargets="UpdateNexusManifest">
-		<ZipDirectory
-			SourceDirectory="$(NexusPackageContentDir)"
-			DestinationFile="$(NexusZipPath)"
-			Overwrite="true" />
-	</Target>
+    <ILRepack
+      Parallel="true"
+      DebugInfo="true"
+      Internalize="true"
+      InputAssemblies="@(_ExtraSlotsNexusInputAssemblies)"
+      OutputFile="$(TargetPath)"
+      TargetKind="SameAsPrimaryAssembly"
+      LibraryPath="$(TargetDir)" />
 
-	<Target Name="CopyDLLPlugins" AfterTargets="ZipThunderstore">
-		<Copy
-			SourceFiles="$(ThunderstorePackageDllPath)"
-			DestinationFolder="D:\r2modman\Valheim\profiles\beta\BepInEx\plugins\shudnal-$(EffectiveModName)\" />
+    <Message Text="Repacked ExtraSlots.dll with YamlDotNet for Nexus." Importance="High" />
+  </Target>
 
-		<Message Text="Copied to r2 folder." Importance="High" />
-	</Target>
+  <Target
+    Name="PrepareExtraSlotsNexusPackage"
+    DependsOnTargets="RepackExtraSlotsForNexus">
+
+    <Error Condition="!Exists('$(TargetPath)')" Text="Repacked mod DLL was not found: $(TargetPath)" />
+    <Error Condition="!Exists('$(EnglishLocalizationSource)')" Text="English localization was not found: $(EnglishLocalizationSource)" />
+
+    <MakeDir Directories="$(NexusPackageDir)" />
+
+    <Copy
+      SourceFiles="$(TargetPath)"
+      DestinationFolder="$(NexusPackageDir)"
+      OverwriteReadOnlyFiles="true" />
+
+    <Copy
+      SourceFiles="$(EnglishLocalizationSource)"
+      DestinationFiles="$(NexusEnglishLocalizationDestination)"
+      OverwriteReadOnlyFiles="true" />
+
+    <Message Text="Nexus package directory updated: $(NexusPackageDir)" Importance="High" />
+  </Target>
+
+  <Target
+    Name="UpdateExtraSlotsNexusManifest"
+    DependsOnTargets="PrepareExtraSlotsNexusPackage">
+
+    <Error Condition="!Exists('$(ProjectDir)UpdateNexusManifest.ps1')" Text="UpdateNexusManifest.ps1 was not found in $(ProjectDir)." />
+    <Error Condition="!Exists('$(NexusManifestPath)')" Text="Nexus manifest was not found: $(NexusManifestPath)" />
+
+    <Exec
+      WorkingDirectory="$(ProjectDir)"
+      Command="powershell -ExecutionPolicy Bypass -NoProfile -File &quot;$(ProjectDir)UpdateNexusManifest.ps1&quot; -ManifestPath &quot;$(NexusManifestPath)&quot; -Version &quot;$(PackageVersion)&quot; -Name &quot;$(EffectiveModName)&quot;" />
+  </Target>
+
+  <Target
+    Name="ZipExtraSlotsNexusPackage"
+    DependsOnTargets="UpdateExtraSlotsNexusManifest">
+
+    <ZipDirectory
+      SourceDirectory="$(NexusPackageDir)"
+      DestinationFile="$(NexusZipPath)"
+      Overwrite="true" />
+
+    <Message Text="Nexus archive created: $(NexusZipPath)" Importance="High" />
+  </Target>
+
+  <Target
+    Name="PublishExtraSlotsAfterBuild"
+    AfterTargets="Build"
+    Condition="'$(DesignTimeBuild)' != 'true'"
+    DependsOnTargets="ZipExtraSlotsNexusPackage" />
 
 </Project>

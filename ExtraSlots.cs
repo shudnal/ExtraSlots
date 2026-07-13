@@ -3,7 +3,7 @@ using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
 using LocalizationManager;
-using ServerSync;
+using ConditionalConfigSync;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -34,16 +34,17 @@ namespace ExtraSlots
     [BepInDependency(Compatibility.Recycle_N_Reclaim.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.RequipMeCompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency(Compatibility.ZenUICompat.GUID, BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("_shudnal.ConditionalConfigSync", BepInDependency.DependencyFlags.HardDependency)]
     [BepInPlugin(pluginID, pluginName, pluginVersion)]
     public class ExtraSlots : BaseUnityPlugin
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.1.18";
+        public const string pluginVersion = "1.1.19";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
-        internal static readonly ConfigSync configSync = new ConfigSync(pluginID) { DisplayName = pluginName, CurrentVersion = pluginVersion, MinimumRequiredVersion = pluginVersion };
+        internal static readonly ConfigSync configSync = new ConfigSync(pluginID) { DisplayName = pluginName, CurrentVersion = pluginVersion, MinimumRequiredVersion = pluginVersion, ModRequired = false };
 
         internal static ExtraSlots instance;
 
@@ -347,7 +348,7 @@ namespace ExtraSlots
         {
             config("General", "NexusID", 2901, "Nexus mod ID for updates");
 
-            configLocked = config("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only. [Synced with Server]", synchronizedSetting: true);
+            configLocked = serverConfig("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only. [Synced with Server]");
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.");
             loggingDebugEnabled = config("General", "Logging debug enabled", defaultValue: false, "Enable debug logging.");
             fixContainerPosition = config("General", "Fix container position for extra rows", defaultValue: true, "Moves container lower if there are extra inventory rows." +
@@ -808,17 +809,35 @@ namespace ExtraSlots
 
         public static void LogCurrentLogLevel() => LogInfo($"Logging: Info {loggingEnabled.Value}, Debug {loggingDebugEnabled.Value}");
 
+#pragma warning disable IDE1006 // Naming Styles
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, ConfigDescription description, bool synchronizedSetting = false)
         {
-            ConfigEntry<T> configEntry = Config.Bind(group, name, defaultValue, description);
+            return configSync.AddConfigEntry(
+                Config,
+                group,
+                name,
+                defaultValue,
+                description,
+                syncMode: ConfigSyncMode.Conditional,
+                serverControlledByDefault: synchronizedSetting).SourceConfig;
+        }
 
-            SyncedConfigEntry<T> syncedConfigEntry = configSync.AddConfigEntry(configEntry);
-            syncedConfigEntry.SynchronizedConfig = synchronizedSetting;
-
-            return configEntry;
+        ConfigEntry<T> serverConfig<T>(string group, string name, T defaultValue, ConfigDescription description)
+        {
+            return configSync.AddConfigEntry(
+                Config,
+                group,
+                name,
+                defaultValue,
+                description,
+                syncMode: ConfigSyncMode.AlwaysServerControlled,
+                serverControlledByDefault: true).SourceConfig;
         }
 
         ConfigEntry<T> config<T>(string group, string name, T defaultValue, string description, bool synchronizedSetting = false) => config(group, name, defaultValue, new ConfigDescription(description), synchronizedSetting);
+
+        ConfigEntry<T> serverConfig<T>(string group, string name, T defaultValue, string description) => serverConfig(group, name, defaultValue, new ConfigDescription(description));
+#pragma warning restore IDE1006 // Naming Styles
 
         private void LoadIcons()
         {

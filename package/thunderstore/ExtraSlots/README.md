@@ -76,24 +76,15 @@ You can set specific index for your slot.
 * [Wiki (github)](https://github.com/shudnal/ExtraSlots)
 * [Download ExtraSlotsAPI.dll (github)](https://github.com/shudnal/ExtraSlots/releases/download/ExtraSlotsAPI/ExtraSlotsAPI.dll)
 
-## Server synchronization for config values
-
-Mod can be installed on client only.
-
-If mod installed on a server then client and server versions should be equal.
-
-In case mod installed on a server, some crucial config values will be synchronized from a server:
-* amount of quick slots (0-6)
-* amount of extra inventory rows (0-5)
-* amount of extra utility items (0-4)
-* should ammo slots be enabled
-* should food slots be enabled
-* should misc slots be enabled
-* should slots backup be enabled
-* should slot progression be enabled and its details
-* should rows progression be enabled and its details
-
-Most other configs are not server synced and can differ on every client. It means you can change appearance and hotkeys as you wish.
+## Conditional Config Sync
+* Config values marked with `[Synced with Server]` are synchronized from the server by default. Core slot counts, slot availability, progression, item eligibility, weight factors, death rules and other gameplay-affecting settings use this default.
+* UI layout, panel positions, hotkeys, labels, colors, tooltips, logging and compatibility presentation settings remain client-controlled by default.
+* Server administrators can change the synchronization policy for policy-controlled settings in `BepInEx/config/shudnal.ConditionalConfigSync/ConditionalConfigSync.SyncPolicy.cfg`.
+* Prefix an exact setting or whole-section identifier with `+` to force server control or `-` to make it client-controlled. Exact-setting rules take precedence over whole-section rules.
+* `General / Lock Configuration` is always server-controlled and cannot be made client-controlled through the policy.
+* Use shared modpack configs or distribute your config manually if you also want client-controlled appearance, controls and compatibility settings to be identical for all players initially.
+* ExtraSlots does not require every connecting player to have the mod at the synchronization protocol level, but a player needs ExtraSlots installed to use its additional inventory UI and slot behavior.
+* If you install this mod manually, do not forget to install [ConditionalConfigSync](https://thunderstore.io/c/valheim/p/shudnal/ConditionalConfigSync/).
 
 ## Slots backup
 

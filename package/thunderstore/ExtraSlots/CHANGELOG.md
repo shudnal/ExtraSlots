@@ -1,3 +1,8 @@
+# 1.1.19
+* hotkeys handling optimizations and fixes
+* migrated configuration synchronization from ServerSync to ConditionalConfigSync
+* server administrators can override the ownership of policy-controlled settings through ConditionalConfigSync policy
+
 # 1.1.18
 * new config "Custom slot items can use regular equipment slots", disabled by default. Custom items go into custom slots only by default.
 

@@ -96,9 +96,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Assemblies\beta\netstandard.dll</HintPath>
     </Reference>
-    <Reference Include="ServerSync, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="ConditionalConfigSync, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>Libs\ServerSync.dll</HintPath>
+      <HintPath>..\Assemblies\Managers\ConditionalConfigSync.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="Splatform, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -166,6 +167,9 @@
     <None Include=".editorconfig" />
     <None Include="EmbeddedLocalizations.csv" />
     <None Include="ILRepack.targets" />
+    <None Include="UpdateTranslations.ps1" />
+    <None Include="UpdateThunderstoreManifest.ps1" />
+    <None Include="UpdateNexusManifest.ps1" />
     <EmbeddedResource Include="Translations\English.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </EmbeddedResource>

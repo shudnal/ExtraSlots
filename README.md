@@ -2,6 +2,16 @@
 
 More inventory slots dedicated for equipment, food, ammo and misc items. Extra utility slots. Quick slots. Custom slots API. Player inventory resize. Gamepad friendly. Slot obtaining progression.
 
+## Conditional Config Sync
+* Config values marked with `[Synced with Server]` are synchronized from the server by default. Core slot counts, slot availability, progression, item eligibility, weight factors, death rules and other gameplay-affecting settings use this default.
+* UI layout, panel positions, hotkeys, labels, colors, tooltips, logging and compatibility presentation settings remain client-controlled by default.
+* Server administrators can change the synchronization policy for policy-controlled settings in `BepInEx/config/shudnal.ConditionalConfigSync/ConditionalConfigSync.SyncPolicy.cfg`.
+* Prefix an exact setting or whole-section identifier with `+` to force server control or `-` to make it client-controlled. Exact-setting rules take precedence over whole-section rules.
+* `General / Lock Configuration` is always server-controlled and cannot be made client-controlled through the policy.
+* Use shared modpack configs or distribute your config manually if you also want client-controlled appearance, controls and compatibility settings to be identical for all players initially.
+* ExtraSlots does not require every connecting player to have the mod at the synchronization protocol level, but a player needs ExtraSlots installed to use its additional inventory UI and slot behavior.
+* If you install this mod manually, do not forget to install [ConditionalConfigSync](https://thunderstore.io/c/valheim/p/shudnal/ConditionalConfigSync/).
+
 [Mod description](package/thunderstore/ExtraSlots/README.md)
 
 # Extra Slots API
