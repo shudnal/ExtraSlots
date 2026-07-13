@@ -76,11 +76,14 @@ namespace ExtraSlots
 
             private static void Postfix(Player __instance)
             {
+                if (__instance != Player.m_localPlayer)
+                    return;
+
                 __instance.m_inventory.m_height = InventoryHeightFull;
 
                 tombstoneContainer ??= __instance.m_tombstone.GetComponent<Container>();
                 if (tombstoneContainer != null)
-                    tombstoneContainer.m_height = __instance.m_inventory.m_height;
+                    tombstoneContainer.m_height = Mathf.Max(tombstoneContainer.m_height, __instance.m_inventory.m_height);
             }
         }
 
@@ -312,6 +315,7 @@ namespace ExtraSlots
                     LogDebug($"Inventory.AddItem X Y Rerouted {item.m_shared.m_name} from {x},{y} to free slot {freeSlot} {freeSlot.GridPosition}");
                     x = freeSlot.GridPosition.x;
                     y = freeSlot.GridPosition.y;
+                    return;
                 }
 
                 if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
