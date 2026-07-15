@@ -40,7 +40,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.1.19";
+        public const string pluginVersion = "1.1.20";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -360,24 +360,24 @@ namespace ExtraSlots
             loggingEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
             loggingDebugEnabled.SettingChanged += (s, e) => LogCurrentLogLevel();
 
-            quickSlotsAmount = config("Extra slots", "Amount of quick slots", defaultValue: 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)), synchronizedSetting: true);
-            extraUtilitySlotsAmount = config("Extra slots", "Amount of extra utility slots", defaultValue: 2, new ConfigDescription("How much extra utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 4)), synchronizedSetting: true);
-            extraRows = config("Extra slots", "Amount of extra inventory rows", defaultValue: 0, new ConfigDescription("How much rows to add or remove from regular inventory [Synced with Server]", new AcceptableValueRange<int>(-3, 5)), synchronizedSetting: true);
-            ammoSlotsEnabled = config("Extra slots", "Enable ammo slots", defaultValue: true, "Enable 3 slots for ammo [Synced with Server]", synchronizedSetting: true);
-            foodSlotsEnabled = config("Extra slots", "Enable food slots", defaultValue: true, "Enable 3 slots for food [Synced with Server]", synchronizedSetting: true);
-            miscSlotsEnabled = config("Extra slots", "Enable misc slots", defaultValue: true, "Enable up to 2 slots for trophies, coins, fish, miscellaneous, keys and quest items. [Synced with Server]" +
+            quickSlotsAmount = serverConfig("Extra slots", "Amount of quick slots", defaultValue: 3, new ConfigDescription("How much quick slots should be added. [Synced with Server]", new AcceptableValueRange<int>(0, 6)));
+            extraUtilitySlotsAmount = serverConfig("Extra slots", "Amount of extra utility slots", defaultValue: 2, new ConfigDescription("How much extra utility slots should be added [Synced with Server]", new AcceptableValueRange<int>(0, 4)));
+            extraRows = serverConfig("Extra slots", "Amount of extra inventory rows", defaultValue: 0, new ConfigDescription("How much rows to add or remove from regular inventory [Synced with Server]", new AcceptableValueRange<int>(-3, 5)));
+            ammoSlotsEnabled = serverConfig("Extra slots", "Enable ammo slots", defaultValue: true, "Enable 3 slots for ammo [Synced with Server]");
+            foodSlotsEnabled = serverConfig("Extra slots", "Enable food slots", defaultValue: true, "Enable 3 slots for food [Synced with Server]");
+            miscSlotsEnabled = serverConfig("Extra slots", "Enable misc slots", defaultValue: true, "Enable up to 2 slots for trophies, coins, fish, miscellaneous, keys and quest items. [Synced with Server]" +
                                                                          "\n1 slot comes with Food slots, 1 slot comes with Ammo slots." +
                                                                          "\nIf both Food and Ammo slots are disabled there will be no Misc slots." + 
-                                                                         "\nIf there are no Quick slots there will be no Misc slots.", synchronizedSetting: true);
-            backupEnabled = config("Extra slots", "Slots backup enabled", defaultValue: true, "Backup extra slots item on save. [Synced with Server]" +
+                                                                         "\nIf there are no Quick slots there will be no Misc slots.");
+            backupEnabled = serverConfig("Extra slots", "Slots backup enabled", defaultValue: true, "Backup extra slots item on save. [Synced with Server]" +
                                                                                         "\nIt could be restored in case of loading character without mod installed leading to extra slots item loss." +
-                                                                                        "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.", synchronizedSetting: true);
-            slotsProgressionEnabled = config("Extra slots", "Slots progression enabled", defaultValue: true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]", synchronizedSetting: true);
-            rowsProgressionEnabled = config("Extra slots", "Inventory rows progression enabled", defaultValue: false, "Enabled inventory rows obtaining progression. [Synced with Server]", synchronizedSetting: true);
-            preventUniqueUtilityItemsEquip = config("Extra slots", "Unique utility items", "BeltStrength:BeltYmir_TW:InfusedBeltStrength", 
+                                                                                        "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.");
+            slotsProgressionEnabled = serverConfig("Extra slots", "Slots progression enabled", defaultValue: true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]");
+            rowsProgressionEnabled = serverConfig("Extra slots", "Inventory rows progression enabled", defaultValue: false, "Enabled inventory rows obtaining progression. [Synced with Server]");
+            preventUniqueUtilityItemsEquip = serverConfig("Extra slots", "Unique utility items", "BeltStrength:BeltYmir_TW:InfusedBeltStrength", 
                 GetDescriptionSeparatedStrings("Comma-separated list of \":\" separated tuples of items that should not be equipped at the same time [Synced with Server]" +
                                             "\nIf you just want one item to be unique-equipped just add its name without \":\"" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."), synchronizedSetting: true);
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."));
 
 
             useSingleHotbarItem = config("Extra slots", "Use single hotbar item", defaultValue: true, "Enabled - only item from the first slot will be used with slots priority (Quick -> Ammo -> Food)\n" +
@@ -399,42 +399,42 @@ namespace ExtraSlots
             preventUniqueUtilityItemsEquip.SettingChanged += (s, e) => ExtraUtilitySlots.UpdateUniqueEquipped();
             showExtraUtilityItems.SettingChanged += (s,e) => Player.m_localPlayer?.SetupEquipment();
 
-            slotsTombstoneAutoEquipEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip all equipment slots", defaultValue: false, "Auto equip items in equipment slots if tombstone was successfully taken as whole. [Synced with Server]", synchronizedSetting: true);
-            slotsTombstoneAutoEquipCarryWeightItemsEnabled = config("Extra slots - Auto equip on tombstone pickup", "Equip items increasing carry weight", defaultValue: true, "Auto equip items in equipment slots that increase max carry weight (like Megingjord) if tombstone was successfully taken as whole. [Synced with Server]" +
-                "\nThese items are unaffected by black and white lists", synchronizedSetting: true);
-            slotsTombstoneAutoEquipWeaponShield = config("Extra slots - Auto equip on tombstone pickup", "Equip previous weapon and shield", defaultValue: false, "Auto equip weapon and shield that was equipped on death. [Synced with Server]" +
-                "\nThese items are unaffected by black and white lists", synchronizedSetting: true);
-            slotsTombstoneAutoEquipWhiteList = config("Extra slots - Auto equip on tombstone pickup", "Items white list", defaultValue: "", "If this list is filled - only these items will be auto equipped. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]", synchronizedSetting: true);
-            slotsTombstoneAutoEquipBlackList = config("Extra slots - Auto equip on tombstone pickup", "Items black list", defaultValue: "", "Items from this list will not be auto equipped. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]", synchronizedSetting: true);
-            slotsTombstoneAutoEquipItemList = config("Extra slots - Auto equip on tombstone pickup", "Items list to always equip", defaultValue: "", "Items from this list will always be auto equipped. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]", synchronizedSetting: true);
+            slotsTombstoneAutoEquipEnabled = serverConfig("Extra slots - Auto equip on tombstone pickup", "Equip all equipment slots", defaultValue: false, "Auto equip items in equipment slots if tombstone was successfully taken as whole. [Synced with Server]");
+            slotsTombstoneAutoEquipCarryWeightItemsEnabled = serverConfig("Extra slots - Auto equip on tombstone pickup", "Equip items increasing carry weight", defaultValue: true, "Auto equip items in equipment slots that increase max carry weight (like Megingjord) if tombstone was successfully taken as whole. [Synced with Server]" +
+                "\nThese items are unaffected by black and white lists");
+            slotsTombstoneAutoEquipWeaponShield = serverConfig("Extra slots - Auto equip on tombstone pickup", "Equip previous weapon and shield", defaultValue: false, "Auto equip weapon and shield that was equipped on death. [Synced with Server]" +
+                "\nThese items are unaffected by black and white lists");
+            slotsTombstoneAutoEquipWhiteList = serverConfig("Extra slots - Auto equip on tombstone pickup", "Items white list", defaultValue: "", "If this list is filled - only these items will be auto equipped. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
+            slotsTombstoneAutoEquipBlackList = serverConfig("Extra slots - Auto equip on tombstone pickup", "Items black list", defaultValue: "", "Items from this list will not be auto equipped. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
+            slotsTombstoneAutoEquipItemList = serverConfig("Extra slots - Auto equip on tombstone pickup", "Items list to always equip", defaultValue: "", "Items from this list will always be auto equipped. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
 
             slotsTombstoneAutoEquipWhiteList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateItemLists();
             slotsTombstoneAutoEquipBlackList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateItemLists();
             slotsTombstoneAutoEquipItemList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateItemLists();
 
-            keepOnDeathEquipmentSlots = config("Extra slots - Death tweaks", "Keep items at equipment slots", defaultValue: false, "Keep items in equipment slots after death. [Synced with Server]", synchronizedSetting: true);
-            keepOnDeathQuickSlots = config("Extra slots - Death tweaks", "Keep items at quick slots", defaultValue: false, "Keep items in quick slots after death. [Synced with Server]", synchronizedSetting: true);
-            keepOnDeathFoodSlots = config("Extra slots - Death tweaks", "Keep items at food slots", defaultValue: false, "Keep items in food slots after death. [Synced with Server]", synchronizedSetting: true);
-            keepOnDeathAmmoSlots = config("Extra slots - Death tweaks", "Keep items at ammo slots", defaultValue: false, "Keep items in ammo slots after death. [Synced with Server]", synchronizedSetting: true);
-            keepOnDeathMiscSlots = config("Extra slots - Death tweaks", "Keep items at misc slots", defaultValue: false, "Keep items in misc slots after death. [Synced with Server]", synchronizedSetting: true);
-            keepOnDeathItemList = config("Extra slots - Death tweaks", "Keep items fixed list", defaultValue: "", "Items from this list will always be kept on death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]", synchronizedSetting: true);
-            keepOnDeathWhiteList = config("Extra slots - Death tweaks", "Keep items white list", defaultValue: "", "If this list is filled - only these items will be kept after death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]", synchronizedSetting: true);
-            keepOnDeathBlackList = config("Extra slots - Death tweaks", "Keep items black list", defaultValue: "", "Items from this list will not be kept after death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]", synchronizedSetting: true);
+            keepOnDeathEquipmentSlots = serverConfig("Extra slots - Death tweaks", "Keep items at equipment slots", defaultValue: false, "Keep items in equipment slots after death. [Synced with Server]");
+            keepOnDeathQuickSlots = serverConfig("Extra slots - Death tweaks", "Keep items at quick slots", defaultValue: false, "Keep items in quick slots after death. [Synced with Server]");
+            keepOnDeathFoodSlots = serverConfig("Extra slots - Death tweaks", "Keep items at food slots", defaultValue: false, "Keep items in food slots after death. [Synced with Server]");
+            keepOnDeathAmmoSlots = serverConfig("Extra slots - Death tweaks", "Keep items at ammo slots", defaultValue: false, "Keep items in ammo slots after death. [Synced with Server]");
+            keepOnDeathMiscSlots = serverConfig("Extra slots - Death tweaks", "Keep items at misc slots", defaultValue: false, "Keep items in misc slots after death. [Synced with Server]");
+            keepOnDeathItemList = serverConfig("Extra slots - Death tweaks", "Keep items fixed list", defaultValue: "", "Items from this list will always be kept on death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
+            keepOnDeathWhiteList = serverConfig("Extra slots - Death tweaks", "Keep items white list", defaultValue: "", "If this list is filled - only these items will be kept after death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
+            keepOnDeathBlackList = serverConfig("Extra slots - Death tweaks", "Keep items black list", defaultValue: "", "Items from this list will not be kept after death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
 
             keepOnDeathItemList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateItemLists();
             keepOnDeathWhiteList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateItemLists();
             keepOnDeathBlackList.SettingChanged += (sender, args) => TombStoneInteraction.UpdateItemLists();
 
-            itemWeightFactorEquipmentSlots = config("Extra slots - Item weight factor", "Equipment slots", defaultValue: 1.0f, 
-                              new ConfigDescription("Weight factor for items in equipment slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
-            itemWeightFactorQuickSlots = config("Extra slots - Item weight factor", "Quick slots", defaultValue: 1.0f, 
-                              new ConfigDescription("Weight factor for items in quick slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
-            itemWeightFactorFoodSlots = config("Extra slots - Item weight factor", "Food slots", defaultValue: 1.0f, 
-                              new ConfigDescription("Weight factor for items in food slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
-            itemWeightFactorAmmoSlots = config("Extra slots - Item weight factor", "Ammo slots", defaultValue: 1.0f, 
-                              new ConfigDescription("Weight factor for items in ammo slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
-            itemWeightFactorMiscSlots = config("Extra slots - Item weight factor", "Misc slots", defaultValue: 1.0f, 
-                              new ConfigDescription("Weight factor for items in misc slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
+            itemWeightFactorEquipmentSlots = serverConfig("Extra slots - Item weight factor", "Equipment slots", defaultValue: 1.0f, 
+                              new ConfigDescription("Weight factor for items in equipment slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)));
+            itemWeightFactorQuickSlots = serverConfig("Extra slots - Item weight factor", "Quick slots", defaultValue: 1.0f, 
+                              new ConfigDescription("Weight factor for items in quick slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)));
+            itemWeightFactorFoodSlots = serverConfig("Extra slots - Item weight factor", "Food slots", defaultValue: 1.0f, 
+                              new ConfigDescription("Weight factor for items in food slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)));
+            itemWeightFactorAmmoSlots = serverConfig("Extra slots - Item weight factor", "Ammo slots", defaultValue: 1.0f, 
+                              new ConfigDescription("Weight factor for items in ammo slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)));
+            itemWeightFactorMiscSlots = serverConfig("Extra slots - Item weight factor", "Misc slots", defaultValue: 1.0f, 
+                              new ConfigDescription("Weight factor for items in misc slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)));
 
             itemWeightFactorEquipmentSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
             itemWeightFactorQuickSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
@@ -442,17 +442,17 @@ namespace ExtraSlots
             itemWeightFactorAmmoSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
             itemWeightFactorMiscSlots.SettingChanged += (s, e) => InventoryInteraction.UpdateTotalWeight();
 
-            lightenedSlotsStartIndex = config("Extra slots - Lightened slots", "First row index", defaultValue: -2, new ConfigDescription("Defines which inventory rows will apply the weight-reduction effect. [Synced with Server]" +
+            lightenedSlotsStartIndex = serverConfig("Extra slots - Lightened slots", "First row index", defaultValue: -2, new ConfigDescription("Defines which inventory rows will apply the weight-reduction effect. [Synced with Server]" +
                 "\nValue < 0: number of bottom rows to affect. Default value -2 means - apply to the last 2 rows" +
                 "\nValue = 0: feature disabled" +
-                "\nValue > 0: index of the first affected row (inclusive)", new AcceptableValueRange<int>(-9, 9)), synchronizedSetting: true);
-            lightenedSlotsWeightFactor = config("Extra slots - Lightened slots", "Weight factor. Item weight will be multiplied by this value.", defaultValue: 0.5f, 
-                    new ConfigDescription("Weight factor for items in lightened slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)), synchronizedSetting: true);
-            lightenedSlotsOnlyExtraRows = config("Extra slots - Lightened slots", "Only extra rows", defaultValue: true, "Set if only rows of additional inventory should be affected (rows 5+). [Synced with Server]", synchronizedSetting: true);
-            lightenedSlotsPlayerKey = config("Extra slots - Lightened slots", "Progression - Player key", defaultValue: "GP_Yagluth", "Comma-separated list of Player unique keys. [Synced with Server]" +
-                "\nLightened slots will be active only if any key is enabled or list is not set", synchronizedSetting: true);
-            lightenedSlotsItemDiscovered = config("Extra slots - Lightened slots", "Progression - Item", defaultValue: "YagluthDrop", "Comma-separated list of items. [Synced with Server]" +
-                "\nLightened slots will be active only if any item is discovered or list is not set.", synchronizedSetting: true);
+                "\nValue > 0: index of the first affected row (inclusive)", new AcceptableValueRange<int>(-9, 9)));
+            lightenedSlotsWeightFactor = serverConfig("Extra slots - Lightened slots", "Weight factor. Item weight will be multiplied by this value.", defaultValue: 0.5f, 
+                    new ConfigDescription("Weight factor for items in lightened slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)));
+            lightenedSlotsOnlyExtraRows = serverConfig("Extra slots - Lightened slots", "Only extra rows", defaultValue: true, "Set if only rows of additional inventory should be affected (rows 5+). [Synced with Server]");
+            lightenedSlotsPlayerKey = serverConfig("Extra slots - Lightened slots", "Progression - Player key", defaultValue: "GP_Yagluth", "Comma-separated list of Player unique keys. [Synced with Server]" +
+                "\nLightened slots will be active only if any key is enabled or list is not set");
+            lightenedSlotsItemDiscovered = serverConfig("Extra slots - Lightened slots", "Progression - Item", defaultValue: "YagluthDrop", "Comma-separated list of items. [Synced with Server]" +
+                "\nLightened slots will be active only if any item is discovered or list is not set.");
 
             lightenedSlotsShowHintImage = config("Extra slots - Lightened slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             lightenedSlotsShowTooltip = config("Extra slots - Lightened slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
@@ -513,17 +513,17 @@ namespace ExtraSlots
             miscSlotsShowTooltip = config("Panels - Misc slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             miscSlotsStackColor = config("Panels - Misc slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             miscSlotsPreventStackAll = config("Panels - Misc slots", "Prevent Stack All", defaultValue: true, "Prevent items from misc slots to be placed into container when Stack All feature is used.");
-            miscSlotsItemList = config("Panels - Misc slots", "Custom item list", defaultValue: "AncientSeed,WitheredBone,BellFragment,DvergrKeyFragment",
+            miscSlotsItemList = serverConfig("Panels - Misc slots", "Custom item list", defaultValue: "AncientSeed,WitheredBone,BellFragment,DvergrKeyFragment",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as misc items" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
-            miscSlotsItemBlackList = config("Panels - Misc slots", "Custom item black list", defaultValue: "",
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"));
+            miscSlotsItemBlackList = serverConfig("Panels - Misc slots", "Custom item black list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as misc items" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"));
 
             miscSlotsItemList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
             miscSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
 
-            quickSlotsHotBarEnabled = config("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots [Synced with Server]", synchronizedSetting: true);
+            quickSlotsHotBarEnabled = serverConfig("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots [Synced with Server]");
             quickSlotsHotBarOffset = config("Panels - Quick slots", "Offset", defaultValue: new Vector2(230f, 156f), "On screen position of quick slots hotbar panel");
             quickSlotsHotBarAnchor = config("Panels - Quick slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for quick slots hotbar panel");
             quickSlotsHotBarScale = config("Panels - Quick slots", "Scale", defaultValue: 1f, "Relative size");
@@ -543,7 +543,7 @@ namespace ExtraSlots
             quickSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarScale.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
 
-            ammoSlotsHotBarEnabled = config("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots [Synced with Server]", synchronizedSetting: true);
+            ammoSlotsHotBarEnabled = serverConfig("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots [Synced with Server]");
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 228f), "On screen position of ammo slots hotbar panel");
             ammoSlotsHotBarAnchor = config("Panels - Ammo slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for ammo slots hotbar panel");
             ammoSlotsHotBarScale = config("Panels - Ammo slots", "Scale", defaultValue: 1f, "Relative size");
@@ -558,12 +558,12 @@ namespace ExtraSlots
             ammoSlotsStackColor = config("Panels - Ammo slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             ammoSlotsPreventStackAll = config("Panels - Ammo slots", "Prevent Stack All", defaultValue: true, "Prevent items from ammo slots to be placed into container when Stack All feature is used.");
             ammoSlotsAllowThrowables = config("Panels - Ammo slots", "Allow throwables", defaultValue: true, "Should bombs and other throwables be allowed to be placed into ammo slots");
-            ammoSlotsItemList = config("Panels - Ammo slots", "Custom item list", defaultValue: "",
+            ammoSlotsItemList = serverConfig("Panels - Ammo slots", "Custom item list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in ammo slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
-            ammoSlotsItemBlackList = config("Panels - Ammo slots", "Custom item black list", defaultValue: "",
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"));
+            ammoSlotsItemBlackList = serverConfig("Panels - Ammo slots", "Custom item black list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as ammo items to fit in ammo slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"));
 
             ammoSlotsItemList.SettingChanged += (s, e) => Slots.UpdateAmmoSlotCustomItemList();
             ammoSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateAmmoSlotCustomItemList();
@@ -573,7 +573,7 @@ namespace ExtraSlots
             ammoSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
             ammoSlotsHotBarScale.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
 
-            foodSlotsHotBarEnabled = config("Panels - Food slots", "Enabled", defaultValue: true, "Enable hotbar with Food slots [Synced with Server]", synchronizedSetting: true);
+            foodSlotsHotBarEnabled = serverConfig("Panels - Food slots", "Enabled", defaultValue: true, "Enable hotbar with Food slots [Synced with Server]");
             foodSlotsHotBarOffset = config("Panels - Food slots", "Offset", defaultValue: new Vector2(230f, 84f), "On screen position of Food slots hotbar panel");
             foodSlotsHotBarAnchor = config("Panels - Food slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for Food slots hotbar panel");
             foodSlotsHotBarScale = config("Panels - Food slots", "Scale", defaultValue: 1f, "Relative size");
@@ -587,12 +587,12 @@ namespace ExtraSlots
             foodSlotsTooltipNameFormat = config("Panels - Food slots", "Tooltip name format", defaultValue: "{0} ({1})", "Where {0} is slot name and {1} is slot shortcut.");
             foodSlotsStackColor = config("Panels - Food slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             foodSlotsPreventStackAll = config("Panels - Food slots", "Prevent Stack All", defaultValue: true, "Prevent items from food slots to be placed into container when Stack All feature is used.");
-            foodSlotsItemList = config("Panels - Food slots", "Custom item list", defaultValue: "",
+            foodSlotsItemList = serverConfig("Panels - Food slots", "Custom item list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in food slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
-            foodSlotsItemBlackList = config("Panels - Food slots", "Custom item black list", defaultValue: "",
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"));
+            foodSlotsItemBlackList = serverConfig("Panels - Food slots", "Custom item black list", defaultValue: "",
                     GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as ammo items to fit in food slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"), synchronizedSetting: true);
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"));
 
             foodSlotsItemList.SettingChanged += (s, e) => Slots.UpdateFoodSlotCustomItemList();
             foodSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateFoodSlotCustomItemList();
@@ -638,26 +638,26 @@ namespace ExtraSlots
             ammoSlotLabelFontSize.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             ammoSlotLabelFontColor.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
 
-            quickSlotGlobalKey1 = config("Progression - Global keys", "Quickslot 1", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotGlobalKey2 = config("Progression - Global keys", "Quickslot 2", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotGlobalKey3 = config("Progression - Global keys", "Quickslot 3", "defeated_bonemass", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotGlobalKey4 = config("Progression - Global keys", "Quickslot 4", "defeated_dragon", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotGlobalKey5 = config("Progression - Global keys", "Quickslot 5", "defeated_goblinking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotGlobalKey6 = config("Progression - Global keys", "Quickslot 6", "defeated_queen", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotGlobalKey1 = serverConfig("Progression - Global keys", "Quickslot 1", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]");
+            quickSlotGlobalKey2 = serverConfig("Progression - Global keys", "Quickslot 2", "defeated_gdking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]");
+            quickSlotGlobalKey3 = serverConfig("Progression - Global keys", "Quickslot 3", "defeated_bonemass", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]");
+            quickSlotGlobalKey4 = serverConfig("Progression - Global keys", "Quickslot 4", "defeated_dragon", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]");
+            quickSlotGlobalKey5 = serverConfig("Progression - Global keys", "Quickslot 5", "defeated_goblinking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]");
+            quickSlotGlobalKey6 = serverConfig("Progression - Global keys", "Quickslot 6", "defeated_queen", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]");
 
-            ammoSlotsGlobalKey = config("Progression - Global keys", "Ammo slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            foodSlotsGlobalKey = config("Progression - Global keys", "Food slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            miscSlotsGlobalKey = config("Progression - Global keys", "Misc slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            ammoSlotsGlobalKey = serverConfig("Progression - Global keys", "Ammo slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]");
+            foodSlotsGlobalKey = serverConfig("Progression - Global keys", "Food slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]");
+            miscSlotsGlobalKey = serverConfig("Progression - Global keys", "Misc slots", "", "Comma-separated list of global keys and player unique keys. Slots will be active only if any key is enabled or list is not set. [Synced with Server]");
 
-            utilitySlotGlobalKey1 = config("Progression - Global keys", "Extra utility slot 1", "defeated_bonemass", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            utilitySlotGlobalKey2 = config("Progression - Global keys", "Extra utility slot 2", "defeated_goblinking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            utilitySlotGlobalKey3 = config("Progression - Global keys", "Extra utility slot 3", "defeated_queen", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            utilitySlotGlobalKey4 = config("Progression - Global keys", "Extra utility slot 4", "defeated_queen", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotGlobalKey1 = serverConfig("Progression - Global keys", "Extra utility slot 1", "defeated_bonemass", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]");
+            utilitySlotGlobalKey2 = serverConfig("Progression - Global keys", "Extra utility slot 2", "defeated_goblinking", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]");
+            utilitySlotGlobalKey3 = serverConfig("Progression - Global keys", "Extra utility slot 3", "defeated_queen", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]");
+            utilitySlotGlobalKey4 = serverConfig("Progression - Global keys", "Extra utility slot 4", "defeated_queen", "Comma-separated list of global keys and player unique keys. Slot will be active only if any key is enabled or list is not set. [Synced with Server]");
 
-            ammoSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Ammo slots", true, "Ammo slots will be active after acquiring first ammo item [Synced with Server]", synchronizedSetting: true);
-            utilitySlotAvailableAfterDiscovery = config("Progression - Discovery", "Utility slots", true, "Utility slots will be active after acquiring first utility item [Synced with Server]", synchronizedSetting: true);
-            foodSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Food slots", true, "Food slots will be active after acquiring first food item [Synced with Server]", synchronizedSetting: true);
-            equipmentSlotsAvailableAfterDiscovery = config("Progression - Discovery", "Equipment slots", true, "Corresponding equipment slot will be active after acquiring first item [Synced with Server]", synchronizedSetting: true);
+            ammoSlotsAvailableAfterDiscovery = serverConfig("Progression - Discovery", "Ammo slots", true, "Ammo slots will be active after acquiring first ammo item [Synced with Server]");
+            utilitySlotAvailableAfterDiscovery = serverConfig("Progression - Discovery", "Utility slots", true, "Utility slots will be active after acquiring first utility item [Synced with Server]");
+            foodSlotsAvailableAfterDiscovery = serverConfig("Progression - Discovery", "Food slots", true, "Food slots will be active after acquiring first food item [Synced with Server]");
+            equipmentSlotsAvailableAfterDiscovery = serverConfig("Progression - Discovery", "Equipment slots", true, "Corresponding equipment slot will be active after acquiring first item [Synced with Server]");
 
             quickSlotGlobalKey1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotGlobalKey2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
@@ -680,22 +680,22 @@ namespace ExtraSlots
             foodSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
-            utilitySlotItemDiscovered1 = config("Progression - Items", "Extra utility slot 1", "Wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            utilitySlotItemDiscovered2 = config("Progression - Items", "Extra utility slot 2", "Demister,GoldRubyRing,SilverRing", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            utilitySlotItemDiscovered3 = config("Progression - Items", "Extra utility slot 3", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            utilitySlotItemDiscovered4 = config("Progression - Items", "Extra utility slot 4", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            utilitySlotItemDiscovered1 = serverConfig("Progression - Items", "Extra utility slot 1", "Wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
+            utilitySlotItemDiscovered2 = serverConfig("Progression - Items", "Extra utility slot 2", "Demister,GoldRubyRing,SilverRing", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
+            utilitySlotItemDiscovered3 = serverConfig("Progression - Items", "Extra utility slot 3", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
+            utilitySlotItemDiscovered4 = serverConfig("Progression - Items", "Extra utility slot 4", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
 
             utilitySlotItemDiscovered1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             utilitySlotItemDiscovered2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             utilitySlotItemDiscovered3.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             utilitySlotItemDiscovered4.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
-            quickSlotItemDiscovered1 = config("Progression - Items", "Quickslot 1", "CryptKey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotItemDiscovered2 = config("Progression - Items", "Quickslot 2", "CryptKey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotItemDiscovered3 = config("Progression - Items", "Quickslot 3", "Wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotItemDiscovered4 = config("Progression - Items", "Quickslot 4", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotItemDiscovered5 = config("Progression - Items", "Quickslot 5", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            quickSlotItemDiscovered6 = config("Progression - Items", "Quickslot 6", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            quickSlotItemDiscovered1 = serverConfig("Progression - Items", "Quickslot 1", "CryptKey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
+            quickSlotItemDiscovered2 = serverConfig("Progression - Items", "Quickslot 2", "CryptKey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
+            quickSlotItemDiscovered3 = serverConfig("Progression - Items", "Quickslot 3", "Wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
+            quickSlotItemDiscovered4 = serverConfig("Progression - Items", "Quickslot 4", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
+            quickSlotItemDiscovered5 = serverConfig("Progression - Items", "Quickslot 5", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
+            quickSlotItemDiscovered6 = serverConfig("Progression - Items", "Quickslot 6", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
 
             quickSlotItemDiscovered1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotItemDiscovered2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
@@ -704,15 +704,15 @@ namespace ExtraSlots
             quickSlotItemDiscovered5.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             quickSlotItemDiscovered6.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
 
-            extraRowPlayerKey1 = config("Progression - Inventory - Player keys", "Extra row 1", "GP_Bonemass", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowPlayerKey2 = config("Progression - Inventory - Player keys", "Extra row 2", "GP_Moder", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowPlayerKey3 = config("Progression - Inventory - Player keys", "Extra row 3", "GP_Yagluth", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowPlayerKey4 = config("Progression - Inventory - Player keys", "Extra row 4", "GP_Queen", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowPlayerKey5 = config("Progression - Inventory - Player keys", "Extra row 5", "GP_Fader", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowPlayerKey1 = serverConfig("Progression - Inventory - Player keys", "Extra row 1", "GP_Bonemass", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]");
+            extraRowPlayerKey2 = serverConfig("Progression - Inventory - Player keys", "Extra row 2", "GP_Moder", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]");
+            extraRowPlayerKey3 = serverConfig("Progression - Inventory - Player keys", "Extra row 3", "GP_Yagluth", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]");
+            extraRowPlayerKey4 = serverConfig("Progression - Inventory - Player keys", "Extra row 4", "GP_Queen", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]");
+            extraRowPlayerKey5 = serverConfig("Progression - Inventory - Player keys", "Extra row 5", "GP_Fader", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]");
 
-            extraRowPlayerKeyMinus2 = config("Progression - Inventory - Player keys", "Regular row 2", "", "Comma-separated list of Player unique keys. Regular inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowPlayerKeyMinus1 = config("Progression - Inventory - Player keys", "Regular row 3", "GP_Eikthyr", "Comma-separated list of Player unique keys. Regular inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowPlayerKeyVanilla = config("Progression - Inventory - Player keys", "Regular row 4", "GP_TheElder", "Comma-separated list of Player unique keys. Regular inventory row will be active only if any key is enabled or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowPlayerKeyMinus2 = serverConfig("Progression - Inventory - Player keys", "Regular row 2", "", "Comma-separated list of Player unique keys. Regular inventory row will be active only if any key is enabled or list is not set. [Synced with Server]");
+            extraRowPlayerKeyMinus1 = serverConfig("Progression - Inventory - Player keys", "Regular row 3", "GP_Eikthyr", "Comma-separated list of Player unique keys. Regular inventory row will be active only if any key is enabled or list is not set. [Synced with Server]");
+            extraRowPlayerKeyVanilla = serverConfig("Progression - Inventory - Player keys", "Regular row 4", "GP_TheElder", "Comma-separated list of Player unique keys. Regular inventory row will be active only if any key is enabled or list is not set. [Synced with Server]");
 
             extraRowPlayerKey1.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowPlayerKey2.SettingChanged += (s, e) => API.UpdateSlots();
@@ -724,15 +724,15 @@ namespace ExtraSlots
             extraRowPlayerKeyMinus1.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowPlayerKeyVanilla.SettingChanged += (s, e) => API.UpdateSlots();
 
-            extraRowItemDiscovered1 = config("Progression - Inventory - Items", "Extra row 1", "Wishbone", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowItemDiscovered2 = config("Progression - Inventory - Items", "Extra row 2", "DragonTear", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowItemDiscovered3 = config("Progression - Inventory - Items", "Extra row 3", "YagluthDrop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowItemDiscovered4 = config("Progression - Inventory - Items", "Extra row 4", "QueenDrop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowItemDiscovered5 = config("Progression - Inventory - Items", "Extra row 5", "FaderDrop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscovered1 = serverConfig("Progression - Inventory - Items", "Extra row 1", "Wishbone", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]");
+            extraRowItemDiscovered2 = serverConfig("Progression - Inventory - Items", "Extra row 2", "DragonTear", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]");
+            extraRowItemDiscovered3 = serverConfig("Progression - Inventory - Items", "Extra row 3", "YagluthDrop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]");
+            extraRowItemDiscovered4 = serverConfig("Progression - Inventory - Items", "Extra row 4", "QueenDrop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]");
+            extraRowItemDiscovered5 = serverConfig("Progression - Inventory - Items", "Extra row 5", "FaderDrop", "Comma-separated list of items. Extra inventory row will be active only if any item is discovered or list is not set. [Synced with Server]");
 
-            extraRowItemDiscoveredMinus2 = config("Progression - Inventory - Items", "Regular row 2", "", "Comma-separated list of items. Regular inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowItemDiscoveredMinus1 = config("Progression - Inventory - Items", "Regular row 3", "HardAntler", "Comma-separated list of items. Regular inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
-            extraRowItemDiscoveredVanilla = config("Progression - Inventory - Items", "Regular row 4", "CryptKey", "Comma-separated list of items. Regular inventory row will be active only if any item is discovered or list is not set. [Synced with Server]", synchronizedSetting: true);
+            extraRowItemDiscoveredMinus2 = serverConfig("Progression - Inventory - Items", "Regular row 2", "", "Comma-separated list of items. Regular inventory row will be active only if any item is discovered or list is not set. [Synced with Server]");
+            extraRowItemDiscoveredMinus1 = serverConfig("Progression - Inventory - Items", "Regular row 3", "HardAntler", "Comma-separated list of items. Regular inventory row will be active only if any item is discovered or list is not set. [Synced with Server]");
+            extraRowItemDiscoveredVanilla = serverConfig("Progression - Inventory - Items", "Regular row 4", "CryptKey", "Comma-separated list of items. Regular inventory row will be active only if any item is discovered or list is not set. [Synced with Server]");
 
             extraRowItemDiscovered1.SettingChanged += (s, e) => API.UpdateSlots();
             extraRowItemDiscovered2.SettingChanged += (s, e) => API.UpdateSlots();

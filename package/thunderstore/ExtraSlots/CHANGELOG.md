@@ -1,3 +1,6 @@
+# 1.1.20
+* some configs made unconditionally server controlled
+
 # 1.1.19
 * hotkeys handling optimizations and fixes
 * migrated configuration synchronization from ServerSync to ConditionalConfigSync
