@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - chatgpt-build-epicloot-013-20260818
+  pull_request:
+    branches:
+      - master
 
 permissions:
   contents: read
