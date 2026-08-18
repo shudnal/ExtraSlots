@@ -1,0 +1,189 @@
+name: Temporary ExtraSlots EpicLoot compatibility build
+
+on:
+  push:
+    branches:
+      - chatgpt-build-epicloot-013-20260818
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Apply compatibility changes
+        shell: pwsh
+        run: |
+          git apply --whitespace=nowarn ".github/extra-slots-epicloot-compat.patch"
+          git diff --check
+
+      - name: Prepare build dependencies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $projectRoot = $env:GITHUB_WORKSPACE
+          $repositoryRoot = Split-Path -Parent $projectRoot
+          $dependencyRoot = Join-Path $env:RUNNER_TEMP "extra-slots-dependencies"
+          $gameRoot = Join-Path $dependencyRoot "ValheimDedicatedServer"
+          $managedRoot = Join-Path $gameRoot "valheim_server_Data\Managed"
+          $assembliesRoot = Join-Path $repositoryRoot "Assemblies"
+          $stableRoot = Join-Path $assembliesRoot "stable"
+          $betaRoot = Join-Path $assembliesRoot "beta"
+          $managerRoot = Join-Path $assembliesRoot "Managers"
+          $publicizedRoot = Join-Path $stableRoot "publicized_assemblies"
+          $apiRoot = Join-Path $repositoryRoot "API"
+
+          New-Item -ItemType Directory -Force -Path $dependencyRoot, $stableRoot, $betaRoot, $managerRoot, $publicizedRoot, $apiRoot | Out-Null
+
+          $steamCmdZip = Join-Path $dependencyRoot "steamcmd.zip"
+          $steamCmdRoot = Join-Path $dependencyRoot "steamcmd"
+          Invoke-WebRequest -UseBasicParsing -Uri "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip" -OutFile $steamCmdZip
+          Expand-Archive -Path $steamCmdZip -DestinationPath $steamCmdRoot -Force
+
+          & (Join-Path $steamCmdRoot "steamcmd.exe") +force_install_dir $gameRoot +login anonymous +app_update 896660 validate +quit
+          if ($LASTEXITCODE -ne 0) {
+              throw "SteamCMD failed with exit code $LASTEXITCODE"
+          }
+          if (-not (Test-Path $managedRoot)) {
+              throw "Valheim managed assembly directory was not found: $managedRoot"
+          }
+
+          Copy-Item -Path (Join-Path $managedRoot "*.dll") -Destination $stableRoot -Force
+          Copy-Item -Path (Join-Path $managedRoot "netstandard.dll") -Destination $betaRoot -Force
+          Copy-Item -Path (Join-Path $managedRoot "Unity.InputSystem.dll") -Destination $betaRoot -Force
+
+          dotnet tool install --global BepInEx.AssemblyPublicizer.Cli
+          $publicizer = Join-Path $env:USERPROFILE ".dotnet\tools\assembly-publicizer.exe"
+          if (-not (Test-Path $publicizer)) {
+              throw "Assembly publicizer was not installed: $publicizer"
+          }
+
+          & $publicizer (Join-Path $managedRoot "assembly_valheim.dll") --strip --output (Join-Path $publicizedRoot "assembly_valheim_publicized.dll")
+          if ($LASTEXITCODE -ne 0) { throw "Failed to publicize assembly_valheim.dll" }
+          & $publicizer (Join-Path $managedRoot "assembly_utils.dll") --strip --output (Join-Path $publicizedRoot "assembly_utils_publicized.dll")
+          if ($LASTEXITCODE -ne 0) { throw "Failed to publicize assembly_utils.dll" }
+          & $publicizer (Join-Path $managedRoot "assembly_guiutils.dll") --strip --output (Join-Path $publicizedRoot "assembly_guiutils_publicized.dll")
+          if ($LASTEXITCODE -ne 0) { throw "Failed to publicize assembly_guiutils.dll" }
+
+          $bepInExZip = Join-Path $dependencyRoot "BepInExPack.zip"
+          $bepInExRoot = Join-Path $dependencyRoot "BepInExPack"
+          Invoke-WebRequest -UseBasicParsing -Uri "https://thunderstore.io/package/download/denikson/BepInExPack_Valheim/5.4.2333/" -OutFile $bepInExZip
+          Expand-Archive -Path $bepInExZip -DestinationPath $bepInExRoot -Force
+          $bepInExDll = Get-ChildItem -Path $bepInExRoot -Recurse -Filter "BepInEx.dll" | Select-Object -First 1
+          if ($null -eq $bepInExDll) {
+              throw "BepInEx.dll was not found in the downloaded package"
+          }
+          $bepInExCore = $bepInExDll.Directory.FullName
+
+          $fakeDriveRoot = Join-Path $dependencyRoot "FDrive"
+          $bepInExTarget = Join-Path $fakeDriveRoot "Steam\steamapps\common\Valheim\BepInEx\core"
+          New-Item -ItemType Directory -Force -Path $bepInExTarget | Out-Null
+          Copy-Item -Path (Join-Path $bepInExCore "*") -Destination $bepInExTarget -Recurse -Force
+          & subst.exe F: $fakeDriveRoot
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to create temporary F: drive"
+          }
+
+          $configSyncZip = Join-Path $dependencyRoot "ConditionalConfigSync.zip"
+          $configSyncRoot = Join-Path $dependencyRoot "ConditionalConfigSync"
+          Invoke-WebRequest -UseBasicParsing -Uri "https://thunderstore.io/package/download/shudnal/ConditionalConfigSync/1.0.2/" -OutFile $configSyncZip
+          Expand-Archive -Path $configSyncZip -DestinationPath $configSyncRoot -Force
+          $configSyncDll = Get-ChildItem -Path $configSyncRoot -Recurse -Filter "ConditionalConfigSync.dll" | Select-Object -First 1
+          if ($null -eq $configSyncDll) {
+              throw "ConditionalConfigSync.dll was not found in the downloaded package"
+          }
+          Copy-Item -Path $configSyncDll.FullName -Destination (Join-Path $managerRoot "ConditionalConfigSync.dll") -Force
+
+          @'
+          function Assert-FileExists {
+              param([Parameter(Mandatory = $true)][string]$Path)
+              if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+                  throw "Required file was not found: $Path"
+              }
+          }
+
+          function Normalize-PackageVersion {
+              param(
+                  [Parameter(Mandatory = $true)][string]$Version,
+                  [Parameter(Mandatory = $true)][string]$Name
+              )
+              $normalized = $Version.Trim()
+              if ($normalized -notmatch '^\d+\.\d+\.\d+$') {
+                  throw "$Name must use major.minor.patch format: $Version"
+              }
+              return $normalized
+          }
+
+          function Get-JsonFile {
+              param([Parameter(Mandatory = $true)][string]$Path)
+              Assert-FileExists -Path $Path
+              return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+          }
+
+          function Save-JsonFile {
+              param(
+                  [Parameter(Mandatory = $true)]$Object,
+                  [Parameter(Mandatory = $true)][string]$Path
+              )
+              $json = $Object | ConvertTo-Json -Depth 32
+              $encoding = New-Object System.Text.UTF8Encoding($false)
+              [System.IO.File]::WriteAllText($Path, $json + [Environment]::NewLine, $encoding)
+          }
+
+          function Assert-MaxLength {
+              param(
+                  [AllowNull()][string]$Value,
+                  [Parameter(Mandatory = $true)][string]$Name,
+                  [Parameter(Mandatory = $true)][int]$MaxLength
+              )
+              if ($null -ne $Value -and $Value.Length -gt $MaxLength) {
+                  throw "$Name exceeds $MaxLength characters"
+              }
+          }
+          '@ | Set-Content -LiteralPath (Join-Path $apiRoot "CommonPublish.ps1") -Encoding UTF8
+
+          Write-Host "Prepared current Valheim assemblies from Steam app 896660."
+
+      - name: Restore and build Release packages
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $staging = Join-Path $env:RUNNER_TEMP "r2modman-staging"
+          New-Item -ItemType Directory -Force -Path $staging | Out-Null
+
+          msbuild ExtraSlots.sln /restore /m /p:Configuration=Release /p:Platform="Any CPU" /p:R2ModManProfilePluginsDir="$staging\" /verbosity:minimal
+          if ($LASTEXITCODE -ne 0) {
+              throw "MSBuild failed with exit code $LASTEXITCODE"
+          }
+
+          $requiredFiles = @(
+              "package\thunderstore\ExtraSlots.zip",
+              "package\nexus\ExtraSlots.zip",
+              "package\thunderstore\ExtraSlots\ExtraSlots.dll",
+              "package\nexus\ExtraSlots\ExtraSlots.dll"
+          )
+          foreach ($requiredFile in $requiredFiles) {
+              if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
+                  throw "Expected build output was not found: $requiredFile"
+              }
+          }
+
+      - name: Upload Release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ExtraSlots-1.1.21-EpicLoot-0.13.0
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            package/thunderstore/ExtraSlots.zip
+            package/nexus/ExtraSlots.zip
+            package/thunderstore/ExtraSlots/ExtraSlots.dll
+            package/nexus/ExtraSlots/ExtraSlots.dll
+            bin/Release/ExtraSlots.pdb
