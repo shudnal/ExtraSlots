@@ -1,0 +1,378 @@
+diff --git a/Compatibility/EpicLootCompat.cs b/Compatibility/EpicLootCompat.cs
+index a4d2433222799345e13ff81f93c44e3c72d6e621..93a9c340592b699395714e8840ed0c72faaf4a46 100644
+--- a/Compatibility/EpicLootCompat.cs
++++ b/Compatibility/EpicLootCompat.cs
+@@ -2,8 +2,8 @@
+ using BepInEx.Bootstrap;
+ using BepInEx.Configuration;
+ using HarmonyLib;
++using System;
+ using System.Collections.Generic;
+-using System.Linq;
+ using System.Reflection;
+ using static ExtraSlots.ExtraSlots;
+ 
+@@ -12,6 +12,11 @@ namespace ExtraSlots.Compatibility;
+ public static class EpicLootCompat
+ {
+     public const string GUID = "randyknapp.mods.epicloot";
++
++    private const string ApiTypeName = "EpicLoot.API";
++    private const string ConfigTypeName = "EpicLoot.Config.ELConfig";
++    private const string SacrificeConfigKey = "ShowEquippedAndHotbarItemsInSacrificeTab";
++
+     public static PluginInfo epicLootPlugin;
+     public static Assembly assembly;
+ 
+@@ -19,15 +24,181 @@ public static class EpicLootCompat
+ 
+     public static ConfigEntry<bool> ShowEquippedAndHotbarItemsInSacrificeTab;
+ 
++    private static bool equipmentProviderRegistered;
++    private static bool sacrificeFilterRegistered;
++
++    private static MethodInfo unregisterEquipmentProviderMethod;
++    private static MethodInfo unregisterSacrificeFilterMethod;
++    private static MethodInfo invalidatePlayerEffectCacheMethod;
++
++    private static readonly Func<Player, List<ItemDrop.ItemData>> equipmentProvider = GetExtraEquippedItems;
++    private static readonly Func<ItemDrop.ItemData, bool> sacrificeFilter = CanSacrifice;
++
+     public static void CheckForCompatibility()
+     {
+-        if (isEnabled = Chainloader.PluginInfos.TryGetValue(GUID, out epicLootPlugin))
++        if (!(isEnabled = Chainloader.PluginInfos.TryGetValue(GUID, out epicLootPlugin)))
++            return;
++
++        assembly ??= Assembly.GetAssembly(epicLootPlugin.Instance.GetType());
++
++        ResolveSacrificeConfig();
++        RegisterApiProviders();
++    }
++
++    public static void Shutdown()
++    {
++        if (!isEnabled)
++            return;
++
++        if (equipmentProviderRegistered)
++            TryUnregister(unregisterEquipmentProviderMethod);
++
++        if (sacrificeFilterRegistered)
++            TryUnregister(unregisterSacrificeFilterMethod);
++
++        equipmentProviderRegistered = false;
++        sacrificeFilterRegistered = false;
++        unregisterEquipmentProviderMethod = null;
++        unregisterSacrificeFilterMethod = null;
++        invalidatePlayerEffectCacheMethod = null;
++    }
++
++    public static void InvalidatePlayerEffectCache(Player player)
++    {
++        if (!equipmentProviderRegistered || player == null || invalidatePlayerEffectCacheMethod == null)
++            return;
++
++        try
+         {
+-            assembly ??= Assembly.GetAssembly(epicLootPlugin.Instance.GetType());
+-            epicLootPlugin.Instance.Config.TryGetEntry("Crafting UI", "ShowEquippedAndHotbarItemsInSacrificeTab", out ShowEquippedAndHotbarItemsInSacrificeTab);
++            invalidatePlayerEffectCacheMethod.Invoke(null, new object[] { player });
++        }
++        catch (Exception exception)
++        {
++            invalidatePlayerEffectCacheMethod = null;
++            LogWarning($"Epic Loot player effect cache invalidation failed and was disabled: {Unwrap(exception)}");
+         }
+     }
+ 
++    private static void ResolveSacrificeConfig()
++    {
++        Type configType = assembly?.GetType(ConfigTypeName);
++        FieldInfo configField = configType == null ? null : AccessTools.Field(configType, SacrificeConfigKey);
++        ShowEquippedAndHotbarItemsInSacrificeTab = configField?.GetValue(null) as ConfigEntry<bool>;
++
++        if (ShowEquippedAndHotbarItemsInSacrificeTab != null)
++            return;
++
++        if (epicLootPlugin.Instance.Config.TryGetEntry("6 - Interface", SacrificeConfigKey, out ShowEquippedAndHotbarItemsInSacrificeTab))
++            return;
++
++        epicLootPlugin.Instance.Config.TryGetEntry("Crafting UI", SacrificeConfigKey, out ShowEquippedAndHotbarItemsInSacrificeTab);
++    }
++
++    private static void RegisterApiProviders()
++    {
++        Type apiType = assembly?.GetType(ApiTypeName);
++        if (apiType == null)
++            return;
++
++        Type equipmentProviderType = typeof(Func<Player, List<ItemDrop.ItemData>>);
++        Type sacrificeFilterType = typeof(Func<ItemDrop.ItemData, bool>);
++
++        MethodInfo registerEquipmentProviderMethod = AccessTools.Method(apiType, "RegisterEquipmentProvider", new[] { typeof(string), equipmentProviderType });
++        unregisterEquipmentProviderMethod = AccessTools.Method(apiType, "UnregisterEquipmentProvider", new[] { typeof(string) });
++        invalidatePlayerEffectCacheMethod = AccessTools.Method(apiType, "InvalidatePlayerEffectCache", new[] { typeof(Player) });
++
++        MethodInfo registerSacrificeFilterMethod = AccessTools.Method(apiType, "RegisterSacrificeFilter", new[] { typeof(string), sacrificeFilterType });
++        unregisterSacrificeFilterMethod = AccessTools.Method(apiType, "UnregisterSacrificeFilter", new[] { typeof(string) });
++
++        if (registerEquipmentProviderMethod != null)
++        {
++            TryUnregister(unregisterEquipmentProviderMethod);
++            equipmentProviderRegistered = TryRegister(registerEquipmentProviderMethod, equipmentProvider, "equipment provider");
++        }
++
++        if (registerSacrificeFilterMethod != null)
++        {
++            TryUnregister(unregisterSacrificeFilterMethod);
++            sacrificeFilterRegistered = TryRegister(registerSacrificeFilterMethod, sacrificeFilter, "sacrifice filter");
++        }
++
++        if (equipmentProviderRegistered || sacrificeFilterRegistered)
++            LogInfo($"Epic Loot API compatibility registered: equipment provider {equipmentProviderRegistered}, sacrifice filter {sacrificeFilterRegistered}");
++    }
++
++    private static bool TryRegister(MethodInfo method, Delegate provider, string providerName)
++    {
++        try
++        {
++            if (method.Invoke(null, new object[] { pluginID, provider }) is bool result && result)
++                return true;
++
++            LogWarning($"Epic Loot {providerName} registration was rejected");
++        }
++        catch (Exception exception)
++        {
++            LogWarning($"Epic Loot {providerName} registration failed: {Unwrap(exception)}");
++        }
++
++        return false;
++    }
++
++    private static void TryUnregister(MethodInfo method)
++    {
++        if (method == null)
++            return;
++
++        try
++        {
++            method.Invoke(null, new object[] { pluginID });
++        }
++        catch
++        {
++        }
++    }
++
++    private static Exception Unwrap(Exception exception)
++    {
++        return exception is TargetInvocationException targetInvocationException && targetInvocationException.InnerException != null
++            ? targetInvocationException.InnerException
++            : exception;
++    }
++
++    private static List<ItemDrop.ItemData> GetExtraEquippedItems(Player player)
++    {
++        List<ItemDrop.ItemData> items = new List<ItemDrop.ItemData>();
++
++        if (!Slots.IsValidPlayer(player))
++            return items;
++
++        foreach (ItemDrop.ItemData item in ExtraUtilitySlots.GetEquippedItems(player))
++            if (item != null && !items.Contains(item))
++                items.Add(item);
++
++        foreach (Slots.Slot slot in Slots.GetEquipmentSlots())
++        {
++            ItemDrop.ItemData item = slot.Item;
++            if (slot.IsCustomSlot && item != null && player.IsItemEquiped(item) && !items.Contains(item))
++                items.Add(item);
++        }
++
++        return items;
++    }
++
++    private static bool CanSacrifice(ItemDrop.ItemData item)
++    {
++        if (item == null)
++            return true;
++
++        if (ShowEquippedAndHotbarItemsInSacrificeTab?.Value == true)
++            return true;
++
++        if (Slots.GetItemSlot(item) is not Slots.Slot slot)
++            return true;
++
++        return !(slot.IsQuickSlot || (slot.IsMiscSlot && epicLootExcludeMiscItemsFromSacrifice.Value));
++    }
++
+     [HarmonyPatch]
+     public static class EpicLoot_Player_GetEquipment_AddItemsFromExtraUtilityAndCustomSlots
+     {
+@@ -35,7 +206,7 @@ public static class EpicLootCompat
+ 
+         public static bool Prepare(MethodBase original)
+         {
+-            if (!isEnabled)
++            if (!isEnabled || equipmentProviderRegistered)
+                 return false;
+ 
+             target ??= AccessTools.Method(assembly.GetType("EpicLoot.PlayerExtensions"), "GetEquipment");
+@@ -44,7 +215,7 @@ public static class EpicLootCompat
+ 
+             if (original == null)
+                 LogInfo("EpicLoot.PlayerExtensions:GetEquipment method is patched to add extra utility and custom slot items");
+-            
++
+             return true;
+         }
+ 
+@@ -53,12 +224,12 @@ public static class EpicLootCompat
+         [HarmonyPriority(Priority.Last)]
+         public static void Postfix(Player player, List<ItemDrop.ItemData> __result)
+         {
+-            if (!Slots.IsValidPlayer(player))
++            if (__result == null)
+                 return;
+ 
+-            ExtraUtilitySlots.GetEquippedItems()
+-                .Union(Slots.GetEquipmentSlots().Where(slot => slot.IsCustomSlot && !slot.IsFree && player.IsItemEquiped(slot.Item)).Select(slot => slot.Item))
+-                .DoIf(item => !__result.Contains(item), __result.Add);
++            foreach (ItemDrop.ItemData item in GetExtraEquippedItems(player))
++                if (!__result.Contains(item))
++                    __result.Add(item);
+         }
+     }
+ 
+@@ -69,31 +240,22 @@ public static class EpicLootCompat
+ 
+         public static bool Prepare(MethodBase original)
+         {
+-            if (!isEnabled)
++            if (!isEnabled || sacrificeFilterRegistered)
+                 return false;
+ 
+-            target ??= AccessTools.Method(assembly.GetType("EpicLoot.Crafting.EnchantCostsHelper"), "GetSacrificeProducts", new System.Type[] { typeof(ItemDrop.ItemData) });
++            target ??= AccessTools.Method(assembly.GetType("EpicLoot.Crafting.EnchantCostsHelper"), "GetSacrificeProducts", new[] { typeof(ItemDrop.ItemData) });
+             if (target == null)
+                 return false;
+ 
+             if (original == null)
+                 LogInfo("EpicLoot.Crafting.EnchantCostsHelper:GetSacrificeProducts method is patched to optionally exclude quick and misc slots");
+-            
++
+             return true;
+         }
+ 
+         public static MethodBase TargetMethod() => target;
+ 
+         [HarmonyPriority(Priority.Last)]
+-        public static bool Prefix(ItemDrop.ItemData item)
+-        {
+-            if (ShowEquippedAndHotbarItemsInSacrificeTab != null && ShowEquippedAndHotbarItemsInSacrificeTab.Value)
+-                return true;
+-
+-            if (Slots.GetItemSlot(item) is not Slots.Slot slot)
+-                return true;
+-
+-            return !(slot.IsQuickSlot || (slot.IsMiscSlot && epicLootExcludeMiscItemsFromSacrifice.Value));
+-        }
++        public static bool Prefix(ItemDrop.ItemData item) => CanSacrifice(item);
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/ExtraSlots.cs b/ExtraSlots.cs
+index a776f44529f7a9476f9bafeaf2e1cf9c2de60985..c789a26f3cae62012a26541c828c24596262deae 100644
+--- a/ExtraSlots.cs
++++ b/ExtraSlots.cs
+@@ -40,7 +40,7 @@ namespace ExtraSlots
+     {
+         public const string pluginID = "shudnal.ExtraSlots";
+         public const string pluginName = "Extra Slots";
+-        public const string pluginVersion = "1.1.20";
++        public const string pluginVersion = "1.1.21";
+ 
+         internal readonly Harmony harmony = new Harmony(pluginID);
+ 
+@@ -335,6 +335,7 @@ namespace ExtraSlots
+         private void OnDestroy()
+         {
+             Config.Save();
++            Compatibility.EpicLootCompat.Shutdown();
+             instance = null;
+             harmony?.UnpatchSelf();
+         }
+diff --git a/ExtraUtilitySlots.cs b/ExtraUtilitySlots.cs
+index f4ea03fd366a88f3f4e0890bb8535cec4461794a..368f5f8c994ab50620e1bdd7d94ba95ebf6aa338 100644
+--- a/ExtraUtilitySlots.cs
++++ b/ExtraUtilitySlots.cs
+@@ -84,6 +84,9 @@ namespace ExtraSlots
+ 
+             extraData.equippedItemsDirty = true;
+ 
++            if (humanoid is Player player)
++                Compatibility.EpicLootCompat.InvalidatePlayerEffectCache(player);
++
+             return item;
+         }
+     }
+diff --git a/package/nexus/manifest.json b/package/nexus/manifest.json
+index 61c256d09d53817ffd7c5b1a8f04861e31239db9..273f9cd2dad01c6bf02aeb41ebaefe0ceea501d7 100644
+--- a/package/nexus/manifest.json
++++ b/package/nexus/manifest.json
+@@ -1,10 +1,10 @@
+ {
+-    "name":  "ExtraSlots",
+-    "description":  "new config Custom slot items can use regular equipment slots",
+-    "version":  "1.1.20",
+-    "file_category":  "main",
+-    "allow_mod_manager_download":  true,
+-    "show_requirements_pop_up":  false,
+-    "archive_existing_file":  true,
+-    "primary_mod_manager_download":  true
++    "name": "ExtraSlots",
++    "description": "updated Epic Loot 0.13.0 compatibility",
++    "version": "1.1.21",
++    "file_category": "main",
++    "allow_mod_manager_download": true,
++    "show_requirements_pop_up": false,
++    "archive_existing_file": true,
++    "primary_mod_manager_download": true
+ }
+diff --git a/package/thunderstore/ExtraSlots/CHANGELOG.md b/package/thunderstore/ExtraSlots/CHANGELOG.md
+index fbfaadab76398e119d9c3f59fa831a9c36bf5862..d80d160d6da5e2126be0808729ba1ed1348b82e5 100644
+--- a/package/thunderstore/ExtraSlots/CHANGELOG.md
++++ b/package/thunderstore/ExtraSlots/CHANGELOG.md
+@@ -1,3 +1,6 @@
++# 1.1.21
++* updated Epic Loot compatibility for magic effects, set bonuses, shard sockets, equip effects, and sacrifice filtering
++
+ # 1.1.20
+ * some configs made unconditionally server controlled
+ 
+diff --git a/package/thunderstore/ExtraSlots/manifest.json b/package/thunderstore/ExtraSlots/manifest.json
+index 87d8ae850c4bb77042ccd5c0dd23b3984c495f44..44627752859c85b356369a79d8a6fe2aed274a4e 100644
+--- a/package/thunderstore/ExtraSlots/manifest.json
++++ b/package/thunderstore/ExtraSlots/manifest.json
+@@ -1,11 +1,11 @@
+ {
+-    "name":  "ExtraSlots",
+-    "version_number":  "1.1.20",
+-    "website_url":  "https://github.com/shudnal/ExtraSlots",
+-    "description":  "More inventory slots dedicated for equipment, food, ammo and misc items. Extra utility slots. Quick slots. Custom slots API. Player inventory resize. Gamepad friendly. Slot obtaining progression.",
+-    "dependencies":  [
+-                         "denikson-BepInExPack_Valheim-5.4.2333",
+-                         "ValheimModding-YamlDotNet-16.3.1",
+-                         "shudnal-ConditionalConfigSync-1.0.2"
+-                     ]
++    "name": "ExtraSlots",
++    "version_number": "1.1.21",
++    "website_url": "https://github.com/shudnal/ExtraSlots",
++    "description": "More inventory slots dedicated for equipment, food, ammo and misc items. Extra utility slots. Quick slots. Custom slots API. Player inventory resize. Gamepad friendly. Slot obtaining progression.",
++    "dependencies": [
++        "denikson-BepInExPack_Valheim-5.4.2333",
++        "ValheimModding-YamlDotNet-16.3.1",
++        "shudnal-ConditionalConfigSync-1.0.2"
++    ]
+ }
