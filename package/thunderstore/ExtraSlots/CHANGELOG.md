@@ -1,3 +1,6 @@
+# 1.1.21
+* updated Epic Loot compatibility for legacy versions and the 0.13.0+ API, including magic effects, set bonuses, and sacrifice filtering in extra slots
+
 # 1.1.20
 * some configs made unconditionally server controlled
 

@@ -83,6 +83,7 @@ namespace ExtraSlots
             }
 
             extraData.equippedItemsDirty = true;
+            Compatibility.EpicLootCompat.InvalidatePlayerEffectCache(humanoid as Player);
 
             return item;
         }

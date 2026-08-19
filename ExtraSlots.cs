@@ -40,7 +40,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.1.20";
+        public const string pluginVersion = "1.1.21";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -334,6 +334,7 @@ namespace ExtraSlots
 
         private void OnDestroy()
         {
+            Compatibility.EpicLootCompat.UnregisterCompatibility();
             Config.Save();
             instance = null;
             harmony?.UnpatchSelf();
@@ -390,7 +391,11 @@ namespace ExtraSlots
             extraRows.SettingChanged += (s, e) => API.UpdateSlots();
             rowsProgressionEnabled.SettingChanged += (s, e) => API.UpdateSlots();
             
-            extraUtilitySlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            extraUtilitySlotsAmount.SettingChanged += (s, e) =>
+            {
+                EquipmentPanel.UpdatePanel();
+                Compatibility.EpicLootCompat.InvalidatePlayerEffectCache(Player.m_localPlayer);
+            };
             quickSlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             foodSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             miscSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
@@ -745,7 +750,7 @@ namespace ExtraSlots
             extraRowItemDiscoveredVanilla.SettingChanged += (s, e) => API.UpdateSlots();
 
             epicLootMagicItemUnequippedAlpha = config("Mods compatibility", "EpicLoot unequipped item alpha", 0.2f, "Make unequipped enchanted item more visible in equipment panel by making its background image more transparent.");
-            epicLootExcludeMiscItemsFromSacrifice = config("Mods compatibility", "EpicLoot exclude misc items from sacrifice", defaultValue: true, "If EpicLoot config ShowEquippedAndHotbarItemsInSacrificeTab is enabled then items in misc slots will be excluded from sacrifice.");
+            epicLootExcludeMiscItemsFromSacrifice = config("Mods compatibility", "EpicLoot exclude misc items from sacrifice", defaultValue: true, "When Epic Loot hides equipped and hotbar items from sacrifice, also exclude items in misc slots.");
             bbhArrowsFindingAndCounting = config("Mods compatibility", "Fix best fit arrows finding when using BowsBeforeHoes Quiver", defaultValue: true, "Make BBH quiver respect item type and ammo type when game tries to find ammo and count it. Game restart is required after change.");
             recycle_N_ReclaimExcludeExtraSlots = config("Mods compatibility", "Prevent Recycle_N_Reclaim from recycling items in extra slots", defaultValue: true, "Recycle_N_Reclaim ignores items in hotbar only. Make it ignore items in extra slots");
             rebindConnectPanel = config("Mods compatibility", "Rebind Connect Panel", defaultValue: KeyCode.F2, "Change the key which used to open Connect Panel with current data");

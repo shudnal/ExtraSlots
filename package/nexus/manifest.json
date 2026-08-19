@@ -1,7 +1,7 @@
 {
     "name":  "ExtraSlots",
-    "description":  "new config Custom slot items can use regular equipment slots",
-    "version":  "1.1.20",
+    "description":  "updated compatibility with legacy and Epic Loot 0.13.0+ versions",
+    "version":  "1.1.21",
     "file_category":  "main",
     "allow_mod_manager_download":  true,
     "show_requirements_pop_up":  false,

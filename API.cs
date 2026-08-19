@@ -205,5 +205,6 @@ public static class API
         EquipmentPanel.UpdatePanel();
         LightenedSlots.UpdateState();
         HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+        Compatibility.EpicLootCompat.InvalidatePlayerEffectCache(Player.m_localPlayer);
     }
 }
