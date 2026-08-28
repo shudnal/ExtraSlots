@@ -254,10 +254,25 @@ namespace ExtraSlots
                 for (int i = index; i < slots.Length; i++)
                     slots[i].UpdateGridPosition();
 
-                if (item != null && TryFindFreeSlotForItem(item, out Slot newSlot))
+                ClearCachedItems();
+
+                if (item != null)
                 {
-                    LogInfo($"While removing slot {slotID} item {item.m_shared.m_name} from {item.m_gridPos} was moved into first empty slot {newSlot} {newSlot.GridPosition}");
-                    item.m_gridPos = newSlot.GridPosition;
+                    if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
+                    {
+                        LogInfo($"While removing slot {slotID} item {item.m_shared.m_name} from {item.m_gridPos} was moved into regular inventory {gridPos}");
+                        item.m_gridPos = gridPos;
+                    }
+                    else if (TryFindFreeSlotForItem(item, out Slot newSlot))
+                    {
+                        LogInfo($"While removing slot {slotID} item {item.m_shared.m_name} from {item.m_gridPos} was moved into first empty slot {newSlot} {newSlot.GridPosition}");
+                        item.m_gridPos = newSlot.GridPosition;
+                    }
+                    else if (CurrentPlayer != null && PlayerInventory != null && PlayerInventory.ContainsItem(item))
+                    {
+                        LogWarning($"While removing slot {slotID} no inventory space was available for {item.m_shared.m_name}. Item was dropped.");
+                        CurrentPlayer.DropItem(PlayerInventory, item, item.m_stack);
+                    }
                 }
 
                 API.UpdateSlots();

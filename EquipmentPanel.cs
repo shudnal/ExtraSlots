@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using static ExtraSlots.ExtraSlots;
 using static ExtraSlots.Slots;
@@ -24,7 +25,9 @@ namespace ExtraSlots
         private static float InventoryPanelWidth => InventoryGui.instance ? InventoryGui.instance.m_player.rect.width : 0;
         private static float PanelWidth => (Math.Max(quickSlotsCount, SlotPositions.LastEquipmentColumn() + 1) + FoodAmmoSlotsWidthInTiles) * tileSize + tileSpace / 2;
         private static float PanelHeight => (((quickSlotsCount > 0 || IsFirstMiscSlotAvailable()) ? 1f + interslotSpaceInTiles : 0f) + EquipmentHeight) * tileSize + tileSpace / 2;
-        private static Vector2 PanelOffset => new Vector2(equipmentPanelOffset.Value.x, -equipmentPanelOffset.Value.y);
+        private static Vector2? draggedPanelOffset;
+        private static Vector2 CurrentPanelOffset => draggedPanelOffset ?? equipmentPanelOffset.Value;
+        private static Vector2 PanelOffset => new Vector2(CurrentPanelOffset.x, -CurrentPanelOffset.y);
         private static Vector2 PanelPosition => new Vector2(InventoryPanelWidth + inventoryPanelOffset, 0f) + PanelOffset;
         private static float FoodAmmoSlotsWidthInTiles => (IsFoodSlotAvailable() || IsAmmoSlotAvailable() ? interslotSpaceInTiles : 0) + (IsFoodSlotAvailable() ? 1f : 0) + (IsAmmoSlotAvailable() ? 1f : 0);
         private static int EquipmentHeight => equipmentSlotsCount > 3 || IsFoodSlotAvailable() || IsAmmoSlotAvailable() ? 3 : equipmentSlotsCount;
@@ -56,6 +59,68 @@ namespace ExtraSlots
         internal static Sprite quickSlot;
         internal static Sprite lightenedSlot;
         internal static Sprite background;
+
+        private static bool IsPanelDragKeyHeld()
+        {
+            var shortcut = equipmentPanelDragKey.Value;
+            if (shortcut.MainKey == KeyCode.None || !ZInput.GetKey(shortcut.MainKey))
+                return false;
+
+            foreach (KeyCode modifier in shortcut.Modifiers)
+                if (!ZInput.GetKey(modifier))
+                    return false;
+
+            return true;
+        }
+
+        private static bool CanDragPanel => equipmentPanelDraggable.Value || IsPanelDragKeyHeld();
+
+        public sealed class EquipmentPanelDragHandle : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+        {
+            private bool dragging;
+            private float scaleFactor = 1f;
+
+            public void OnBeginDrag(PointerEventData eventData)
+            {
+                if (!CanDragPanel || eventData.button != PointerEventData.InputButton.Left)
+                    return;
+
+                dragging = true;
+                draggedPanelOffset = equipmentPanelOffset.Value;
+                scaleFactor = GetComponentInParent<Canvas>()?.scaleFactor ?? 1f;
+                if (scaleFactor <= 0f)
+                    scaleFactor = 1f;
+            }
+
+            public void OnDrag(PointerEventData eventData)
+            {
+                if (!dragging || draggedPanelOffset == null)
+                    return;
+
+                Vector2 delta = eventData.delta / scaleFactor;
+                draggedPanelOffset = draggedPanelOffset.Value + new Vector2(delta.x, -delta.y);
+                UpdateBackground();
+                SetSlotsPositions();
+                MarkDirty();
+            }
+
+            public void OnEndDrag(PointerEventData eventData) => FinishDrag();
+
+            private void OnDisable() => FinishDrag();
+
+            private void FinishDrag()
+            {
+                if (!dragging)
+                    return;
+
+                dragging = false;
+                Vector2? finalOffset = draggedPanelOffset;
+                draggedPanelOffset = null;
+
+                if (finalOffset.HasValue)
+                    equipmentPanelOffset.Value = finalOffset.Value;
+            }
+        }
 
         public class SidePanelDefaults
         {
@@ -497,6 +562,12 @@ namespace ExtraSlots
                 equipmentBkg.name = "Bkg";
 
                 equipmentBackgroundImage = equipmentBkg.GetComponent<Image>();
+                if (equipmentBackgroundImage)
+                {
+                    equipmentBackgroundImage.raycastTarget = true;
+                    equipmentBkg.gameObject.AddComponent<EquipmentPanelDragHandle>();
+                }
+
                 inventoryBackgroundImage = inventoryBackground.transform.GetComponent<Image>();
 
                 if (selected_frames != null)
@@ -765,6 +836,7 @@ namespace ExtraSlots
 
             iconMaterial = null;
             originalScale = Vector3.zero;
+            draggedPanelOffset = null;
 
             updateSidePanelsInFrames = 0;
             updateSidePanelsPreviousExtraRows = -10;

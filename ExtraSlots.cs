@@ -40,7 +40,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.1.21";
+        public const string pluginVersion = "1.1.22";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -71,6 +71,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> slotsTombstoneAutoEquipWeaponShield;
         public static ConfigEntry<bool> slotsTombstoneAutoEquipEnabled;
         public static ConfigEntry<bool> slotsTombstoneAutoEquipCarryWeightItemsEnabled;
+        public static ConfigEntry<bool> slotsTombstoneAutoEquipManualTakeAll;
         
         public static ConfigEntry<string> slotsTombstoneAutoEquipWhiteList;
         public static ConfigEntry<string> slotsTombstoneAutoEquipBlackList;
@@ -81,6 +82,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> keepOnDeathFoodSlots;
         public static ConfigEntry<bool> keepOnDeathAmmoSlots;
         public static ConfigEntry<bool> keepOnDeathMiscSlots;
+        public static ConfigEntry<bool> keepOnDeathEquippedState;
 
         public static ConfigEntry<string> keepOnDeathItemList;
         public static ConfigEntry<string> keepOnDeathWhiteList;
@@ -103,6 +105,8 @@ namespace ExtraSlots
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
         public static ConfigEntry<Vector2> equipmentPanelOffset;
+        public static ConfigEntry<bool> equipmentPanelDraggable;
+        public static ConfigEntry<KeyboardShortcut> equipmentPanelDragKey;
         public static ConfigEntry<Vector2> equipmentPanelTooltipOffset;
         public static ConfigEntry<bool> quickSlotsAlignmentCenter;
         public static ConfigEntry<bool> equipmentSlotsShowTooltip;
@@ -407,6 +411,7 @@ namespace ExtraSlots
             slotsTombstoneAutoEquipEnabled = serverConfig("Extra slots - Auto equip on tombstone pickup", "Equip all equipment slots", defaultValue: false, "Auto equip items in equipment slots if tombstone was successfully taken as whole. [Synced with Server]");
             slotsTombstoneAutoEquipCarryWeightItemsEnabled = serverConfig("Extra slots - Auto equip on tombstone pickup", "Equip items increasing carry weight", defaultValue: true, "Auto equip items in equipment slots that increase max carry weight (like Megingjord) if tombstone was successfully taken as whole. [Synced with Server]" +
                 "\nThese items are unaffected by black and white lists");
+            slotsTombstoneAutoEquipManualTakeAll = serverConfig("Extra slots - Auto equip on tombstone pickup", "Apply after manual Take All", defaultValue: false, "Apply tombstone auto-equip settings after using the Take All button on an opened tombstone. [Synced with Server]");
             slotsTombstoneAutoEquipWeaponShield = serverConfig("Extra slots - Auto equip on tombstone pickup", "Equip previous weapon and shield", defaultValue: false, "Auto equip weapon and shield that was equipped on death. [Synced with Server]" +
                 "\nThese items are unaffected by black and white lists");
             slotsTombstoneAutoEquipWhiteList = serverConfig("Extra slots - Auto equip on tombstone pickup", "Items white list", defaultValue: "", "If this list is filled - only these items will be auto equipped. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
@@ -422,6 +427,7 @@ namespace ExtraSlots
             keepOnDeathFoodSlots = serverConfig("Extra slots - Death tweaks", "Keep items at food slots", defaultValue: false, "Keep items in food slots after death. [Synced with Server]");
             keepOnDeathAmmoSlots = serverConfig("Extra slots - Death tweaks", "Keep items at ammo slots", defaultValue: false, "Keep items in ammo slots after death. [Synced with Server]");
             keepOnDeathMiscSlots = serverConfig("Extra slots - Death tweaks", "Keep items at misc slots", defaultValue: false, "Keep items in misc slots after death. [Synced with Server]");
+            keepOnDeathEquippedState = serverConfig("Extra slots - Death tweaks", "Keep equipped state", defaultValue: false, "Items that are kept on death and were equipped will be equipped again after respawn. [Synced with Server]");
             keepOnDeathItemList = serverConfig("Extra slots - Death tweaks", "Keep items fixed list", defaultValue: "", "Items from this list will always be kept on death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
             keepOnDeathWhiteList = serverConfig("Extra slots - Death tweaks", "Keep items white list", defaultValue: "", "If this list is filled - only these items will be kept after death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
             keepOnDeathBlackList = serverConfig("Extra slots - Death tweaks", "Keep items black list", defaultValue: "", "Items from this list will not be kept after death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
@@ -503,6 +509,8 @@ namespace ExtraSlots
 
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalLeft, "Equipment slots alignment");
             equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
+            equipmentPanelDraggable = config("Panels - Equipment slots", "Panel draggable", defaultValue: false, "Allow dragging the equipment panel by its background without holding the drag key");
+            equipmentPanelDragKey = config("Panels - Equipment slots", "Panel drag key", new KeyboardShortcut(KeyCode.LeftAlt), "Hold this key while dragging the equipment panel background to reposition it");
             quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle under equipment slots");
             equipmentSlotsShowTooltip = config("Panels - Equipment slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             equipmentPanelTooltipOffset = config("Panels - Equipment slots", "Gamepad Tooltip Offset", Vector2.zero, "Offset relative to original position of tooltip at upper right corner of the inventory (side elements included)");

@@ -1,3 +1,12 @@
+# 1.1.22
+* fixed upgrading items in extra slots with a full regular inventory, preserving their slot and equipped state
+* added an option to apply tombstone auto-equip settings after using the Take All button on an opened tombstone
+* added an option to keep the equipped state of items that are kept on death
+* tombstones now preserve their inventory dimensions across reloads when inventory size settings change before recovery
+* optimized hotbar refreshes to reduce repeated UI work, especially with mods that decorate hotbars
+* occupied custom slots now safely relocate their item or drop it when the slot is removed
+* equipment panel can now be repositioned by dragging its background while holding a configurable key, or with always-on dragging enabled
+
 # 1.1.21
 * updated Epic Loot compatibility for legacy versions and the 0.13.0+ API, including magic effects, set bonuses, and sacrifice filtering in extra slots
 

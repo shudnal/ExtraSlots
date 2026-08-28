@@ -159,12 +159,15 @@ namespace ExtraSlots
                 __instance.m_height = InventoryHeightFull;
 
                 if (__result == emptyPosition
-                    && InventoryGui.instance.m_craftTimer >= InventoryGui.instance.m_craftDuration
-                    && InventoryGui.instance.m_craftUpgradeItem is ItemDrop.ItemData item
-                    && TryFindFreeSlotForItem(item, out Slot slot))
+                    && InventoryGui_DoCrafting_UpgradeInSlot.UpgradeSourceSlot is Slot sourceSlot
+                    && InventoryGui_DoCrafting_UpgradeInSlot.UpgradeSourceItem is ItemDrop.ItemData upgradeItem)
                 {
-                    __result = slot.GridPosition;
-                    LogDebug($"Inventory.FindEmptySlot for upgraded item {item.m_shared.m_name} {__result}");
+                    sourceSlot.ClearItemCache();
+                    if (sourceSlot.IsFree && sourceSlot.ItemFits(upgradeItem))
+                    {
+                        __result = sourceSlot.GridPosition;
+                        LogDebug($"Inventory.FindEmptySlot for upgraded item {upgradeItem.m_shared.m_name} {__result}");
+                    }
                 }
 
                 if (__result == emptyPosition && TryFindFreeEquipmentSlotForItem(Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot, out Slot slot1))
@@ -190,6 +193,64 @@ namespace ExtraSlots
                     __result = gridPos;
                     LogDebug($"Inventory.FindEmptySlot made free space for AddItem_ByName item {Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot.m_shared.m_name} {__result}");
                 }
+            }
+
+            [HarmonyFinalizer]
+            [HarmonyPriority(Priority.First)]
+            private static void Finalizer(Inventory __instance)
+            {
+                if (__instance == PlayerInventory)
+                    __instance.m_height = InventoryHeightFull;
+            }
+        }
+
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.DoCrafting))]
+        internal static class InventoryGui_DoCrafting_UpgradeInSlot
+        {
+            internal static Slot UpgradeSourceSlot;
+            internal static ItemDrop.ItemData UpgradeSourceItem;
+            private static bool wasEquipped;
+
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(InventoryGui __instance)
+            {
+                ResetState();
+
+                if (__instance.m_craftUpgradeItem is not ItemDrop.ItemData item)
+                    return;
+
+                UpgradeSourceSlot = GetSlotInGrid(item.m_gridPos);
+                UpgradeSourceItem = item;
+                wasEquipped = CurrentPlayer != null && CurrentPlayer.IsItemEquiped(item);
+            }
+
+            private static void Postfix()
+            {
+                Slot sourceSlot = UpgradeSourceSlot;
+                bool shouldReequip = wasEquipped;
+                ResetState();
+
+                if (!shouldReequip || sourceSlot == null || CurrentPlayer == null)
+                    return;
+
+                sourceSlot.ClearItemCache();
+                ItemDrop.ItemData upgradedItem = sourceSlot.Item;
+                if (upgradedItem != null && !CurrentPlayer.IsItemEquiped(upgradedItem))
+                    CurrentPlayer.EquipItem(upgradedItem, triggerEquipEffects: false);
+            }
+
+            [HarmonyFinalizer]
+            private static Exception Finalizer(Exception __exception)
+            {
+                ResetState();
+                return __exception;
+            }
+
+            private static void ResetState()
+            {
+                UpgradeSourceSlot = null;
+                UpgradeSourceItem = null;
+                wasEquipped = false;
             }
         }
 
@@ -280,12 +341,18 @@ namespace ExtraSlots
             {
                 if (__instance != PlayerInventory)
                 {
-                    // There is some nasty behaviour when Tombstone inside a dungeon loading Grave inventory ignores inventory height set in Tombstone ZNetView Awake in LoadFields
-                    // It should be only possible when loading grave inventory. But anyway if item contains slot custom data - make it always fit current inventory
-                    if (Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall && y >= __instance.m_height && item.m_customData.ContainsKey(customKeySlotID) && item.m_customData.ContainsKey(customKeyPlayerID))
+                    // There is some nasty behaviour when a tombstone inventory is created with dimensions smaller than its saved item positions.
+                    // Slot metadata identifies items that came from the player slot region, so keep the loading inventory large enough to preserve them.
+                    if (Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall
+                        && item.m_customData.ContainsKey(customKeySlotID)
+                        && item.m_customData.ContainsKey(customKeyPlayerID)
+                        && (x >= __instance.m_width || y >= __instance.m_height))
                     {
-                        LogDebug($"Inventory \"{__instance.m_name}\" loading: Inventory.AddItem X Y item {item.m_shared.m_name} adding at {x},{y} position insufficient height {__instance.m_height} -> {y + 1}");
-                        __instance.m_height = y + 1;
+                        int oldWidth = __instance.m_width;
+                        int oldHeight = __instance.m_height;
+                        __instance.m_width = Mathf.Max(__instance.m_width, x + 1);
+                        __instance.m_height = Mathf.Max(__instance.m_height, y + 1);
+                        LogDebug($"Inventory \"{__instance.m_name}\" loading: expanded {oldWidth}x{oldHeight} -> {__instance.m_width}x{__instance.m_height} for {item.m_shared.m_name} at {x},{y}");
                     }
                     return;
                 }

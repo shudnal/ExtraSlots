@@ -12,7 +12,13 @@ namespace ExtraSlots
 {
     public static class TombStoneInteraction
     {
-        private static readonly List<ItemDrop.ItemData> itemsToKeep = new List<ItemDrop.ItemData>();
+        private class KeptItem
+        {
+            public ItemDrop.ItemData item;
+            public bool wasEquipped;
+        }
+
+        private static readonly List<KeptItem> itemsToKeep = new List<KeptItem>();
         private static readonly HashSet<Slot> takenSlots = new HashSet<Slot>();
 
         public static List<string> autoEquipItemList = new List<string>();
@@ -117,18 +123,21 @@ namespace ExtraSlots
                 return;
             }
 
+            SaveLastEquippedSlotsToItems();
+            SaveLastEquippedWeaponShieldToItems(player);
+
             slots.DoIf(IsSlotToKeep, KeepItem);
             ClearCachedItems();
-
-            SaveLastEquippedSlotsToItems();
-
-            SaveLastEquippedWeaponShieldToItems(player);
 
             void KeepItem(Slot slot)
             {
                 ItemDrop.ItemData item = slot.Item;
 
-                itemsToKeep.Add(item);
+                itemsToKeep.Add(new KeptItem
+                {
+                    item = item,
+                    wasEquipped = item.m_equipped || player.IsItemEquiped(item)
+                });
                 player.GetInventory().m_inventory.Remove(item);
                 LogDebug($"Character.CheckDeath.Prefix: On death drop prevented for item {item.m_shared.m_name} from slot {slot}. Item temporary removed from player inventory.");
             }
@@ -157,7 +166,13 @@ namespace ExtraSlots
             if (itemsToKeep.Count == 0)
                 return;
 
-            player.GetInventory().m_inventory.AddRange(itemsToKeep);
+            foreach (KeptItem keptItem in itemsToKeep)
+            {
+                player.GetInventory().m_inventory.Add(keptItem.item);
+
+                if (keepOnDeathEquippedState.Value && keptItem.wasEquipped)
+                    keptItem.item.m_equipped = true;
+            }
 
             LogDebug($"Death wrapping cleanup from {reason}: {itemsToKeep.Count} item(s) returned to player inventory.");
 
@@ -185,6 +200,31 @@ namespace ExtraSlots
             }
         }
 
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnTakeAll))]
+        private static class InventoryGui_OnTakeAll_TombstoneAutoEquip
+        {
+            private static void Prefix(InventoryGui __instance, ref long __state)
+            {
+                __state = -1L;
+                if (!slotsTombstoneAutoEquipManualTakeAll.Value
+                    || __instance.m_currentContainer == null
+                    || __instance.m_currentContainer.GetComponent<TombStone>() == null)
+                    return;
+
+                __state = __instance.m_currentContainer.GetInventory().GetAllItems().Sum(item => (long)item.m_stack);
+            }
+
+            private static void Postfix(InventoryGui __instance, long __state)
+            {
+                if (__state < 0 || __instance.m_currentContainer == null)
+                    return;
+
+                long remaining = __instance.m_currentContainer.GetInventory().GetAllItems().Sum(item => (long)item.m_stack);
+                if (remaining < __state)
+                    CurrentPlayer?.StartCoroutine(AutoEquipItemsOnTombstoneTakeAll());
+            }
+        }
+
         public static IEnumerator AutoEquipItemsOnTombstoneTakeAll()
         {
             float timeoutTime = Time.time + 5f;
@@ -197,6 +237,23 @@ namespace ExtraSlots
             yield return EquipItemsInSlots();
 
             yield return EquipWeaponShield();
+        }
+
+        private static bool PersistTombstoneDimensions(Container container, int width, int height)
+        {
+            if (container?.m_nview?.IsValid() != true || !container.m_nview.IsOwner() || container.GetComponentInParent<TombStone>() == null)
+                return false;
+
+            container.m_width = Mathf.Max(container.m_width, width);
+            container.m_height = Mathf.Max(container.m_height, height);
+
+            string typeName = container.GetType().Name;
+            ZDO zdo = container.m_nview.GetZDO();
+            zdo.Set(ZNetView.CustomFieldsStr, true);
+            zdo.Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
+            zdo.Set(typeName + ".m_width", container.m_width);
+            zdo.Set(typeName + ".m_height", container.m_height);
+            return true;
         }
 
         [HarmonyPatch(typeof(Container), nameof(Container.Awake))]
@@ -223,14 +280,24 @@ namespace ExtraSlots
 
             private static void Postfix(Container __instance)
             {
-                if (__instance.m_nview?.IsValid() == true && __instance.m_nview.IsOwner() && __instance.GetComponent<TombStone>() is not null && __instance.m_height > VanillaInventoryHeight)
-                {
-                    string typeName = __instance.GetType().Name;
-                    __instance.m_nview.GetZDO().Set(ZNetView.CustomFieldsStr, true);
-                    __instance.m_nview.GetZDO().Set((ZNetView.CustomFieldsStr + typeName).GetStableHashCode(), true);
-                    __instance.m_nview.GetZDO().Set(typeName + "." + "m_height", InventoryHeightFull);
-                    LogDebug($"TombStone Container Awake Postfix height {InventoryHeightFull} saved with {ZNetView.CustomFieldsStr}");
-                }
+                if (__instance.GetComponentInParent<TombStone>() == null)
+                    return;
+
+                if (PersistTombstoneDimensions(__instance, __instance.m_width, __instance.m_height))
+                    LogDebug($"TombStone Container Awake dimensions {__instance.m_width}x{__instance.m_height} saved with {ZNetView.CustomFieldsStr}");
+            }
+        }
+
+        [HarmonyPatch(typeof(TombStone), nameof(TombStone.Setup))]
+        private static class TombStone_Setup_PersistDimensions
+        {
+            private static void Postfix(TombStone __instance)
+            {
+                Container container = __instance.m_container != null ? __instance.m_container : __instance.GetComponent<Container>();
+                if (container?.m_inventory == null)
+                    return;
+
+                PersistTombstoneDimensions(container, container.m_inventory.m_width, container.m_inventory.m_height);
             }
         }
 
@@ -243,7 +310,9 @@ namespace ExtraSlots
                 if (hold)
                     return;
 
-                int targetHeight = GetTargetInventoryHeight(InventorySizeFull, __instance.m_container.m_width);
+                int targetHeight = Mathf.Max(
+                    GetTargetInventoryHeight(InventorySizeFull, __instance.m_container.m_width),
+                    __instance.m_container.m_inventory?.m_height ?? 0);
                 if (targetHeight > __instance.m_container.m_height)
                 {
                     LogDebug($"TombStone Interact height {__instance.m_container.m_height} -> {targetHeight}. Inventory reloaded.");
@@ -254,6 +323,8 @@ namespace ExtraSlots
                     __instance.m_container.m_lastDataString = "";
                     __instance.m_container.Load();
                 }
+
+                PersistTombstoneDimensions(__instance.m_container, __instance.m_container.m_inventory?.m_width ?? __instance.m_container.m_width, __instance.m_container.m_inventory?.m_height ?? __instance.m_container.m_height);
             }
         }
 

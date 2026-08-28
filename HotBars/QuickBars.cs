@@ -35,7 +35,113 @@ public static class QuickBars
     }
 
     private static readonly Dictionary<GameObject, ElementExtraData> elementsExtraData = new Dictionary<GameObject, ElementExtraData>(32);
+    private static readonly Dictionary<HotkeyBar, HotkeyBarRefreshGate> refreshGates = new Dictionary<HotkeyBar, HotkeyBarRefreshGate>();
     private static readonly List<ItemDrop.ItemData> itemsToUse = new List<ItemDrop.ItemData>();
+
+    private sealed class HotkeyBarRefreshGate
+    {
+        private const float HeartbeatInterval = 1f;
+        private static int inventoryRevision;
+
+        private ItemDrop.ItemData[] items = new ItemDrop.ItemData[8];
+        private int[] stacks = new int[8];
+        private float[] durabilities = new float[8];
+        private bool[] equipped = new bool[8];
+        private int[] qualities = new int[8];
+        private int[] variants = new int[8];
+        private int[] gridX = new int[8];
+
+        private int itemCount;
+        private int elementCount = -1;
+        private int selected;
+        private int revision;
+        private int actionQueueCount;
+        private bool gamepadActive;
+        private bool playerAlive;
+        private float lastRefreshTime;
+
+        internal bool ShouldRefresh(HotkeyBar bar, Player player)
+        {
+            if (elementCount == -1
+                || !player.IsDead() != playerAlive
+                || bar.m_elements.Count != elementCount
+                || bar.m_selected != selected
+                || revision != inventoryRevision
+                || ZInput.IsGamepadActive() != gamepadActive
+                || player.GetActionQueueCount() != actionQueueCount
+                || Time.unscaledTime - lastRefreshTime > HeartbeatInterval)
+                return true;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                ItemDrop.ItemData item = items[i];
+                if (item == null
+                    || item.m_stack != stacks[i]
+                    || item.m_durability != durabilities[i]
+                    || item.m_equipped != equipped[i]
+                    || item.m_quality != qualities[i]
+                    || item.m_variant != variants[i]
+                    || item.m_gridPos.x != gridX[i])
+                    return true;
+
+                if (item.m_shared.m_useDurability && item.m_durability <= 0f)
+                    return true;
+            }
+
+            return false;
+        }
+
+        internal void Resample(HotkeyBar bar, Player player)
+        {
+            playerAlive = !player.IsDead();
+            itemCount = playerAlive ? bar.m_items.Count : 0;
+
+            if (itemCount > items.Length)
+                Grow(itemCount);
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                ItemDrop.ItemData item = bar.m_items[i];
+                items[i] = item;
+                if (item == null)
+                    continue;
+
+                stacks[i] = item.m_stack;
+                durabilities[i] = item.m_durability;
+                equipped[i] = item.m_equipped;
+                qualities[i] = item.m_quality;
+                variants[i] = item.m_variant;
+                gridX[i] = item.m_gridPos.x;
+            }
+
+            for (int i = itemCount; i < items.Length; i++)
+                items[i] = null;
+
+            elementCount = bar.m_elements.Count;
+            selected = bar.m_selected;
+            revision = inventoryRevision;
+            actionQueueCount = player.GetActionQueueCount();
+            gamepadActive = ZInput.IsGamepadActive();
+            lastRefreshTime = Time.unscaledTime;
+        }
+
+        private void Grow(int size)
+        {
+            items = new ItemDrop.ItemData[size];
+            stacks = new int[size];
+            durabilities = new float[size];
+            equipped = new bool[size];
+            qualities = new int[size];
+            variants = new int[size];
+            gridX = new int[size];
+        }
+
+        internal static void BumpRevision(Humanoid humanoid)
+        {
+            if (humanoid == Player.m_localPlayer)
+                inventoryRevision++;
+        }
+    }
 
     public static RectTransform InstantiateHotKeyBar(string barName)
     {
@@ -51,6 +157,7 @@ public static class QuickBars
     public static void ResetBars()
     {
         elementsExtraData.Clear();
+        refreshGates.Clear();
         _currentBarIndex = -1;
         bars = null;
     }
@@ -309,9 +416,37 @@ public static class QuickBars
                     ? Mathf.Clamp(bar.m_selected, -1, bar.m_elements.Count - 1)
                     : -1;
 
-                bar.UpdateIcons(player);
+                if (!refreshGates.TryGetValue(bar, out HotkeyBarRefreshGate refreshGate))
+                {
+                    refreshGate = new HotkeyBarRefreshGate();
+                    refreshGates[bar] = refreshGate;
+                }
+
+                if (refreshGate.ShouldRefresh(bar, player))
+                {
+                    bar.UpdateIcons(player);
+                    refreshGate.Resample(bar, player);
+                }
             }
         }
+    }
+
+    [HarmonyPatch(typeof(Player), nameof(Player.OnInventoryChanged))]
+    private static class Player_OnInventoryChanged_BumpHotbarRevision
+    {
+        private static void Postfix(Player __instance) => HotkeyBarRefreshGate.BumpRevision(__instance);
+    }
+
+    [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.EquipItem))]
+    private static class Humanoid_EquipItem_BumpHotbarRevision
+    {
+        private static void Postfix(Humanoid __instance) => HotkeyBarRefreshGate.BumpRevision(__instance);
+    }
+
+    [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.UnequipItem))]
+    private static class Humanoid_UnequipItem_BumpHotbarRevision
+    {
+        private static void Postfix(Humanoid __instance) => HotkeyBarRefreshGate.BumpRevision(__instance);
     }
 
     [HarmonyPatch(typeof(Hud), nameof(Hud.OnDestroy))]

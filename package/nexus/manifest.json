@@ -1,7 +1,7 @@
 {
     "name":  "ExtraSlots",
-    "description":  "updated compatibility with legacy and Epic Loot 0.13.0+ versions",
-    "version":  "1.1.21",
+    "description":  "improved slot upgrade and tombstone safety, hotbar performance, and equipment panel positioning",
+    "version":  "1.1.22",
     "file_category":  "main",
     "allow_mod_manager_download":  true,
     "show_requirements_pop_up":  false,
