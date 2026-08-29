@@ -52,18 +52,42 @@ internal static class ComfyQuickSlotsCompat
 
         try
         {
+            // Comfy stores a complete vanilla Inventory.Save package. Read the serialized count
+            // independently so the source is consumed only after every entry was materialized and
+            // represented by either the live inventory or ExtraSlots deferred storage.
+            ZPackage header = new ZPackage(data);
+            _ = header.ReadInt();
+            int expectedItems = header.ReadInt();
+
             Inventory snapshot = new Inventory(SnapshotKey, null, Width, Height);
             snapshot.Load(new ZPackage(data));
             List<ItemDrop.ItemData> items = snapshot.GetAllItemsInGridOrder().Where(item => item != null).ToList();
-            if (items.Count == 0)
-                return;
 
             int imported = InventoryMigration.ImportMissingItemsToDeferred(
                 player,
                 items,
                 "ComfyQuickSlots snapshot",
                 GetPreferredSlot,
-                item => item.m_equipped);
+                item => item.m_equipped,
+                out bool allRepresented);
+
+            bool allMaterialized = items.Count == expectedItems;
+            if (allMaterialized && allRepresented)
+            {
+                // Migration is intentionally one-way. Remove both possible storage locations so a
+                // stale Comfy snapshot cannot resurrect an item after it was later consumed/dropped.
+                player.m_knownTexts.Remove(SnapshotKey);
+                player.m_customData.Remove(SnapshotKey);
+                LogMessage($"ComfyQuickSlots snapshot was fully adopted by ExtraSlots ({items.Count} item(s), {imported} newly deferred) and removed from the character.");
+            }
+            else if (!allMaterialized)
+            {
+                LogWarning($"ComfyQuickSlots snapshot materialized {items.Count}/{expectedItems} item(s). Source data will remain intact so unavailable-prefab items can be recovered later.");
+            }
+            else
+            {
+                LogWarning("ComfyQuickSlots snapshot could not be fully adopted. Source data will remain intact for a later retry.");
+            }
 
             if (imported > 0)
             {

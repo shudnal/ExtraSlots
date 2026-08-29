@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,12 +11,17 @@ namespace ExtraSlots
 {
     public static class ItemsSlotsValidation
     {
+        private static int playerLoadDepth;
+
         public static void ValidateSlots() => SlotsValidation.MarkDirty();
         public static void ValidateItems() => ItemsValidation.MarkDirty();
 
         public static void Validate()
         {
-            if (!Player.m_localPlayer || Player.m_localPlayer.m_isLoading || PlayerInventory == null)
+            // Player.Load has several independent compatibility/topology postfixes. They are allowed
+            // to mark validation dirty, but the actual pass must run only after all of them finish so
+            // restore-slot metadata cannot be pruned between reconciliation passes.
+            if (playerLoadDepth > 0 || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading || PlayerInventory == null)
                 return;
 
             if (!ItemsValidation.IsDirty && !SlotsValidation.IsDirty)
@@ -81,6 +87,52 @@ namespace ExtraSlots
             return true;
         }
 
+        private static bool TryRelocateInvalidSlotWithoutDisplacing(ItemDrop.ItemData item)
+        {
+            Inventory inventory = PlayerInventory;
+            if (item == null || inventory == null || !inventory.ContainsItem(item))
+                return false;
+
+            ClearCachedItems();
+
+            if (TryGetSavedPlayerSlot(item, out Slot savedSlot)
+                && savedSlot.IsActive
+                && savedSlot.ItemFits(item)
+                && (savedSlot.IsFree || ReferenceEquals(savedSlot.Item, item))
+                && MoveToSlot(item, savedSlot))
+            {
+                return true;
+            }
+
+            bool topFirst = inventory.TopFirst(item);
+            if (topFirst)
+            {
+                for (int y = 0; y < InventoryHeightPlayer; y++)
+                    for (int x = 0; x < InventoryWidth; x++)
+                        if (inventory.GetItemAt(x, y) == null && Move(item, new Vector2i(x, y)))
+                            return true;
+            }
+            else
+            {
+                for (int y = InventoryHeightPlayer - 1; y >= 0; y--)
+                    for (int x = 0; x < InventoryWidth; x++)
+                        if (inventory.GetItemAt(x, y) == null && Move(item, new Vector2i(x, y)))
+                            return true;
+            }
+
+            if (TryFindEmptyQuickSlot(out Slot quickSlot) && quickSlot.ItemFits(item) && MoveToSlot(item, quickSlot))
+                return true;
+
+            if (TryFindFreeSlotForItem(item, out Slot freeSlot) && MoveToSlot(item, freeSlot))
+                return true;
+
+            // A slot becoming inactive or rejecting its resident is a topology transition, not a
+            // reason to reshuffle unrelated regular items merely to manufacture space. If all direct
+            // destinations are occupied, preserve the resident in deferred storage and retry when
+            // capacity/topology changes.
+            return DeferredInventory.DeferExisting(item, "no non-disruptive destination remained for an invalid slot resident");
+        }
+
         private static bool EquippedItemNeedsEquipmentSlot(ItemDrop.ItemData item)
         {
             if (item == null || CurrentPlayer == null || !CurrentPlayer.IsItemEquiped(item) || !IsEquipmentSlotItem(item))
@@ -124,7 +176,7 @@ namespace ExtraSlots
                             continue;
                         }
 
-                        if (IsPlacementValid(item, out _, out _))
+                        if (IsPlacementValid(item, out PlacementIssue issue, out _))
                             continue;
 
                         LogInfo($"SlotValidation: Item {item.m_shared.m_name} no longer has a valid placement in slot {slot}");
@@ -132,7 +184,10 @@ namespace ExtraSlots
                         if ((item.m_equipped || Player.m_localPlayer.IsItemEquiped(item)) && TryPlaceEquippedItem(item))
                             continue;
 
-                        RelocateToBestAvailable(item, deferIfNoSpace: true);
+                        if (issue == PlacementIssue.InactiveSlot || issue == PlacementIssue.InvalidForSlot)
+                            TryRelocateInvalidSlotWithoutDisplacing(item);
+                        else
+                            RelocateToBestAvailable(item, deferIfNoSpace: true);
                     }
                 }
             }
@@ -205,7 +260,20 @@ namespace ExtraSlots
                                 continue;
                             }
 
-                            if (!RelocateToBestAvailable(item, deferIfNoSpace: true) || !PlayerInventory.ContainsItem(item))
+                            // If an equipped item was invalidated by a topology change, first move it
+                            // directly to another equipment slot. The generic relocation path prefers
+                            // regular cells and would otherwise move the same item twice in one pass.
+                            bool relocated = (item.m_equipped || CurrentPlayer?.IsItemEquiped(item) == true)
+                                && TryPlaceEquippedItem(item);
+
+                            if (!relocated)
+                            {
+                                relocated = issue == PlacementIssue.InactiveSlot || issue == PlacementIssue.InvalidForSlot
+                                    ? TryRelocateInvalidSlotWithoutDisplacing(item)
+                                    : RelocateToBestAvailable(item, deferIfNoSpace: true);
+                            }
+
+                            if (!relocated || !PlayerInventory.ContainsItem(item))
                                 continue;
 
                             if (!IsPlacementValid(item, out issue, out currentSlot))
@@ -285,6 +353,21 @@ namespace ExtraSlots
                         SlotsValidation.MarkDirty();
                     }
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.Load))]
+        private static class Player_Load_DeferValidationUntilAllPostfixesFinish
+        {
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix() => playerLoadDepth++;
+
+            [HarmonyFinalizer]
+            [HarmonyPriority(Priority.Last)]
+            private static Exception Finalizer(Exception __exception)
+            {
+                playerLoadDepth = Math.Max(0, playerLoadDepth - 1);
+                return __exception;
             }
         }
 

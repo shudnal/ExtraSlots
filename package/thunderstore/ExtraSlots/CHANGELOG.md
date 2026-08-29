@@ -7,7 +7,7 @@
 * added an option to keep the equipped state of items that are kept on death
 * tombstones now preserve their inventory dimensions across reloads when inventory size settings change before recovery
 * optimized hotbar refreshes to reduce repeated UI work, especially with mods that decorate hotbars
-* occupied custom slots now safely relocate their item or drop it when the slot is removed
+* occupied custom slots now safely relocate their item or preserve it in deferred inventory when the slot is removed
 * equipment, Quick, Ammo, and Food panels can now be repositioned by dragging; the equipment panel can optionally snap to its default position or nearby inventory UI edges
 * added an option, enabled by default, to fade the queued equip indicator as the current equip action progresses
 * added an option to keep empty available Quick, Ammo, and Food hotbar slots visible, disabled by default
@@ -16,6 +16,8 @@
 * deferred items are moved into an automatically expanded tombstone on death when possible
 * improved migration and recovery from EquipmentAndQuickSlots 2.x/3.x, ComfyQuickSlots and InventorySlots
 * improved upgrade safety for items stored in ExtraSlots slots when inventory topology changes during crafting
+* added a compatibility option to disable Inventory.Changed batching when diagnosing interactions with other inventory mods
+* external localization overrides are now intentionally loaded only from BepInEx/config
 
 # 1.1.21
 * updated Epic Loot compatibility for legacy versions and the 0.13.0+ API, including magic effects, set bonuses, and sacrifice filtering in extra slots

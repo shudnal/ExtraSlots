@@ -1,5 +1,7 @@
 ﻿using BepInEx.Configuration;
+using HarmonyLib;
 using System;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -98,6 +100,22 @@ namespace ExtraSlots
                     return false;
 
             return true;
+        }
+
+        [HarmonyPatch]
+        private static class QuickBars_ConfigureHotbarDragHandle_UseBarRoot
+        {
+            private static MethodBase TargetMethod() =>
+                AccessTools.Method(typeof(HotBars.QuickBars), "ConfigureHotbarDragHandle");
+
+            private static void Prefix(HotkeyBar bar, ref GameObject handle)
+            {
+                // Pointer drag handlers are resolved through the clicked object's hierarchy. Attach
+                // one handler to the whole hotbar instead of attaching handlers to individual slot
+                // buttons; this makes the complete panel the drag surface and avoids competing item UI.
+                if (bar)
+                    handle = bar.gameObject;
+            }
         }
     }
 }
