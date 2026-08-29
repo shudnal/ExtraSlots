@@ -15,8 +15,27 @@ namespace ExtraSlots
 
         public static void Validate()
         {
-            ItemsValidation.Validate();
-            SlotsValidation.Validate();
+            if (!Player.m_localPlayer || Player.m_localPlayer.m_isLoading || PlayerInventory == null)
+                return;
+
+            if (!ItemsValidation.IsDirty && !SlotsValidation.IsDirty)
+                return;
+
+            const int maxPasses = 64;
+            for (int pass = 0; pass < maxPasses; pass++)
+            {
+                ItemsValidation.Validate();
+                SlotsValidation.Validate();
+
+                bool placementValid = IsInventoryPlacementValid(out _, out _);
+                bool restoredDeferred = placementValid && DeferredInventory.TryRestoreAvailable();
+
+                if (!ItemsValidation.IsDirty && !SlotsValidation.IsDirty && !restoredDeferred)
+                    return;
+            }
+
+            if (ItemsValidation.IsDirty || SlotsValidation.IsDirty)
+                LogWarning("Inventory validation reached its safety pass limit before reaching a stable state.");
         }
 
         private static bool TryPlaceEquippedItem(ItemDrop.ItemData item)
@@ -77,6 +96,7 @@ namespace ExtraSlots
         {
             private static bool isDirty;
 
+            internal static bool IsDirty => isDirty;
             internal static void MarkDirty() => isDirty = true;
 
             internal static void Validate()
@@ -112,7 +132,7 @@ namespace ExtraSlots
                         if ((item.m_equipped || Player.m_localPlayer.IsItemEquiped(item)) && TryPlaceEquippedItem(item))
                             continue;
 
-                        RelocateToBestAvailable(item, dropIfNoSpace: true);
+                        RelocateToBestAvailable(item, deferIfNoSpace: true);
                     }
                 }
             }
@@ -147,6 +167,7 @@ namespace ExtraSlots
         {
             private static bool isDirty;
 
+            internal static bool IsDirty => isDirty;
             internal static void MarkDirty() => isDirty = true;
 
             internal static void Validate()
@@ -161,7 +182,15 @@ namespace ExtraSlots
                     EnsureCurrentGeometry();
                     RepairStructuralIntegrity();
 
-                    foreach (ItemDrop.ItemData item in PlayerInventory.m_inventory.ToList())
+                    List<ItemDrop.ItemData> itemsInGridOrder = PlayerInventory.m_inventory
+                        .Select((item, index) => new { Item = item, Index = index })
+                        .OrderBy(entry => entry.Item?.m_gridPos.y ?? int.MaxValue)
+                        .ThenBy(entry => entry.Item?.m_gridPos.x ?? int.MaxValue)
+                        .ThenBy(entry => entry.Index)
+                        .Select(entry => entry.Item)
+                        .ToList();
+
+                    foreach (ItemDrop.ItemData item in itemsInGridOrder)
                     {
                         if (item == null)
                             continue;
@@ -176,7 +205,7 @@ namespace ExtraSlots
                                 continue;
                             }
 
-                            if (!RelocateToBestAvailable(item, dropIfNoSpace: true) || !PlayerInventory.ContainsItem(item))
+                            if (!RelocateToBestAvailable(item, deferIfNoSpace: true) || !PlayerInventory.ContainsItem(item))
                                 continue;
 
                             if (!IsPlacementValid(item, out issue, out currentSlot))

@@ -414,7 +414,7 @@ namespace ExtraSlots
             return true;
         }
 
-        internal static bool RelocateToBestAvailable(ItemDrop.ItemData item, bool dropIfNoSpace = false)
+        internal static bool RelocateToBestAvailable(ItemDrop.ItemData item, bool deferIfNoSpace = false)
         {
             if (item == null || PlayerInventory == null || !PlayerInventory.ContainsItem(item))
                 return false;
@@ -457,19 +457,138 @@ namespace ExtraSlots
                 return true;
             }
 
-            if (!dropIfNoSpace || CurrentPlayer == null)
+            if (!deferIfNoSpace)
                 return false;
 
-            LogWarning($"No valid inventory position remained for {item.m_shared.m_name}. Item will be dropped instead of leaving it hidden or invalid.");
-            if (!CurrentPlayer.DropItem(PlayerInventory, item, item.m_stack))
+            return DeferredInventory.DeferExisting(item, "no valid inventory position remained");
+        }
+
+        internal static bool TryInsertDetachedToBestAvailable(
+            ItemDrop.ItemData item,
+            string preferredSlotId,
+            bool preferEquipmentSlot,
+            out ItemDrop.ItemData placedItem,
+            out bool fullyInserted,
+            out bool madeProgress)
+        {
+            placedItem = null;
+            fullyInserted = false;
+            madeProgress = false;
+
+            Inventory inventory = PlayerInventory;
+            if (inventory == null || item == null || inventory.ContainsItem(item) || item.m_stack < 1)
+                return false;
+
+            ClearCachedItems();
+
+            if (!string.IsNullOrEmpty(preferredSlotId)
+                && API.FindSlot(preferredSlotId) is Slot preferredSlot
+                && preferredSlot.IsActive
+                && preferredSlot.ItemFits(item)
+                && preferredSlot.IsFree
+                && InsertExisting(item, preferredSlot.GridPosition))
             {
-                LogWarning($"Failed to drop {item.m_shared.m_name}; its placement remains unresolved.");
+                placedItem = item;
+                fullyInserted = true;
+                madeProgress = true;
+                return true;
+            }
+
+            if (preferEquipmentSlot
+                && TryFindFreeEquipmentSlotForItem(item, out Slot equipmentSlot)
+                && equipmentSlot.IsFree
+                && InsertExisting(item, equipmentSlot.GridPosition))
+            {
+                placedItem = item;
+                fullyInserted = true;
+                madeProgress = true;
+                return true;
+            }
+
+            int stackCapacity = 0;
+            if (item.m_shared.m_maxStackSize > 1)
+            {
+                foreach (ItemDrop.ItemData stackItem in inventory.m_inventory)
+                {
+                    if (stackItem == null
+                        || stackItem.m_shared.m_name != item.m_shared.m_name
+                        || stackItem.m_quality != item.m_quality
+                        || stackItem.m_worldLevel != item.m_worldLevel)
+                    {
+                        continue;
+                    }
+
+                    stackCapacity += Math.Max(0, stackItem.m_shared.m_maxStackSize - stackItem.m_stack);
+                    if (stackCapacity >= item.m_stack)
+                        break;
+                }
+            }
+
+            Vector2i target = emptyPosition;
+            if (stackCapacity < item.m_stack)
+            {
+                target = FindEmptyRegularPosition(item);
+                if (target.x < 0 && TryFindEmptyQuickSlot(out Slot quickSlot) && quickSlot.ItemFits(item))
+                    target = quickSlot.GridPosition;
+                if (target.x < 0 && TryFindFreeSlotForItem(item, out Slot freeSlot))
+                    target = freeSlot.GridPosition;
+                if (target.x < 0 && TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: false, out Vector2i freedPosition))
+                    target = freedPosition;
+
+                // Do not partially consume the deferred stack unless the remainder already has a
+                // concrete cell. This keeps deferred persistence atomic if no placement exists.
+                if (target.x < 0)
+                    return false;
+            }
+
+            if (item.m_shared.m_maxStackSize > 1 && stackCapacity >= item.m_stack)
+            {
+                int originalStack = item.m_stack;
+                List<(ItemDrop.ItemData Item, int Stack)> stackSnapshots = new List<(ItemDrop.ItemData, int)>();
+
+                while (item.m_stack > 0)
+                {
+                    ItemDrop.ItemData stackItem = inventory.FindFreeStackItem(item.m_shared.m_name, item.m_quality, item.m_worldLevel);
+                    if (stackItem == null || ReferenceEquals(stackItem, item))
+                        break;
+
+                    int capacity = stackItem.m_shared.m_maxStackSize - stackItem.m_stack;
+                    if (capacity <= 0)
+                        break;
+
+                    stackSnapshots.Add((stackItem, stackItem.m_stack));
+                    int amount = Math.Min(capacity, item.m_stack);
+                    stackItem.m_stack += amount;
+                    item.m_stack -= amount;
+                }
+
+                if (item.m_stack <= 0)
+                {
+                    MarkChanged(inventory);
+                    fullyInserted = true;
+                    madeProgress = true;
+                    return true;
+                }
+
+                // This should only be reachable if another patch changed stack semantics during the
+                // operation. Roll the tentative merge back so the deferred source stays authoritative.
+                foreach ((ItemDrop.ItemData stackItem, int previousStack) in stackSnapshots)
+                    stackItem.m_stack = previousStack;
+                item.m_stack = originalStack;
                 return false;
             }
 
-            ClearCachedItems();
-            MarkChanged(PlayerInventory);
-            return true;
+            // When existing stacks cannot consume the whole deferred item, keep the operation
+            // atomic: place the complete stack in a concrete cell instead of partially merging it.
+            if (target.x >= 0 && InsertExisting(item, target))
+            {
+                placedItem = item;
+                fullyInserted = true;
+                madeProgress = true;
+                return true;
+            }
+
+            return false;
         }
 
         internal static bool TryMakeFreeSpaceInPlayerInventory(bool tryFindRegularInventorySlot, out Vector2i gridPos)
@@ -547,7 +666,7 @@ namespace ExtraSlots
 
                     if (savedSlot == null || !savedSlot.IsActive || !savedSlot.ItemFits(item))
                     {
-                        RelocateToBestAvailable(item, dropIfNoSpace: false);
+                        RelocateToBestAvailable(item, deferIfNoSpace: false);
                         continue;
                     }
 
@@ -558,11 +677,11 @@ namespace ExtraSlots
                             && ReferenceEquals(occupantSaved, savedSlot);
 
                         if (!occupantOwnsTarget)
-                            RelocateToBestAvailable(occupant, dropIfNoSpace: false);
+                            RelocateToBestAvailable(occupant, deferIfNoSpace: false);
                     }
 
                     if (!MoveToSlot(item, savedSlot))
-                        RelocateToBestAvailable(item, dropIfNoSpace: false);
+                        RelocateToBestAvailable(item, deferIfNoSpace: false);
                 }
 
                 ClearCachedItems();
@@ -579,7 +698,7 @@ namespace ExtraSlots
                     if (TryGetSavedPlayerSlot(item, out _))
                         continue;
 
-                    RelocateToBestAvailable(item, dropIfNoSpace: false);
+                    RelocateToBestAvailable(item, deferIfNoSpace: false);
                 }
 
                 ClearCachedItems();

@@ -164,7 +164,6 @@ public class Localizer
         }
 
         Scan(Paths.ConfigPath, true);
-        Scan(Paths.PluginPath, false);
 
         if (LoadTranslationFromAssembly(defaultLanguage) is not { } englishAssemblyData)
             throw new Exception($"Found no English localizations in mod {Plugin.Info.Metadata.Name}. Expected an embedded resource Translations/English.json or Translations/English.yml.");

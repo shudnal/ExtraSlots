@@ -261,7 +261,7 @@ namespace ExtraSlots
 
                     if (item != null && PlayerInventory != null && PlayerInventory.ContainsItem(item))
                     {
-                        if (!PlayerInventoryOperations.RelocateToBestAvailable(item, dropIfNoSpace: true))
+                        if (!PlayerInventoryOperations.RelocateToBestAvailable(item, deferIfNoSpace: true))
                             LogWarning($"While removing slot {slotID}, item {item.m_shared.m_name} could not be relocated.");
                     }
                 }

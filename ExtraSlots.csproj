@@ -42,6 +42,7 @@
     <Compile Include="Compatibility\SimpleSort.cs" />
     <Compile Include="Compatibility\ZenBeehiveCompat.cs" />
     <Compile Include="DebugLogging.cs" />
+    <Compile Include="DeferredInventory.cs" />
     <Compile Include="ItemNameTokens.cs" />
     <Compile Include="LightenedSlots.cs" />
     <Compile Include="LocalizationManager.cs" />
@@ -50,6 +51,9 @@
     <Compile Include="Compatibility\BetterProgressionCompat.cs" />
     <Compile Include="Compatibility\BetterArcheryCompat.cs" />
     <Compile Include="Compatibility\EquipmentAndQuickSlotsCompat.cs" />
+    <Compile Include="Compatibility\ComfyQuickSlotsCompat.cs" />
+    <Compile Include="Compatibility\InventoryMigration.cs" />
+    <Compile Include="Compatibility\InventorySlotsCompat.cs" />
     <Compile Include="Compatibility\PlantEasilyCompat.cs" />
     <Compile Include="CustomConfigs.cs" />
     <Compile Include="EquipmentPanel.cs" />

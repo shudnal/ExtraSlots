@@ -1,4 +1,4 @@
-# 1.1.22
+# 1.2.0
 * fixed error spam and stale slot state when loading a character in a world with fewer inventory rows or available extra slots
 * improved automatic recovery of items left in invalid, inactive, hidden, overlapping, or otherwise unavailable extra slot cells after slot or inventory layout changes
 * tombstone auto-loot now simulates actual stacking and valid destination cells before taking everything, reducing partial recovery when inventory or slot availability changed after death
@@ -11,6 +11,11 @@
 * equipment, Quick, Ammo, and Food panels can now be repositioned by dragging; the equipment panel can optionally snap to its default position or nearby inventory UI edges
 * added an option, enabled by default, to fade the queued equip indicator as the current equip action progresses
 * added an option to keep empty available Quick, Ammo, and Food hotbar slots visible, disabled by default
+* added deferred inventory recovery to prevent items from being lost when inventory topology changes and no valid slot is immediately available
+* deferred items are preserved across character saves and can be recovered after running the character without ExtraSlots
+* deferred items are moved into an automatically expanded tombstone on death when possible
+* improved migration and recovery from EquipmentAndQuickSlots 2.x/3.x, ComfyQuickSlots and InventorySlots
+* improved upgrade safety for items stored in ExtraSlots slots when inventory topology changes during crafting
 
 # 1.1.21
 * updated Epic Loot compatibility for legacy versions and the 0.13.0+ API, including magic effects, set bonuses, and sacrifice filtering in extra slots
