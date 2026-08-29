@@ -15,6 +15,7 @@ namespace ExtraSlots
             {
                 LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into previous slot {prevSlot} {prevSlot.GridPosition}");
                 item.m_gridPos = prevSlot.GridPosition;
+                ClearCachedItems();
                 return true;
             }
 
@@ -23,6 +24,7 @@ namespace ExtraSlots
             {
                 LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into first free slot {gridPos}");
                 item.m_gridPos = gridPos;
+                ClearCachedItems();
                 return true;
             }
 
@@ -30,6 +32,7 @@ namespace ExtraSlots
             {
                 LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into first free valid slot {slot} {slot.GridPosition}");
                 item.m_gridPos = slot.GridPosition;
+                ClearCachedItems();
                 return true;
             }
 
@@ -37,6 +40,7 @@ namespace ExtraSlots
             {
                 LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into created free space {gridPosEmptied}");
                 item.m_gridPos = gridPosEmptied;
+                ClearCachedItems();
                 return true;
             }
 
@@ -65,6 +69,7 @@ namespace ExtraSlots
 
                 isDirty = false;
 
+                bool moved = false;
                 for (int i = 0; i < slots.Length; i++)
                 {
                     Slot slot = slots[i];
@@ -81,7 +86,8 @@ namespace ExtraSlots
                         {
                             LogDebug($"SlotValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into first free equipment slot {freeEquipmentSlot}");
                             item.m_gridPos = freeEquipmentSlot.GridPosition;
-                            freeEquipmentSlot.ClearItemCache();
+                            ClearCachedItems();
+                            moved = true;
                             continue;
                         }
                         else if (TryFindFirstUnequippedSlotForItem(item, out Slot slotToSwap))
@@ -90,7 +96,8 @@ namespace ExtraSlots
                             {
                                 LogDebug($"SlotValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into unequipped slot {slotToSwap} {slotToSwap.GridPosition}");
                                 item.m_gridPos = slotToSwap.GridPosition;
-                                slotToSwap.ClearItemCache();
+                                ClearCachedItems();
+                                moved = true;
                                 continue;
                             }
                             else
@@ -102,15 +109,23 @@ namespace ExtraSlots
                                 itemToSwap.m_gridPos = item.m_gridPos;
                                 item.m_gridPos = slotToSwap.GridPosition;
 
-                                slotToSwap.ClearItemCache();
+                                ClearCachedItems();
+                                moved = true;
                                 if (slot.ItemFits(item = slot.Item))
+                                    continue;
+
+                                if (item == null)
                                     continue;
                             }
                         }
                     }
 
-                    PutIntoFirstEmptySlot(item);
+                    if (PutIntoFirstEmptySlot(item))
+                        moved = true;
                 }
+
+                if (moved)
+                    PlayerInventory.Changed();
             }
 
             [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.SetupEquipment))]

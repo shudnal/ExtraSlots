@@ -202,9 +202,20 @@ public static class API
     public static void UpdateSlots()
     {
         UpdateSlotsGridPosition();
-        EquipmentPanel.UpdatePanel();
+        UpdateSlotActivation();
         LightenedSlots.UpdateState();
         HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+    }
+
+    internal static void UpdateSlotActivation()
+    {
+        ClearCachedItems();
+        EquipmentPanel.UpdatePanel();
+        ItemsSlotsValidation.ValidateItems();
+        ItemsSlotsValidation.ValidateSlots();
+        HotBars.QuickSlotsHotBar.MarkDirty();
+        HotBars.AmmoSlotsHotBar.MarkDirty();
+        HotBars.FoodSlotsHotBar.MarkDirty();
         Compatibility.EpicLootCompat.InvalidatePlayerEffectCache(Player.m_localPlayer);
     }
 }

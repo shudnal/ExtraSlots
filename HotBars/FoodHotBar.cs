@@ -22,12 +22,9 @@ public static class FoodSlotsHotBar
 
     private static void AdaptGridPos(List<ItemDrop.ItemData> items)
     {
-        int offsetX = barSlotIndex % InventoryWidth;
-        if (offsetX == 0)
-            return;
-
-        foreach (ItemDrop.ItemData item in items)
+        for (int i = 0; i < items.Count; i++)
         {
+            ItemDrop.ItemData item = items[i];
             if (item == null)
                 continue;
 
@@ -37,7 +34,8 @@ public static class FoodSlotsHotBar
                 realPositions[item] = realPosition;
             }
 
-            item.m_gridPos = new Vector2i(realPosition.x - offsetX, realPosition.y);
+            int slotIndex = Array.FindIndex(hotBarSlots, slot => slot != null && slot.IsActive && ReferenceEquals(slot.Item, item));
+            item.m_gridPos = new Vector2i(slotIndex >= 0 ? slotIndex : i, realPosition.y);
         }
     }
 

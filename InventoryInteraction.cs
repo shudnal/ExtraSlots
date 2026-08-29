@@ -24,7 +24,9 @@ namespace ExtraSlots
             if (CurrentPlayer.m_tombstone?.GetComponent<Container>() is Container tombstone)
                 tombstone.m_height = Mathf.Max(tombstone.m_height, InventoryHeightFull);
 
+            ClearCachedItems();
             ItemsSlotsValidation.ValidateItems();
+            ItemsSlotsValidation.ValidateSlots();
         }
 
         public static float GetItemWeightFactor(Slot slot)
@@ -239,12 +241,7 @@ namespace ExtraSlots
                     CurrentPlayer.EquipItem(upgradedItem, triggerEquipEffects: false);
             }
 
-            [HarmonyFinalizer]
-            private static Exception Finalizer(Exception __exception)
-            {
-                ResetState();
-                return __exception;
-            }
+            private static void Finalizer() => ResetState();
 
             private static void ResetState()
             {

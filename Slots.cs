@@ -462,6 +462,7 @@ namespace ExtraSlots
                     LogDebug($"In attempt to create free space {item.m_shared.m_name} from {item.m_gridPos} was moved into equipment slot {equipmentSlot} {equipmentSlot.GridPosition}");
                     gridPos = item.m_gridPos;
                     item.m_gridPos = equipmentSlot.GridPosition;
+                    ClearCachedItems();
                     return true;
                 }
 
@@ -470,6 +471,7 @@ namespace ExtraSlots
                     LogDebug($"In attempt to create free space {item.m_shared.m_name} from {item.m_gridPos} was moved into free slot {slot} {slot.GridPosition}");
                     gridPos = item.m_gridPos;
                     item.m_gridPos = slot.GridPosition;
+                    ClearCachedItems();
                     return true;
                 }
             }
@@ -709,12 +711,22 @@ namespace ExtraSlots
         {
             ClearCachedItems();
             Dictionary<Slot, ItemDrop.ItemData> slotItems = slots.ToDictionary(slot => slot, slot => slot.CacheItem());
+            Dictionary<ItemDrop.ItemData, Vector2i> previousPositions = slotItems.Values
+                .Where(item => item != null)
+                .Distinct()
+                .ToDictionary(item => item, item => item.m_gridPos);
 
             slots.Do(slot => slot.UpdateGridPosition());
+
+            bool itemMoved = previousPositions.Any(pair => pair.Key.m_gridPos != pair.Value);
+            bool inventoryHeightChanged = PlayerInventory != null && PlayerInventory.m_height != InventoryHeightFull;
 
             ClearCachedItems();
 
             InventoryInteraction.UpdatePlayerInventorySize();
+
+            if (itemMoved && !inventoryHeightChanged && PlayerInventory != null)
+                PlayerInventory.Changed();
         }
 
         internal static void UpdateMiscSlotCustomItemList() 

@@ -1,4 +1,5 @@
 # 1.1.22
+* fixed error spam and stale slot state when loading a character in a world with fewer inventory rows or available extra slots
 * fixed upgrading items in extra slots with a full regular inventory, preserving their slot and equipped state
 * added an option to apply tombstone auto-equip settings after using the Take All button on an opened tombstone
 * added an option to keep the equipped state of items that are kept on death
