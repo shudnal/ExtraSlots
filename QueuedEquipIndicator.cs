@@ -11,14 +11,22 @@ namespace ExtraSlots
     {
         private static readonly Dictionary<Image, float> baseAlphas = new Dictionary<Image, float>();
 
-        internal static void Update(Image image, Image background, ItemDrop.ItemData item, Player player)
+        internal static void Update(Image image, ItemDrop.ItemData item, Player player)
         {
-            if (image == null || background == null)
+            if (!queuedEquipFade.Value || image == null || player == null || item == null || player.m_actionQueue.Count == 0)
                 return;
 
+            if (!TryGetQueuedAction(player, item, out Player.MinorActionData action, out int actionIndex))
+                return;
+
+            Update(image, action, actionIndex);
+        }
+
+        private static void Update(Image image, Player.MinorActionData action, int actionIndex)
+        {
             float baseAlpha = GetBaseAlpha(image);
             Color color = image.color;
-            color.a = queuedEquipFade.Value ? baseAlpha * GetAlpha(player, item) : baseAlpha;
+            color.a = baseAlpha * GetAlpha(action, actionIndex);
             image.color = color;
         }
 
@@ -35,25 +43,41 @@ namespace ExtraSlots
             return alpha;
         }
 
-        private static float GetAlpha(Player player, ItemDrop.ItemData item)
+        internal static void Update(GameObject queuedObject, ItemDrop.ItemData item, Player player)
         {
-            if (player == null || item == null)
-                return 1f;
+            if (!queuedEquipFade.Value || queuedObject == null || player == null || item == null || player.m_actionQueue.Count == 0)
+                return;
+
+            Update(queuedObject.GetComponent<Image>(), item, player);
+        }
+
+        private static bool TryGetQueuedAction(Player player, ItemDrop.ItemData item, out Player.MinorActionData action, out int actionIndex)
+        {
+            action = null;
+            actionIndex = -1;
 
             for (int i = 0; i < player.m_actionQueue.Count; i++)
             {
-                Player.MinorActionData action = player.m_actionQueue[i];
-                if (!ReferenceEquals(action.m_item, item)
-                    || action.m_type != Player.MinorActionData.ActionType.Equip)
+                Player.MinorActionData queuedAction = player.m_actionQueue[i];
+                if (!ReferenceEquals(queuedAction.m_item, item)
+                    || queuedAction.m_type != Player.MinorActionData.ActionType.Equip
+                    && queuedAction.m_type != Player.MinorActionData.ActionType.Unequip)
                     continue;
 
-                if (i != 0 || action.m_duration <= 0f)
-                    return 1f;
-
-                return 1f - Mathf.Clamp01(action.m_time / action.m_duration);
+                action = queuedAction;
+                actionIndex = i;
+                return true;
             }
 
-            return 1f;
+            return false;
+        }
+
+        private static float GetAlpha(Player.MinorActionData action, int actionIndex)
+        {
+            if (actionIndex != 0 || action.m_duration <= 0f)
+                return 1f;
+
+            return 1f - Mathf.Clamp01(action.m_time / action.m_duration);
         }
 
         [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui))]
@@ -62,16 +86,23 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.Last)]
             private static void Postfix(InventoryGrid __instance, Player player)
             {
-                if (!player || __instance?.m_inventory == null || __instance.m_inventory != player.GetInventory())
+                if (!queuedEquipFade.Value)
+                    return;
+
+                if (!player || player.m_actionQueue.Count == 0 || __instance?.m_inventory == null || __instance.m_inventory != player.GetInventory())
                     return;
 
                 foreach (InventoryGrid.Element element in __instance.m_elements)
                 {
-                    if (element?.m_queued == null || !element.m_used || !element.m_queued.enabled || element?.m_equiped == null)
+                    if (element?.m_queued == null || element.m_equiped == null || !element.m_used || !element.m_queued.enabled)
                         continue;
 
                     ItemDrop.ItemData item = __instance.m_inventory.GetItemAt(element.m_pos.x, element.m_pos.y);
-                    Update(element.m_queued, element.m_equiped, item, player);
+                    if (item == null || !TryGetQueuedAction(player, item, out Player.MinorActionData action, out int actionIndex))
+                        continue;
+
+                    element.m_equiped.enabled = action.m_type == Player.MinorActionData.ActionType.Equip;
+                    Update(element.m_queued, action, actionIndex);
                 }
             }
         }
@@ -91,16 +122,24 @@ namespace ExtraSlots
             baseAlphas.Clear();
         }
 
+        private static void ClearCache()
+        {
+            if (queuedEquipFade.Value)
+                RestoreAndClearCache();
+            else
+                baseAlphas.Clear();
+        }
+
         [HarmonyPatch(typeof(Hud), nameof(Hud.OnDestroy))]
         private static class Hud_OnDestroy_ClearQueuedIndicatorCache
         {
-            private static void Postfix() => RestoreAndClearCache();
+            private static void Postfix() => ClearCache();
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnDestroy))]
         private static class InventoryGui_OnDestroy_ClearQueuedIndicatorCache
         {
-            private static void Postfix() => RestoreAndClearCache();
+            private static void Postfix() => ClearCache();
         }
     }
 }
