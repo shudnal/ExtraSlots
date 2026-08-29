@@ -403,31 +403,39 @@ namespace ExtraSlots
 
                     LogMessage($"Item dissappearing prevention at Inventory.AddItem_OnLoad -> Inventory.AddItem_ItemData_amount_x_y: item {item.m_shared.m_name} at {x},{y} amount {amount}");
 
+                    Vector2i target = emptyPosition;
                     if (TryFindFreeEquipmentSlotForItem(itemData, out Slot equipmentSlot))
                     {
-                        itemData.m_gridPos = equipmentSlot.GridPosition;
-                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y found free equipment slot for item {itemData.m_shared.m_name}. Position rerouted {x},{y} -> {itemData.m_gridPos}");
+                        target = equipmentSlot.GridPosition;
+                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y found free equipment slot for item {itemData.m_shared.m_name}. Position rerouted {x},{y} -> {target}");
                     }
                     else if (TryFindFreeSlotForItem(itemData, out Slot slot))
                     {
-                        itemData.m_gridPos = slot.GridPosition;
-                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y found free slot for item {itemData.m_shared.m_name}. Position rerouted {x},{y} -> {itemData.m_gridPos}");
+                        target = slot.GridPosition;
+                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y found free slot for item {itemData.m_shared.m_name}. Position rerouted {x},{y} -> {target}");
                     }
                     else if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
                     {
-                        itemData.m_gridPos = gridPos;
-                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y made free space for item {itemData.m_shared.m_name}. Position rerouted {x},{y} -> {itemData.m_gridPos}");
-                    }
-                    else
-                    {
-                        itemData.m_gridPos = new Vector2i(InventoryWidth - 1, InventoryHeightFull - 1); // Put in the last slot and item will find its place sooner or later
-                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y item {itemData.m_shared.m_name} put in the last slot to find place later. Position rerouted {x},{y} -> {itemData.m_gridPos}");
+                        target = gridPos;
+                        LogDebug($"Inventory.AddItem_ItemData_amount_x_y made free space for item {itemData.m_shared.m_name}. Position rerouted {x},{y} -> {target}");
                     }
 
-                    __instance.m_inventory.Add(itemData);
-                    item.m_stack -= amount;
-                    __result = true;
-                    __instance.Changed();
+                    bool inserted = target != emptyPosition && PlayerInventoryOperations.InsertExisting(itemData, target);
+                    if (!inserted)
+                    {
+                        // Loading must never silently lose an item. Keep it represented just outside
+                        // the current grid and let the invariant reconciliation settle/drop it once
+                        // the player's full progression/config state is available.
+                        Vector2i temporary = new Vector2i(0, InventoryHeightFull);
+                        inserted = PlayerInventoryOperations.InsertForReconciliation(itemData, temporary);
+                        LogWarning($"Inventory.AddItem_ItemData_amount_x_y temporarily staged {itemData.m_shared.m_name} at {temporary} for reconciliation");
+                    }
+
+                    if (inserted)
+                    {
+                        item.m_stack -= amount;
+                        __result = true;
+                    }
                 }
             }
         }
@@ -516,11 +524,8 @@ namespace ExtraSlots
 
                 LogDebug($"Inventory.AddItem_Item item {item.m_shared.m_name} found free slot {slot} {slot.GridPosition}");
 
-                item.m_gridPos = slot.GridPosition;
-                __instance.m_inventory.Add(item);
-
-                __instance.Changed();
-                __result = true;
+                if (PlayerInventoryOperations.InsertExisting(item, slot.GridPosition))
+                    __result = true;
             }
         }
 

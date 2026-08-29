@@ -40,8 +40,6 @@ namespace ExtraSlots
         public const string customKeySlotID = "ExtraSlotsEquippedSlot";
         internal const string customKeyWeaponShield = "ExtraSlotsEquippedWeaponShield";
 
-        private static readonly List<ItemDrop.ItemData> itemsInGridOrder = new List<ItemDrop.ItemData>();
-
         public class Slot
         {
             private readonly string _id;
@@ -85,22 +83,26 @@ namespace ExtraSlots
                     EquipmentPanel.MarkDirty();
             }
 
-            internal void UpdateGridPosition()
+            internal void UpdateGridPosition(bool moveResident = true)
             {
-                ItemDrop.ItemData item = Item;
+                ItemDrop.ItemData item = moveResident ? Item : null;
                 _gridPos = new Vector2i(_index % InventoryWidth, _index / InventoryWidth + InventoryHeightPlayer);
                 if (item != null)
-                    item.m_gridPos = _gridPos;
+                    PlayerInventoryOperations.MoveForTopology(item, _gridPos);
             }
 
             internal void SwapIndexWith(Slot slot)
             {
-                // Cache slot item to be grid position independent when getting slot item
-                CacheItem(); slot.CacheItem();
+                using IDisposable mutation = PlayerInventoryOperations.Batch(PlayerInventory);
+
+                // Keep both residents resolved by their old cells until the permutation is complete.
+                CacheItem();
+                slot.CacheItem();
 
                 (_index, slot._index) = (slot._index, _index);
                 UpdateGridPosition();
                 slot.UpdateGridPosition();
+                ClearCachedItems();
             }
 
             internal void SetSlotIndex(int index)
@@ -236,52 +238,42 @@ namespace ExtraSlots
                 if (index == -1)
                     return false;
 
-                // Cache slot item to move them afterwards
-                for (int i = index; i < slots.Length; i++)
-                    slots[i].CacheItem();
-
-                ItemDrop.ItemData item = slots[index].Item;
-
-                // Shift slots left
-                for (int i = index + 1; i < slots.Length; i++)
+                using (PlayerInventoryOperations.Batch(PlayerInventory))
                 {
-                    slots[i - 1] = slots[i];
-                    slots[i - 1].SetSlotIndex(i - 1);
-                }
+                    // Cache residents before the topology changes so shifted slots keep their items.
+                    for (int i = index; i < slots.Length; i++)
+                        slots[i].CacheItem();
 
-                slots[slots.Length - 1] = new Slot(emptySlotID, slots.Length - 1, null, (item) => false, () => false);
+                    ItemDrop.ItemData item = slots[index].Item;
 
-                for (int i = index; i < slots.Length; i++)
-                    slots[i].UpdateGridPosition();
-
-                ClearCachedItems();
-
-                if (item != null)
-                {
-                    if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
+                    for (int i = index + 1; i < slots.Length; i++)
                     {
-                        LogInfo($"While removing slot {slotID} item {item.m_shared.m_name} from {item.m_gridPos} was moved into regular inventory {gridPos}");
-                        item.m_gridPos = gridPos;
+                        slots[i - 1] = slots[i];
+                        slots[i - 1].SetSlotIndex(i - 1);
                     }
-                    else if (TryFindFreeSlotForItem(item, out Slot newSlot))
+
+                    slots[slots.Length - 1] = new Slot(emptySlotID, slots.Length - 1, null, (item) => false, () => false);
+
+                    for (int i = index; i < slots.Length; i++)
+                        slots[i].UpdateGridPosition();
+
+                    ClearCachedItems();
+
+                    if (item != null && PlayerInventory != null && PlayerInventory.ContainsItem(item))
                     {
-                        LogInfo($"While removing slot {slotID} item {item.m_shared.m_name} from {item.m_gridPos} was moved into first empty slot {newSlot} {newSlot.GridPosition}");
-                        item.m_gridPos = newSlot.GridPosition;
-                    }
-                    else if (CurrentPlayer != null && PlayerInventory != null && PlayerInventory.ContainsItem(item))
-                    {
-                        LogWarning($"While removing slot {slotID} no inventory space was available for {item.m_shared.m_name}. Item was dropped.");
-                        CurrentPlayer.DropItem(PlayerInventory, item, item.m_stack);
+                        if (!PlayerInventoryOperations.RelocateToBestAvailable(item, dropIfNoSpace: true))
+                            LogWarning($"While removing slot {slotID}, item {item.m_shared.m_name} could not be relocated.");
                     }
                 }
 
                 API.UpdateSlots();
-
                 return true;
             }
 
             internal static void InsertSlot(int startIndex, string slotID, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive)
             {
+                using IDisposable mutation = PlayerInventoryOperations.Batch(PlayerInventory);
+
                 int endIndex = Array.FindIndex(slots, slot => slot.Index >= startIndex && slot.IsEmptySlot); // find first empty slot to stop shifting
                 LogInfo($"InsertSlot {slotID} at {startIndex} empty slot found {endIndex}");
                 if (endIndex == -1)
@@ -306,6 +298,8 @@ namespace ExtraSlots
 
                 for (int i = endIndex; i >= startIndex; i--)
                     slots[i].UpdateGridPosition();
+
+                ClearCachedItems();
             }
 
             internal static string GetSlotID(string slotID) => $"{customSlotID}{slotID}";
@@ -432,52 +426,8 @@ namespace ExtraSlots
             return slot != null;
         }
 
-        public static bool TryMakeFreeSpaceInPlayerInventory(bool tryFindRegularInventorySlot, out Vector2i gridPos)
-        {
-            gridPos = emptyPosition;
-
-            itemsInGridOrder.Clear();
-            if (tryFindRegularInventorySlot)
-                for (int i = InventoryHeightPlayer - 1; i >= 0; i--)
-                    for (int j = InventoryWidth - 1; j >= 0; j--)
-                        if (PlayerInventory.GetItemAt(j, i) is not ItemDrop.ItemData item)
-                            return (gridPos = new Vector2i(j, i)) != emptyPosition;
-                        else
-                            itemsInGridOrder.Add(item);
-            else
-                itemsInGridOrder.AddRange(
-                            PlayerInventory.GetAllItemsInGridOrder()
-                                .Where(item => item.m_gridPos.y < InventoryHeightPlayer)
-                                .OrderByDescending(item => item.m_gridPos.y)
-                                .ThenByDescending(item => item.m_gridPos.x)
-                        );
-
-            // To be clear there is no cached items overlap
-            ClearCachedItems();
-
-            foreach (ItemDrop.ItemData item in itemsInGridOrder)
-            {
-                if (TryFindFreeEquipmentSlotForItem(item, out Slot equipmentSlot))
-                {
-                    LogDebug($"In attempt to create free space {item.m_shared.m_name} from {item.m_gridPos} was moved into equipment slot {equipmentSlot} {equipmentSlot.GridPosition}");
-                    gridPos = item.m_gridPos;
-                    item.m_gridPos = equipmentSlot.GridPosition;
-                    ClearCachedItems();
-                    return true;
-                }
-
-                if (TryFindFreeSlotForItem(item, out Slot slot))
-                {
-                    LogDebug($"In attempt to create free space {item.m_shared.m_name} from {item.m_gridPos} was moved into free slot {slot} {slot.GridPosition}");
-                    gridPos = item.m_gridPos;
-                    item.m_gridPos = slot.GridPosition;
-                    ClearCachedItems();
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        public static bool TryMakeFreeSpaceInPlayerInventory(bool tryFindRegularInventorySlot, out Vector2i gridPos) =>
+            PlayerInventoryOperations.TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot, out gridPos);
 
         public static bool HaveEmptyQuickSlot() => slots.Any(slot => slot.IsFreeQuickSlot());
 
@@ -707,26 +657,26 @@ namespace ExtraSlots
             return minAmountOfExtraRows;
         }
 
-        internal static void UpdateSlotsGridPosition()
+        internal static void UpdateSlotsGridPosition(bool moveResidents = true)
         {
-            ClearCachedItems();
-            Dictionary<Slot, ItemDrop.ItemData> slotItems = slots.ToDictionary(slot => slot, slot => slot.CacheItem());
-            Dictionary<ItemDrop.ItemData, Vector2i> previousPositions = slotItems.Values
-                .Where(item => item != null)
-                .Distinct()
-                .ToDictionary(item => item, item => item.m_gridPos);
+            using (PlayerInventoryOperations.Batch(PlayerInventory))
+            {
+                ClearCachedItems();
+                if (moveResidents)
+                    slots.Do(slot => slot.CacheItem());
 
-            slots.Do(slot => slot.UpdateGridPosition());
+                // Live topology changes move known residents as one transaction. Player.Load uses
+                // moveResidents=false because saved coordinates belong to the previous world's
+                // topology and must first be reconciled through per-item slot provenance.
+                slots.Do(slot => slot.UpdateGridPosition(moveResidents));
 
-            bool itemMoved = previousPositions.Any(pair => pair.Key.m_gridPos != pair.Value);
-            bool inventoryHeightChanged = PlayerInventory != null && PlayerInventory.m_height != InventoryHeightFull;
+                ClearCachedItems();
+                InventoryInteraction.UpdatePlayerInventorySize();
 
-            ClearCachedItems();
-
-            InventoryInteraction.UpdatePlayerInventorySize();
-
-            if (itemMoved && !inventoryHeightChanged && PlayerInventory != null)
-                PlayerInventory.Changed();
+                ItemsSlotsValidation.ValidateItems();
+                ItemsSlotsValidation.ValidateSlots();
+                ItemsSlotsValidation.Validate();
+            }
         }
 
         internal static void UpdateMiscSlotCustomItemList() 

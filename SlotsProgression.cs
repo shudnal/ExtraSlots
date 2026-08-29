@@ -359,12 +359,13 @@ namespace ExtraSlots
                 loadedPlayer = __instance;
                 try
                 {
-                    if (IsRowProgressionActive())
-                        UpdateSlotsGridPosition();
+                    using (PlayerInventoryOperations.Batch(__instance.GetInventory()))
+                    {
+                        if (IsRowProgressionActive())
+                            UpdateSlotsGridPosition(moveResidents: false);
 
-                    ClearCachedItems();
-                    ItemsSlotsValidation.ValidateItems();
-                    ItemsSlotsValidation.ValidateSlots();
+                        PlayerInventoryOperations.ReconcileLoadedTopology();
+                    }
                 }
                 finally
                 {

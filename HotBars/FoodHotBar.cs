@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -16,39 +15,9 @@ public static class FoodSlotsHotBar
     private static HotkeyBar hotBar = null;
     private static RectTransform hotBarRect = null;
     private static Slot[] hotBarSlots = Array.Empty<Slot>();
-    private static readonly Dictionary<ItemDrop.ItemData, Vector2i> realPositions = new Dictionary<ItemDrop.ItemData, Vector2i>();
 
     internal static void UpdateSlots() => hotBarSlots = GetFoodSlots();
-
-    private static void AdaptGridPos(List<ItemDrop.ItemData> items)
-    {
-        for (int i = 0; i < items.Count; i++)
-        {
-            ItemDrop.ItemData item = items[i];
-            if (item == null)
-                continue;
-
-            if (!realPositions.TryGetValue(item, out Vector2i realPosition))
-            {
-                realPosition = item.m_gridPos;
-                realPositions[item] = realPosition;
-            }
-
-            int slotIndex = Array.FindIndex(hotBarSlots, slot => slot != null && slot.IsActive && ReferenceEquals(slot.Item, item));
-            item.m_gridPos = new Vector2i(slotIndex >= 0 ? slotIndex : i, realPosition.y);
-        }
-    }
-
-    public static void RestoreGridPos()
-    {
-        foreach (KeyValuePair<ItemDrop.ItemData, Vector2i> item in realPositions)
-            if (item.Key != null)
-                item.Key.m_gridPos = item.Value;
-
-        realPositions.Clear();
-    }
-
-    public static void GetItems(List<ItemDrop.ItemData> bound, bool adaptGridPos = false)
+    public static void GetItems(List<ItemDrop.ItemData> bound)
     {
         if (PlayerInventory == null)
             return;
@@ -64,16 +33,13 @@ public static class FoodSlotsHotBar
             if (item != null)
                 bound.Add(item);
         }
-
-        if (adaptGridPos)
-            AdaptGridPos(bound);
     }
 
     public static List<ItemDrop.ItemData> GetItems()
     {
         List<ItemDrop.ItemData> result = new List<ItemDrop.ItemData>();
 
-        GetItems(result, adaptGridPos: false);
+        GetItems(result);
 
         return result;
     }

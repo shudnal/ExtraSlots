@@ -105,9 +105,14 @@ namespace ExtraSlots
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
         public static ConfigEntry<Vector2> equipmentPanelOffset;
-        public static ConfigEntry<bool> equipmentPanelDraggable;
-        public static ConfigEntry<KeyboardShortcut> equipmentPanelDragKey;
+        public static ConfigEntry<bool> equipmentPanelSticky;
+        public static ConfigEntry<float> equipmentPanelStickyDistance;
         public static ConfigEntry<Vector2> equipmentPanelTooltipOffset;
+
+        public static ConfigEntry<bool> panelsDraggable;
+        public static ConfigEntry<KeyboardShortcut> panelsDragKey;
+        public static ConfigEntry<bool> queuedEquipFade;
+        public static ConfigEntry<bool> alwaysShowEmptyHotbarSlots;
         public static ConfigEntry<bool> quickSlotsAlignmentCenter;
         public static ConfigEntry<bool> equipmentSlotsShowTooltip;
         public static ConfigEntry<bool> equipmentSlotsPreventStackAll;
@@ -506,16 +511,23 @@ namespace ExtraSlots
 
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalLeft, "Equipment slots alignment");
             equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
-            equipmentPanelDraggable = config("Panels - Equipment slots", "Panel draggable", defaultValue: false, "Allow dragging the equipment panel by its background without holding the drag key");
-            equipmentPanelDragKey = config("Panels - Equipment slots", "Panel drag key", new KeyboardShortcut(KeyCode.LeftAlt), "Hold this key while dragging the equipment panel background to reposition it");
+            equipmentPanelSticky = config("Panels - Equipment slots", "Sticky", defaultValue: true, "Snap the equipment panel to its default attachment or nearby inventory UI panels while dragging");
+            equipmentPanelStickyDistance = config("Panels - Equipment slots", "Sticky distance", defaultValue: 20f, new ConfigDescription("Maximum distance at which the equipment panel snaps to a nearby compatible UI edge", new AcceptableValueRange<float>(0f, 100f)));
             quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle under equipment slots");
             equipmentSlotsShowTooltip = config("Panels - Equipment slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             equipmentPanelTooltipOffset = config("Panels - Equipment slots", "Gamepad Tooltip Offset", Vector2.zero, "Offset relative to original position of tooltip at upper right corner of the inventory (side elements included)");
             equipmentSlotsPreventStackAll = config("Panels - Equipment slots", "Prevent Stack All", defaultValue: true, "Prevent items from equipment slots to be placed into container when Stack All feature is used.");
 
+            panelsDraggable = config("Panels - Dragging", "Always allow dragging", defaultValue: false, "Allow dragging ExtraSlots panels without holding the drag key");
+            panelsDragKey = config("Panels - Dragging", "Drag key", new KeyboardShortcut(KeyCode.LeftAlt), "Hold this key while dragging ExtraSlots panels");
+            queuedEquipFade = config("Panels - Item indicators", "Fade queued equip indicator", defaultValue: true, "Fade the yellow queued indicator from opaque to transparent while an item is being equipped");
+            alwaysShowEmptyHotbarSlots = config("Panels - Hotbars", "Always show empty slots", defaultValue: false, "Keep all currently available Quick, Ammo and Food hotbar slots visible even when they are empty");
+
             vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
             equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            equipmentPanelSticky.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
+            equipmentPanelStickyDistance.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             equipmentPanelTooltipOffset.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
 
             miscSlotsShowLabel = config("Panels - Misc slots", "Show label", defaultValue: false, "Show slot label");
@@ -560,6 +572,7 @@ namespace ExtraSlots
             quickSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarScale.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
+            alwaysShowEmptyHotbarSlots.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
 
             ammoSlotsHotBarEnabled = serverConfig("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots [Synced with Server]");
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 228f), "On screen position of ammo slots hotbar panel");

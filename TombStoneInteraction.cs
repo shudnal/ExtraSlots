@@ -19,7 +19,7 @@ namespace ExtraSlots
         }
 
         private static readonly List<KeptItem> itemsToKeep = new List<KeptItem>();
-        private static readonly HashSet<Slot> takenSlots = new HashSet<Slot>();
+        private static IDisposable keepItemsMutation;
 
         public static List<string> autoEquipItemList = new List<string>();
         public static List<string> autoEquipWhiteList = new List<string>();
@@ -67,6 +67,75 @@ namespace ExtraSlots
             return true;
         }
 
+        private static float GetCarryWeightChange(StatusEffect effect)
+        {
+            if (effect == null)
+                return 0f;
+
+            float value = 0f;
+            effect.ModifyMaxCarryWeight(0f, ref value);
+            return value;
+        }
+
+        private static float GetItemCarryWeightChange(ItemDrop.ItemData item) =>
+            item?.m_shared?.m_equipStatusEffect != null ? GetCarryWeightChange(item.m_shared.m_equipStatusEffect) : 0f;
+
+        private static bool CanGuaranteeAdditionalEquipEffect(Player player, ItemDrop.ItemData item, Slot destinationSlot)
+        {
+            if (player == null || item == null || destinationSlot == null || !destinationSlot.IsEquipmentSlot || !IsItemToEquip(item))
+                return false;
+
+            // Custom-slot equipment semantics belong to the provider mod. Do not assume its
+            // EquipItem patch will add an effect without replacing another runtime item.
+            if (IsCustomSlotItem(item))
+                return false;
+
+            if (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility)
+            {
+                if (player.m_utilityItem == null)
+                    return true;
+
+                int utilityIndex = ExtraUtilitySlots.GetSlotForItem(item);
+                return utilityIndex >= 0 && ExtraUtilitySlots.GetItem(utilityIndex) == null;
+            }
+
+            // For vanilla single-instance equipment types, only count the incoming effect when
+            // nothing of that type is currently equipped. Replacement deltas are intentionally
+            // treated conservatively so EasyFit never relies on a bonus that may disappear.
+            return !player.GetInventory().m_inventory.Any(existing => existing != null
+                && !ReferenceEquals(existing, item)
+                && player.IsItemEquiped(existing)
+                && existing.m_shared.m_itemType == item.m_shared.m_itemType);
+        }
+
+        private static bool CanAccountForAutoEquipCarryEffect(Player player, ItemDrop.ItemData item, Slot destinationSlot, out float carryDelta)
+        {
+            carryDelta = 0f;
+            if (player == null || item == null || destinationSlot == null || !IsItemToEquip(item))
+                return true;
+
+            StatusEffect incomingEffect = item.m_shared?.m_equipStatusEffect;
+            float incomingDelta = GetCarryWeightChange(incomingEffect);
+            if (CanGuaranteeAdditionalEquipEffect(player, item, destinationSlot))
+            {
+                carryDelta = incomingDelta;
+                return true;
+            }
+
+            // If auto-equip may replace an already equipped item, the exact post-equip carry limit
+            // depends on provider/vanilla replacement semantics. Never let EasyFit rely on a carry
+            // delta we cannot prove. Zero-delta replacements are safe only when the displaced
+            // same-type equipment also has no carry effect.
+            if (Mathf.Abs(incomingDelta) > 0.0001f || IsCustomSlotItem(item))
+                return false;
+
+            return !player.GetInventory().m_inventory.Any(existing => existing != null
+                && !ReferenceEquals(existing, item)
+                && player.IsItemEquiped(existing)
+                && existing.m_shared.m_itemType == item.m_shared.m_itemType
+                && Mathf.Abs(GetItemCarryWeightChange(existing)) > 0.0001f);
+        }
+
         public static IEnumerator EquipItemsInSlots()
         {
             ClearCachedItems();
@@ -83,7 +152,7 @@ namespace ExtraSlots
 
         private static bool IsItemToEquip(ItemDrop.ItemData item)
         {
-            if (slotsTombstoneAutoEquipCarryWeightItemsEnabled.Value && item != null && item.m_shared.m_equipStatusEffect is SE_Stats se && se.m_addMaxCarryWeight > 0)
+            if (slotsTombstoneAutoEquipCarryWeightItemsEnabled.Value && GetItemCarryWeightChange(item) > 0f)
                 return true;
 
             if (!slotsTombstoneAutoEquipEnabled.Value)
@@ -126,21 +195,28 @@ namespace ExtraSlots
             SaveLastEquippedSlotsToItems();
             SaveLastEquippedWeaponShieldToItems(player);
 
-            slots.DoIf(IsSlotToKeep, KeepItem);
-            ClearCachedItems();
+            List<Slot> slotsToKeep = slots.Where(IsSlotToKeep).ToList();
+            if (slotsToKeep.Count == 0)
+                return;
 
-            void KeepItem(Slot slot)
+            keepItemsMutation ??= PlayerInventoryOperations.Batch(player.GetInventory());
+            foreach (Slot slot in slotsToKeep)
             {
                 ItemDrop.ItemData item = slot.Item;
+                if (item == null)
+                    continue;
 
                 itemsToKeep.Add(new KeptItem
                 {
                     item = item,
                     wasEquipped = item.m_equipped || player.IsItemEquiped(item)
                 });
-                player.GetInventory().m_inventory.Remove(item);
-                LogDebug($"Character.CheckDeath.Prefix: On death drop prevented for item {item.m_shared.m_name} from slot {slot}. Item temporary removed from player inventory.");
+
+                if (PlayerInventoryOperations.Remove(item))
+                    LogDebug($"Character.CheckDeath.Prefix: On death drop prevented for item {item.m_shared.m_name} from slot {slot}. Item temporarily removed from player inventory.");
             }
+
+            ClearCachedItems();
         }
 
         public static bool IsSlotToKeep(Slot slot)
@@ -164,21 +240,41 @@ namespace ExtraSlots
         public static void OnDeathPostfix(Player player, string reason = "unknown")
         {
             if (itemsToKeep.Count == 0)
-                return;
-
-            foreach (KeptItem keptItem in itemsToKeep)
             {
-                player.GetInventory().m_inventory.Add(keptItem.item);
-
-                if (keepOnDeathEquippedState.Value && keptItem.wasEquipped)
-                    keptItem.item.m_equipped = true;
+                keepItemsMutation?.Dispose();
+                keepItemsMutation = null;
+                return;
             }
 
-            LogDebug($"Death wrapping cleanup from {reason}: {itemsToKeep.Count} item(s) returned to player inventory.");
+            try
+            {
+                foreach (KeptItem keptItem in itemsToKeep)
+                {
+                    if (!PlayerInventoryOperations.InsertExisting(keptItem.item, keptItem.item.m_gridPos))
+                    {
+                        // Keeping the exact ItemData is more important than preserving a stale cell.
+                        // The invariant pass below will settle any exceptional conflict safely.
+                        PlayerInventoryOperations.InsertForReconciliation(keptItem.item, keptItem.item.m_gridPos);
+                    }
 
-            itemsToKeep.Clear();
+                    if (keepOnDeathEquippedState.Value && keptItem.wasEquipped)
+                        keptItem.item.m_equipped = true;
+                }
 
-            ClearCachedItems();
+                ClearCachedItems();
+                ItemsSlotsValidation.ValidateItems();
+                ItemsSlotsValidation.ValidateSlots();
+                ItemsSlotsValidation.Validate();
+
+                LogDebug($"Death wrapping cleanup from {reason}: {itemsToKeep.Count} item(s) returned to player inventory.");
+            }
+            finally
+            {
+                itemsToKeep.Clear();
+                ClearCachedItems();
+                keepItemsMutation?.Dispose();
+                keepItemsMutation = null;
+            }
         }
 
         [HarmonyPatch(typeof(TombStone), nameof(TombStone.OnTakeAllSuccess))]
@@ -329,85 +425,68 @@ namespace ExtraSlots
         }
 
         [HarmonyPatch(typeof(TombStone), nameof(TombStone.EasyFitInInventory))]
-        private static class TombStone_EasyFitInInventory_HeightAdjustment
+        private static class TombStone_EasyFitInInventory_ExactSimulation
         {
-            private static float GetDynamicWeightChange(StatusEffect se)
-            {
-                float limit = 0f;
-                se.ModifyMaxCarryWeight(0f, ref limit);
-                return limit;
-            }
-
-            private static void Prefix(TombStone __instance, Player player, ref float __state)
+            private static void Postfix(TombStone __instance, Player player, ref bool __result)
             {
                 if (!IsValidPlayer(player))
                     return;
 
-                __state = (__instance.m_lootStatusEffect as SE_Stats)?.m_addMaxCarryWeight ?? 0f;
-
-                if (slotsTombstoneAutoEquipCarryWeightItemsEnabled.Value || slotsTombstoneAutoEquipEnabled.Value)
+                Inventory tombstoneInventory = __instance.m_container?.GetInventory();
+                Inventory playerInventory = player.GetInventory();
+                if (tombstoneInventory == null || playerInventory == null)
                 {
-                    __state += __instance.m_container.GetInventory().GetAllItems()
-                        .Where(item => item != null && item.m_shared.m_equipStatusEffect is SE_Stats se && GetSlotInGrid(item.m_gridPos) is Slot slot && slot.IsEquipmentSlot)
-                        .Sum(item => GetDynamicWeightChange(item.m_shared.m_equipStatusEffect));
-                };
-
-                Player.m_localPlayer.m_maxCarryWeight += __state;
-            }
-
-            private static void Postfix(TombStone __instance, Player player, float __state, ref bool __result)
-            {
-                if (!IsValidPlayer(player))
+                    __result = false;
                     return;
-
-                Player.m_localPlayer.m_maxCarryWeight -= __state;
-                if (__result)
-                    return;
-
-                if (__instance.m_container.GetInventory().NrOfItems() > InventorySizeActive)
-                    return;
-
-                int nrOfItems = 0; takenSlots.Clear();
-                foreach (ItemDrop.ItemData item in __instance.m_container.GetInventory().GetAllItemsInGridOrder())
-                {
-                    if (item.m_gridPos.y < InventoryHeightPlayer)
-                    {
-                        nrOfItems++;
-                        continue;
-                    }
-
-                    Slot slot = GetSlotInGrid(item.m_gridPos);
-                    if (slot == null)
-                    {
-                        nrOfItems++;
-                        continue;
-                    }
-                        
-                    if (takenSlots.Contains(slot))
-                    {
-                        nrOfItems++;
-                        continue;
-                    }
-
-                    takenSlots.Add(slot);
-                    if (slot.IsQuickSlot)
-                    {
-                        nrOfItems++;
-                        continue;
-                    }
-
-                    if (!slot.ItemFits(item))
-                    {
-                        nrOfItems++;
-                        continue;
-                    }
-
-                    // Item position is slot, slot is free, item fits slot, slot is dedicated slot (not quick slot).
-                    // At least this item will be moved into that slot on inventory transfer
-                    // This item can be excluded from items amount counting
                 }
 
-                __result = nrOfItems <= PlayerInventory.GetEmptySlots() && player.GetInventory().GetTotalWeight() + __instance.m_container.GetInventory().GetTotalWeight() < player.GetMaxCarryWeight() + __state;
+                // Simulate the real two-pass Inventory.MoveAll behavior, stack consumption and the
+                // final ExtraSlots placement invariant. A positive result therefore means every
+                // incoming stack has a concrete, semantically valid destination.
+                if (!PlayerInventoryOperations.CanFitItems(
+                        tombstoneInventory.GetAllItems(),
+                        out List<PlayerInventoryOperations.SimulatedEquipmentPlacement> equipmentPlacements))
+                {
+                    __result = false;
+                    return;
+                }
+
+                float effectiveMaxCarryWeight = player.GetMaxCarryWeight();
+                HashSet<int> accountedEffects = new HashSet<int>();
+
+                foreach (ItemDrop.ItemData equipped in playerInventory.m_inventory)
+                {
+                    if (equipped == null || !player.IsItemEquiped(equipped) || equipped.m_shared.m_equipStatusEffect == null)
+                        continue;
+
+                    accountedEffects.Add(equipped.m_shared.m_equipStatusEffect.NameHash());
+                }
+
+                if (__instance.m_lootStatusEffect != null)
+                {
+                    int effectHash = __instance.m_lootStatusEffect.NameHash();
+                    if (accountedEffects.Add(effectHash))
+                        effectiveMaxCarryWeight += GetCarryWeightChange(__instance.m_lootStatusEffect);
+                }
+
+                foreach (PlayerInventoryOperations.SimulatedEquipmentPlacement placement in equipmentPlacements)
+                {
+                    ItemDrop.ItemData item = placement.Item;
+                    if (item == null || !IsItemToEquip(item))
+                        continue;
+
+                    if (!CanAccountForAutoEquipCarryEffect(player, item, placement.Slot, out float carryDelta))
+                    {
+                        __result = false;
+                        return;
+                    }
+
+                    StatusEffect effect = item.m_shared?.m_equipStatusEffect;
+                    if (effect != null && accountedEffects.Add(effect.NameHash()))
+                        effectiveMaxCarryWeight += carryDelta;
+                }
+
+                __result = playerInventory.GetTotalWeight() + tombstoneInventory.GetTotalWeight() <= effectiveMaxCarryWeight;
             }
         }
 

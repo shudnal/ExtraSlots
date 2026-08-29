@@ -47,32 +47,39 @@ internal class EquipmentAndQuickSlotsCompat
 
     private static void TransferItemsToPlayerInventory(Inventory fromInventory, bool equipItem)
     {
-        foreach (ItemDrop.ItemData item in fromInventory.GetAllItemsInGridOrder().Where(item => item != null))
+        using (PlayerInventoryOperations.Batch(PlayerInventory))
         {
-            if (!(TryFindSlotForItem(item, out Slot slot) ? PlayerInventory.AddItem(item, slot.GridPosition) : PlayerInventory.AddItem(item)))
+            foreach (ItemDrop.ItemData item in fromInventory.GetAllItemsInGridOrder().Where(item => item != null))
             {
-                if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
+                if (!(TryFindSlotForItem(item, out Slot slot) ? PlayerInventory.AddItem(item, slot.GridPosition) : PlayerInventory.AddItem(item)))
                 {
-                    LogInfo($"Item {item.m_shared.m_name} from EaQS was put to created free space {gridPos}");
-                    item.m_gridPos = gridPos;
-                }
-                else
-                {
-                    // Put item out of grid. Eventually it will be put into first free slot.
-                    LogWarning($"Item {item.m_shared.m_name} was temporary put out of grid. It will return to inventory first free slot.");
-                    item.m_gridPos = new Vector2i(0, InventoryHeightFull);
+                    bool inserted = false;
+                    if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
+                    {
+                        LogInfo($"Item {item.m_shared.m_name} from EaQS was put to created free space {gridPos}");
+                        inserted = PlayerInventoryOperations.InsertExisting(item, gridPos);
+                    }
+
+                    if (!inserted)
+                    {
+                        // Migration can run before the world is safe for dropping items. Keep the
+                        // exact ItemData represented and let the normal invariant pass settle it.
+                        Vector2i temporary = new Vector2i(0, InventoryHeightFull);
+                        LogWarning($"Item {item.m_shared.m_name} from EaQS was staged for inventory reconciliation.");
+                        PlayerInventoryOperations.InsertForReconciliation(item, temporary);
+                    }
                 }
 
-                PlayerInventory.m_inventory.Add(item);
+                LogMessage($"Item {item.m_shared.m_name} was loaded from EquipmentAndQuickSlots {fromInventory.m_name}");
+
+                if (equipItem)
+                    playerToLoad.UseItem(playerToLoad.GetInventory(), item, false);
             }
 
-            LogMessage($"Item {item.m_shared.m_name} was loaded from EquipmentAndQuickSlots {fromInventory.m_name}");
-
-            if (equipItem)
-                playerToLoad.UseItem(playerToLoad.GetInventory(), item, false);
+            fromInventory.m_inventory.Clear();
+            ItemsSlotsValidation.ValidateItems();
+            ItemsSlotsValidation.ValidateSlots();
         }
-
-        fromInventory.m_inventory.Clear();
     }
 
     private static bool TryFindSlotForItem(ItemDrop.ItemData item, out Slot slot) => TryFindFreeEquipmentSlotForItem(item, out slot) || TryFindFreeSlotForItem(item, out slot);

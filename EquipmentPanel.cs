@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using static ExtraSlots.ExtraSlots;
 using static ExtraSlots.Slots;
@@ -26,9 +25,11 @@ namespace ExtraSlots
         private static float PanelWidth => (Math.Max(quickSlotsCount, SlotPositions.LastEquipmentColumn() + 1) + FoodAmmoSlotsWidthInTiles) * tileSize + tileSpace / 2;
         private static float PanelHeight => (((quickSlotsCount > 0 || IsFirstMiscSlotAvailable()) ? 1f + interslotSpaceInTiles : 0f) + EquipmentHeight) * tileSize + tileSpace / 2;
         private static Vector2? draggedPanelOffset;
+        private static readonly Vector3[] dragRectCorners = new Vector3[4];
         private static Vector2 CurrentPanelOffset => draggedPanelOffset ?? equipmentPanelOffset.Value;
         private static Vector2 PanelOffset => new Vector2(CurrentPanelOffset.x, -CurrentPanelOffset.y);
-        private static Vector2 PanelPosition => new Vector2(InventoryPanelWidth + inventoryPanelOffset, 0f) + PanelOffset;
+        private static Vector2 PanelPosition => GetPanelPosition(CurrentPanelOffset);
+        private static Vector2 GetPanelPosition(Vector2 offset) => new Vector2(InventoryPanelWidth + inventoryPanelOffset + offset.x, -offset.y);
         private static float FoodAmmoSlotsWidthInTiles => (IsFoodSlotAvailable() || IsAmmoSlotAvailable() ? interslotSpaceInTiles : 0) + (IsFoodSlotAvailable() ? 1f : 0) + (IsAmmoSlotAvailable() ? 1f : 0);
         private static int EquipmentHeight => equipmentSlotsCount > 3 || IsFoodSlotAvailable() || IsAmmoSlotAvailable() ? 3 : equipmentSlotsCount;
 
@@ -60,66 +61,139 @@ namespace ExtraSlots
         internal static Sprite lightenedSlot;
         internal static Sprite background;
 
-        private static bool IsPanelDragKeyHeld()
+        private static bool CanDragPanel => UIDragging.CanDrag(panelsDraggable.Value, panelsDragKey.Value);
+
+        private static Vector2 SnapPanelOffset(Vector2 offset)
         {
-            var shortcut = equipmentPanelDragKey.Value;
-            if (shortcut.MainKey == KeyCode.None || !ZInput.GetKey(shortcut.MainKey))
-                return false;
+            if (!equipmentPanelSticky.Value || equipmentPanelStickyDistance.Value <= 0f)
+                return offset;
 
-            foreach (KeyCode modifier in shortcut.Modifiers)
-                if (!ZInput.GetKey(modifier))
-                    return false;
+            float distance = equipmentPanelStickyDistance.Value;
 
-            return true;
+            // Preserve the familiar default attachment as the strongest sticky position.
+            bool snappedDefaultX = Mathf.Abs(offset.x) <= distance;
+            bool snappedDefaultY = Mathf.Abs(offset.y) <= distance;
+            if (snappedDefaultX)
+                offset.x = 0f;
+            if (snappedDefaultY)
+                offset.y = 0f;
+
+            if (!InventoryGui.instance || !InventoryGui.instance.m_player)
+                return offset;
+
+            Rect panelRect = GetPredictedPanelRect(offset);
+            RectTransform[] targets =
+            {
+                inventoryBackground,
+                InventoryGui.instance.m_player,
+                InventoryGui.instance.m_crafting,
+                InventoryGui.instance.m_info,
+                InventoryGui.instance.m_container
+            };
+
+            float bestX = 0f;
+            float bestXDistance = distance + 1f;
+            foreach (RectTransform target in targets)
+            {
+                if (!TryGetRectInPlayerSpace(target, out Rect targetRect) || !RangesOverlap(panelRect.yMin, panelRect.yMax, targetRect.yMin, targetRect.yMax))
+                    continue;
+
+                ConsiderSnap(targetRect.xMin - panelRect.xMax, ref bestX, ref bestXDistance, distance);
+                ConsiderSnap(targetRect.xMax - panelRect.xMin, ref bestX, ref bestXDistance, distance);
+            }
+
+            if (!snappedDefaultX && bestXDistance <= distance)
+            {
+                offset.x += bestX;
+                panelRect.x += bestX;
+            }
+
+            float bestY = 0f;
+            float bestYDistance = distance + 1f;
+            foreach (RectTransform target in targets)
+            {
+                if (!TryGetRectInPlayerSpace(target, out Rect targetRect) || !RangesOverlap(panelRect.xMin, panelRect.xMax, targetRect.xMin, targetRect.xMax))
+                    continue;
+
+                ConsiderSnap(targetRect.yMin - panelRect.yMax, ref bestY, ref bestYDistance, distance);
+                ConsiderSnap(targetRect.yMax - panelRect.yMin, ref bestY, ref bestYDistance, distance);
+            }
+
+            if (!snappedDefaultY && bestYDistance <= distance)
+                offset.y -= bestY; // Config Y grows down while local UI Y grows up.
+
+            return offset;
         }
 
-        private static bool CanDragPanel => equipmentPanelDraggable.Value || IsPanelDragKeyHeld();
-
-        public sealed class EquipmentPanelDragHandle : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+        private static Rect GetPredictedPanelRect(Vector2 offset)
         {
-            private bool dragging;
-            private float scaleFactor = 1f;
+            Vector2 topLeft = GetPanelPosition(offset);
+            return new Rect(topLeft.x, topLeft.y - PanelHeight, PanelWidth, PanelHeight);
+        }
 
-            public void OnBeginDrag(PointerEventData eventData)
+        private static bool TryGetRectInPlayerSpace(RectTransform target, out Rect rect)
+        {
+            rect = default;
+            RectTransform playerRect = InventoryGui.instance?.m_player;
+            if (!target || !playerRect || target == equipmentBackground || !target.gameObject.activeInHierarchy)
+                return false;
+
+            target.GetWorldCorners(dragRectCorners);
+
+            Vector3 local = playerRect.InverseTransformPoint(dragRectCorners[0]);
+            float minX = local.x;
+            float maxX = local.x;
+            float minY = local.y;
+            float maxY = local.y;
+            for (int i = 1; i < dragRectCorners.Length; i++)
             {
-                if (!CanDragPanel || eventData.button != PointerEventData.InputButton.Left)
-                    return;
-
-                dragging = true;
-                draggedPanelOffset = equipmentPanelOffset.Value;
-                scaleFactor = GetComponentInParent<Canvas>()?.scaleFactor ?? 1f;
-                if (scaleFactor <= 0f)
-                    scaleFactor = 1f;
+                local = playerRect.InverseTransformPoint(dragRectCorners[i]);
+                minX = Mathf.Min(minX, local.x);
+                maxX = Mathf.Max(maxX, local.x);
+                minY = Mathf.Min(minY, local.y);
+                maxY = Mathf.Max(maxY, local.y);
             }
 
-            public void OnDrag(PointerEventData eventData)
+            rect = Rect.MinMaxRect(minX, minY, maxX, maxY);
+            return rect.width > 0f && rect.height > 0f;
+        }
+
+        private static bool RangesOverlap(float minA, float maxA, float minB, float maxB) => maxA >= minB && maxB >= minA;
+
+        private static void ConsiderSnap(float delta, ref float bestDelta, ref float bestDistance, float maxDistance)
+        {
+            float absolute = Mathf.Abs(delta);
+            if (absolute <= maxDistance && absolute < bestDistance)
             {
-                if (!dragging || draggedPanelOffset == null)
-                    return;
-
-                Vector2 delta = eventData.delta / scaleFactor;
-                draggedPanelOffset = draggedPanelOffset.Value + new Vector2(delta.x, -delta.y);
-                UpdateBackground();
-                SetSlotsPositions();
-                MarkDirty();
+                bestDelta = delta;
+                bestDistance = absolute;
             }
+        }
 
-            public void OnEndDrag(PointerEventData eventData) => FinishDrag();
+        private static void PreviewPanelOffset(Vector2 offset)
+        {
+            draggedPanelOffset = offset;
+            UpdateBackground();
+            SetSlotsPositions();
+            MarkDirty();
+        }
 
-            private void OnDisable() => FinishDrag();
+        private static void CommitPanelOffset(Vector2 offset)
+        {
+            draggedPanelOffset = null;
+            equipmentPanelOffset.Value = offset;
+        }
 
-            private void FinishDrag()
-            {
-                if (!dragging)
-                    return;
-
-                dragging = false;
-                Vector2? finalOffset = draggedPanelOffset;
-                draggedPanelOffset = null;
-
-                if (finalOffset.HasValue)
-                    equipmentPanelOffset.Value = finalOffset.Value;
-            }
+        private static void ConfigurePanelDragHandle(GameObject handle)
+        {
+            UIDragging.Configure(
+                handle,
+                () => CanDragPanel,
+                () => equipmentPanelOffset.Value,
+                PreviewPanelOffset,
+                CommitPanelOffset,
+                delta => new Vector2(delta.x, -delta.y),
+                SnapPanelOffset);
         }
 
         public class SidePanelDefaults
@@ -144,6 +218,8 @@ namespace ExtraSlots
 
         internal static void ReorderVanillaSlots()
         {
+            using IDisposable mutation = PlayerInventoryOperations.Batch(PlayerInventory);
+
             var vanillaOrder = VanillaOrder.Split(',').ToList();
 
             var desiredOrder = vanillaSlotsOrder.Value
@@ -190,9 +266,10 @@ namespace ExtraSlots
                 slots[i].UpdateGridPosition();
             }
 
+            ClearCachedItems();
             SetSlotsPositions();
 
-            PlayerInventory?.Changed();
+            PlayerInventoryOperations.MarkChanged(PlayerInventory);
 
             if (vanillaSlotsOrder.Value != VanillaOrder)
                 LogInfo($"Vanilla slots reordered: {desiredOrder.Join()}");
@@ -565,7 +642,7 @@ namespace ExtraSlots
                 if (equipmentBackgroundImage)
                 {
                     equipmentBackgroundImage.raycastTarget = true;
-                    equipmentBkg.gameObject.AddComponent<EquipmentPanelDragHandle>();
+                    ConfigurePanelDragHandle(equipmentBkg.gameObject);
                 }
 
                 inventoryBackgroundImage = inventoryBackground.transform.GetComponent<Image>();
