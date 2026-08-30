@@ -17,7 +17,7 @@ namespace ExtraSlots.Compatibility
                 "Mods compatibility",
                 "Inventory Changed batching",
                 true,
-                "Aggregate multiple player Inventory.Changed() calls into one final notification during ExtraSlots inventory transactions. Disable this as a compatibility diagnostic if another mod depends on intermediate Inventory.Changed callbacks.");
+                "Aggregate ordinary player Inventory.Changed() calls into one final notification during ExtraSlots inventory mutations. Disable this as a compatibility diagnostic if another mod depends on intermediate Inventory.Changed callbacks. Explicit ExtraSlots topology transactions remain atomic.");
 
             EpicLootCompat.CheckForCompatibility();
 
@@ -105,11 +105,10 @@ namespace ExtraSlots.Compatibility
     }
 
     /// <summary>
-    /// Keeps mutation batching optional for compatibility diagnostics and clears ExtraSlots' slot
-    /// cache synchronously for every real player-inventory Changed() call. The synchronous cache
-    /// invalidation is required even while observer notification is batched: vanilla MoveAll can
-    /// add several items before the final Player.OnInventoryChanged callback, and every AddItem must
-    /// see the cells occupied by earlier additions in the same transaction.
+    /// Keeps observer-oriented automatic mutation batching optional for compatibility diagnostics and
+    /// clears ExtraSlots' slot cache synchronously for every real player-inventory Changed() call.
+    /// Explicit PlayerInventoryOperations.Batch() scopes are correctness boundaries for topology
+    /// rebuilds and intentionally remain atomic regardless of this compatibility setting.
     /// </summary>
     internal static class InventoryChangedBatchingCompatibility
     {
@@ -120,13 +119,10 @@ namespace ExtraSlots.Compatibility
         }
 
         [HarmonyPatch]
-        private static class PlayerInventoryOperations_Batch_Optional
+        private static class PlayerInventoryOperations_AutomaticBatch_Optional
         {
-            private static IEnumerable<MethodBase> TargetMethods()
-            {
-                yield return AccessTools.Method(typeof(global::ExtraSlots.PlayerInventoryOperations), "Batch");
-                yield return AccessTools.Method(typeof(global::ExtraSlots.PlayerInventoryOperations), "AutomaticBatch");
-            }
+            private static MethodBase TargetMethod() =>
+                AccessTools.Method(typeof(global::ExtraSlots.PlayerInventoryOperations), "AutomaticBatch");
 
             private static bool Prefix(ref IDisposable __result)
             {
@@ -152,14 +148,21 @@ namespace ExtraSlots.Compatibility
 
     /// <summary>
     /// Small guards around deferred inventory that intentionally stay outside its persistence core:
-    /// preserve an explicit slot return address over a transient physical cell, append death escrow
+    /// preserve an explicit slot return address over a transient physical cell, restore equipped
+    /// state for any equipable deferred item regardless of its physical slot, append death escrow
     /// after the grave's existing grid, and immediately disable FloatingTerrain pickup dummies when
     /// a tombstone is recovered so Player.AutoPickup cannot observe a dummy with a destroyed parent.
     /// </summary>
     internal static class DeferredInventoryRuntimeGuards
     {
+        private sealed class DeferredRestoreMergeState
+        {
+            internal readonly List<(ItemDrop.ItemData Item, int Stack)> Candidates = new List<(ItemDrop.ItemData, int)>();
+        }
+
         private static Inventory tombstoneAppendInventory;
         private static int tombstoneAppendStartHeight;
+        private static int deferredRestoreDepth;
 
         [HarmonyPatch]
         private static class DeferredInventory_CapturePreferredSlot_PreserveExplicitAddress
@@ -180,6 +183,99 @@ namespace ExtraSlots.Compatibility
 
                 __result = slotID;
                 return false;
+            }
+        }
+
+        [HarmonyPatch]
+        private static class DeferredInventory_TryRestoreAvailable_TrackScope
+        {
+            private static MethodBase TargetMethod() =>
+                AccessTools.Method(typeof(global::ExtraSlots.DeferredInventory), "TryRestoreAvailable");
+
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix() => deferredRestoreDepth++;
+
+            [HarmonyFinalizer]
+            [HarmonyPriority(Priority.Last)]
+            private static Exception Finalizer(Exception __exception)
+            {
+                deferredRestoreDepth = Math.Max(0, deferredRestoreDepth - 1);
+                return __exception;
+            }
+        }
+
+        [HarmonyPatch]
+        private static class PlayerInventoryOperations_TryInsertDetached_RestoreEquippedRepresentative
+        {
+            private static MethodBase TargetMethod() =>
+                AccessTools.Method(typeof(global::ExtraSlots.PlayerInventoryOperations), "TryInsertDetachedToBestAvailable");
+
+            private static void Prefix(ItemDrop.ItemData item, bool preferEquipmentSlot, out DeferredRestoreMergeState __state)
+            {
+                __state = null;
+                if (deferredRestoreDepth <= 0
+                    || !preferEquipmentSlot
+                    || item?.m_shared == null
+                    || item.m_shared.m_maxStackSize <= 1
+                    || global::ExtraSlots.Slots.PlayerInventory?.m_inventory == null)
+                {
+                    return;
+                }
+
+                DeferredRestoreMergeState state = new DeferredRestoreMergeState();
+                foreach (ItemDrop.ItemData candidate in global::ExtraSlots.Slots.PlayerInventory.m_inventory)
+                {
+                    if (candidate == null
+                        || ReferenceEquals(candidate, item)
+                        || candidate.m_shared.m_name != item.m_shared.m_name
+                        || candidate.m_quality != item.m_quality
+                        || candidate.m_worldLevel != item.m_worldLevel
+                        || candidate.m_stack >= candidate.m_shared.m_maxStackSize)
+                    {
+                        continue;
+                    }
+
+                    state.Candidates.Add((candidate, candidate.m_stack));
+                }
+
+                __state = state;
+            }
+
+            private static void Postfix(
+                bool preferEquipmentSlot,
+                ref ItemDrop.ItemData placedItem,
+                ref bool fullyInserted,
+                DeferredRestoreMergeState __state)
+            {
+                if (deferredRestoreDepth <= 0 || !preferEquipmentSlot || !fullyInserted)
+                    return;
+
+                Player player = global::ExtraSlots.Slots.CurrentPlayer;
+                if (player == null)
+                    return;
+
+                if (placedItem == null && __state != null)
+                {
+                    ItemDrop.ItemData firstChangedStack = null;
+                    foreach ((ItemDrop.ItemData candidate, int previousStack) in __state.Candidates)
+                    {
+                        if (candidate == null || candidate.m_stack <= previousStack)
+                            continue;
+
+                        if (player.IsItemEquiped(candidate))
+                        {
+                            placedItem = candidate;
+                            break;
+                        }
+
+                        firstChangedStack ??= candidate;
+                    }
+
+                    placedItem ??= firstChangedStack;
+                }
+
+                if (placedItem != null && placedItem.IsEquipable() && !player.IsItemEquiped(placedItem))
+                    player.EquipItem(placedItem, triggerEquipEffects: false);
             }
         }
 

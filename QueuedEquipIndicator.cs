@@ -102,12 +102,10 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.Last)]
             private static void Postfix(InventoryGrid __instance, Player player)
             {
-                if (!IsFadeEnabled())
-                    return;
-
                 if (!player || player.m_actionQueue.Count == 0 || __instance?.m_inventory == null || __instance.m_inventory != player.GetInventory())
                     return;
 
+                bool fadeEnabled = IsFadeEnabled();
                 foreach (InventoryGrid.Element element in __instance.m_elements)
                 {
                     if (element?.m_queued == null || element.m_equiped == null || !element.m_used || !element.m_queued.enabled)
@@ -117,8 +115,10 @@ namespace ExtraSlots
                     if (item == null || !TryGetQueuedAction(player, item, out Player.MinorActionData action, out int actionIndex))
                         continue;
 
+                    // Queued equip/unequip state is independent of the optional alpha fade.
                     element.m_equiped.enabled = action.m_type == Player.MinorActionData.ActionType.Equip;
-                    Update(element.m_queued, action, actionIndex);
+                    if (fadeEnabled)
+                        Update(element.m_queued, action, actionIndex);
                 }
             }
         }
@@ -131,7 +131,7 @@ namespace ExtraSlots
 
             private static void Postfix(HotkeyBar bar, Player player)
             {
-                if (!IsFadeEnabled() || !bar || player == null || player.m_actionQueue.Count == 0)
+                if (!bar || player == null || player.m_actionQueue.Count == 0)
                     return;
 
                 int slotOffset;
@@ -157,6 +157,7 @@ namespace ExtraSlots
                         continue;
 
                     // HotkeyBar.ElementData.m_equiped is a GameObject, unlike InventoryGrid's Image.
+                    // Its queued state must remain correct even when indicator fading is disabled.
                     element.m_equiped.SetActive(action.m_type == Player.MinorActionData.ActionType.Equip);
                 }
             }

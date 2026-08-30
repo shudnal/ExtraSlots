@@ -166,27 +166,47 @@ internal class EquipmentAndQuickSlotsCompat
             return false;
         }
 
-        int imported = InventoryMigration.ImportMissingItemsToDeferred(
-            playerToLoad,
-            items,
-            $"legacy EaQS {key}",
-            item => GetLegacyPreferredSlot(key, item),
-            item => equipItems || item.m_equipped,
-            out bool allRepresented);
-
+        // EaQS 2.x side inventories are authoritative additional inventories, not backups of the
+        // main player inventory. Every serialized entry therefore represents a distinct owned item,
+        // even when an identical item already exists in the main inventory. Do not use the generic
+        // backup deduplication helper here. First require the complete source to materialize, then
+        // adopt every entry independently into durable deferred storage; the normal validator will
+        // immediately restore as many entries as current ExtraSlots topology can accept.
         bool allMaterialized = items.Count == expectedItems;
-        if (allMaterialized && allRepresented)
-        {
-            RemoveLegacyKey(playerToLoad, key);
-            LogMessage($"Legacy EaQS {key} was fully adopted by ExtraSlots ({items.Count} item(s), {imported} newly deferred).");
-        }
-        else if (!allMaterialized)
+        if (!allMaterialized)
         {
             LogWarning($"Legacy EaQS {key} materialized {items.Count}/{expectedItems} item(s). Source data will remain intact so unavailable-prefab items can be recovered later.");
+            return false;
+        }
+
+        int imported = 0;
+        bool allAdopted = true;
+        foreach (ItemDrop.ItemData item in items)
+        {
+            string preferredSlotId = GetLegacyPreferredSlot(key, item);
+            bool restoreEquipped = equipItems || item.m_equipped;
+            if (!DeferredInventory.EnqueueDetached(
+                playerToLoad,
+                item,
+                preferredSlotId,
+                restoreEquipped,
+                $"legacy EaQS {key}"))
+            {
+                allAdopted = false;
+                break;
+            }
+
+            imported++;
+        }
+
+        if (allAdopted)
+        {
+            RemoveLegacyKey(playerToLoad, key);
+            LogMessage($"Legacy EaQS {key} was fully adopted by ExtraSlots ({items.Count} authoritative item(s) deferred for placement).");
         }
         else
         {
-            LogWarning($"Legacy EaQS {key} could not be fully adopted. Source data will remain intact for a later retry.");
+            LogWarning($"Legacy EaQS {key} could not be fully adopted after {imported}/{items.Count} item(s). Source data will remain intact for a later retry.");
         }
 
         if (imported > 0)
@@ -195,7 +215,7 @@ internal class EquipmentAndQuickSlotsCompat
             ItemsSlotsValidation.ValidateSlots();
         }
 
-        return allMaterialized && allRepresented;
+        return allAdopted;
     }
 
     private static bool LoadValue(Player player, string key, out string value)
