@@ -147,6 +147,133 @@ namespace ExtraSlots.Compatibility
     }
 
     /// <summary>
+    /// Makes legacy EaQS 2.x side-inventory adoption transactional from the character-data point of
+    /// view. Individual EnqueueDetached calls persist eagerly for loss safety, so a later failure must
+    /// restore the deferred payload that existed before this authoritative source was processed. This
+    /// keeps the retained legacy source retryable without duplicating entries adopted before the failure.
+    /// </summary>
+    internal static class LegacyEaQSMigrationRetrySafety
+    {
+        private sealed class LegacyMigrationState
+        {
+            internal Player Player;
+            internal bool HadDeferredPayload;
+            internal string DeferredPayload;
+            internal bool RolledBack;
+        }
+
+        [HarmonyPatch]
+        private static class EquipmentAndQuickSlotsCompat_MigrateLegacyInventory_RollbackPartialAdoption
+        {
+            private static MethodBase TargetMethod() =>
+                AccessTools.Method(typeof(EquipmentAndQuickSlotsCompat), "MigrateLegacyInventory");
+
+            private static void Prefix(out LegacyMigrationState __state)
+            {
+                __state = null;
+
+                Player player = EquipmentAndQuickSlotsCompat.playerToLoad;
+                // Character-select preview intentionally returns false but never adopts deferred data.
+                if (player == null || Player.m_localPlayer == null)
+                    return;
+
+                bool hadDeferredPayload = player.m_customData.TryGetValue(global::ExtraSlots.DeferredInventory.CustomDataKey, out string deferredPayload);
+                __state = new LegacyMigrationState
+                {
+                    Player = player,
+                    HadDeferredPayload = hadDeferredPayload,
+                    DeferredPayload = deferredPayload
+                };
+            }
+
+            private static void Postfix(bool __result, LegacyMigrationState __state)
+            {
+                if (!__result)
+                    Rollback(__state);
+            }
+
+            private static Exception Finalizer(Exception __exception, LegacyMigrationState __state)
+            {
+                if (__exception != null)
+                    Rollback(__state);
+
+                return __exception;
+            }
+
+            private static void Rollback(LegacyMigrationState state)
+            {
+                if (state?.Player == null || state.RolledBack)
+                    return;
+
+                state.RolledBack = true;
+                if (state.HadDeferredPayload)
+                    state.Player.m_customData[global::ExtraSlots.DeferredInventory.CustomDataKey] = state.DeferredPayload;
+                else
+                    state.Player.m_customData.Remove(global::ExtraSlots.DeferredInventory.CustomDataKey);
+
+                // Force DeferredInventory's in-memory queue back to the exact pre-migration payload.
+                // The legacy EaQS source key was not removed on failure, so the whole authoritative
+                // side inventory can now be retried safely on the next load.
+                global::ExtraSlots.DeferredInventory.EnsureLoaded(state.Player);
+                global::ExtraSlots.ExtraSlots.LogWarning("Rolled back partial legacy EaQS side-inventory adoption; source data remains intact for a later retry.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles tombstone layouts where Container is a child of TombStone. The original direct-component
+    /// path remains responsible for vanilla/current layouts; this patch supplements only nested layouts
+    /// so the manual Take All auto-equip behavior is not executed twice.
+    /// </summary>
+    internal static class NestedTombstoneCompatibility
+    {
+        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.OnTakeAll))]
+        private static class InventoryGui_OnTakeAll_NestedTombstoneAutoEquip
+        {
+            private static void Prefix(InventoryGui __instance, ref long __state)
+            {
+                __state = -1L;
+                Container container = __instance?.m_currentContainer;
+                if (!global::ExtraSlots.ExtraSlots.slotsTombstoneAutoEquipManualTakeAll.Value
+                    || container == null
+                    || container.GetComponent<TombStone>() != null
+                    || container.GetComponentInParent<TombStone>() == null)
+                {
+                    return;
+                }
+
+                __state = GetItemCount(container.GetInventory());
+            }
+
+            private static void Postfix(InventoryGui __instance, long __state)
+            {
+                if (__state < 0)
+                    return;
+
+                Container container = __instance?.m_currentContainer;
+                if (container == null)
+                    return;
+
+                if (GetItemCount(container.GetInventory()) < __state)
+                    global::ExtraSlots.Slots.CurrentPlayer?.StartCoroutine(global::ExtraSlots.TombStoneInteraction.AutoEquipItemsOnTombstoneTakeAll());
+            }
+
+            private static long GetItemCount(Inventory inventory)
+            {
+                long result = 0;
+                if (inventory?.m_inventory == null)
+                    return result;
+
+                foreach (ItemDrop.ItemData item in inventory.m_inventory)
+                    if (item != null)
+                        result += item.m_stack;
+
+                return result;
+            }
+        }
+    }
+
+    /// <summary>
     /// Small guards around deferred inventory that intentionally stay outside its persistence core:
     /// preserve an explicit slot return address over a transient physical cell, restore equipped
     /// state for any equipable deferred item regardless of its physical slot, append death escrow
