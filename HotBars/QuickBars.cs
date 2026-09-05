@@ -40,6 +40,7 @@ public static class QuickBars
     private static readonly Dictionary<HotkeyBar, HotkeyBarRefreshGate> refreshGates = new Dictionary<HotkeyBar, HotkeyBarRefreshGate>();
     private static readonly Dictionary<ItemDrop.ItemData, Vector2i> projectedItemPositions = new Dictionary<ItemDrop.ItemData, Vector2i>();
     private static readonly List<ItemDrop.ItemData> itemsToUse = new List<ItemDrop.ItemData>();
+    private static readonly Vector3[] dragBoundsCorners = new Vector3[4];
 
     private sealed class HotkeyBarRefreshGate
     {
@@ -294,44 +295,91 @@ public static class QuickBars
         }
     }
 
-    private static void ConfigureHotbarDragHandle(HotkeyBar bar, GameObject handle)
+    private static void ConfigureHotbarDragHandle(HotkeyBar bar)
     {
-        if (!bar || !handle || bar.name == vanillaBarName || handle.GetComponent<UIDragging.DragHandle>() != null)
+        if (!bar || bar.name == vanillaBarName)
             return;
 
-        Func<Vector2> getPosition;
-        Action<Vector2> commitPosition;
+        UIDragging.DragHandle dragHandle = bar.GetComponent<UIDragging.DragHandle>();
+        if (dragHandle == null || dragHandle.GetPosition == null)
+        {
+            Func<Vector2> getPosition;
+            Action<Vector2> commitPosition;
 
-        if (bar.name == QuickSlotsHotBar.barName)
-        {
-            getPosition = () => ExtraSlots.quickSlotsHotBarOffset.Value;
-            commitPosition = value => ExtraSlots.quickSlotsHotBarOffset.Value = value;
-        }
-        else if (bar.name == AmmoSlotsHotBar.barName)
-        {
-            getPosition = () => ExtraSlots.ammoSlotsHotBarOffset.Value;
-            commitPosition = value => ExtraSlots.ammoSlotsHotBarOffset.Value = value;
-        }
-        else if (bar.name == FoodSlotsHotBar.barName)
-        {
-            getPosition = () => ExtraSlots.foodSlotsHotBarOffset.Value;
-            commitPosition = value => ExtraSlots.foodSlotsHotBarOffset.Value = value;
-        }
-        else
-        {
-            return;
-        }
-
-        UIDragging.Configure(
-            handle,
-            () => UIDragging.CanDrag(ExtraSlots.panelsDraggable.Value, ExtraSlots.panelsDragKey.Value),
-            getPosition,
-            value =>
+            if (bar.name == QuickSlotsHotBar.barName)
             {
-                if (bar.transform is RectTransform rect)
-                    rect.anchoredPosition = value;
-            },
-            commitPosition);
+                getPosition = () => ExtraSlots.quickSlotsHotBarOffset.Value;
+                commitPosition = value => ExtraSlots.quickSlotsHotBarOffset.Value = value;
+            }
+            else if (bar.name == AmmoSlotsHotBar.barName)
+            {
+                getPosition = () => ExtraSlots.ammoSlotsHotBarOffset.Value;
+                commitPosition = value => ExtraSlots.ammoSlotsHotBarOffset.Value = value;
+            }
+            else if (bar.name == FoodSlotsHotBar.barName)
+            {
+                getPosition = () => ExtraSlots.foodSlotsHotBarOffset.Value;
+                commitPosition = value => ExtraSlots.foodSlotsHotBarOffset.Value = value;
+            }
+            else
+            {
+                return;
+            }
+
+            // Attach directly to the persistent panel, never to disposable/rebuilt slot elements.
+            // Remove any obsolete element handles before they can win EventSystem drag resolution.
+            foreach (UIDragging.DragHandle oldHandle in bar.GetComponentsInChildren<UIDragging.DragHandle>(true))
+            {
+                if (oldHandle.gameObject == bar.gameObject)
+                    continue;
+
+                oldHandle.enabled = false;
+                UnityEngine.Object.Destroy(oldHandle);
+            }
+
+            dragHandle = UIDragging.Configure(
+                bar.gameObject,
+                () => Player.m_localPlayer && !Player.m_localPlayer.IsDead()
+                    && InventoryGui.instance?.m_dragItem == null
+                    && UIDragging.CanDrag(ExtraSlots.panelsDraggable.Value, ExtraSlots.panelsDragKey.Value),
+                getPosition,
+                value =>
+                {
+                    if (bar.transform is RectTransform rect)
+                        rect.anchoredPosition = value;
+                },
+                commitPosition,
+                movementSpace: bar.transform.parent as RectTransform);
+        }
+
+        // Vanilla hotbar graphics need not be raycast targets. Provide one conditional surface whose
+        // bounds follow the actual wrapped/upward layout, including gaps between slot elements.
+        bool hasBounds = false;
+        Vector2 min = Vector2.zero;
+        Vector2 max = Vector2.zero;
+        foreach (HotkeyBar.ElementData element in bar.m_elements)
+        {
+            if (element?.m_go == null || !element.m_go.activeSelf || element.m_go.transform is not RectTransform rect)
+                continue;
+
+            rect.GetWorldCorners(dragBoundsCorners);
+            foreach (Vector3 corner in dragBoundsCorners)
+            {
+                Vector2 point = bar.transform.InverseTransformPoint(corner);
+                if (!hasBounds)
+                {
+                    min = max = point;
+                    hasBounds = true;
+                }
+                else
+                {
+                    min = Vector2.Min(min, point);
+                    max = Vector2.Max(max, point);
+                }
+            }
+        }
+
+        UIDragging.SetRaycastSurface(dragHandle, new Rect(min, max - min), hasBounds);
     }
 
     private static void ProjectGridPositionsForBar(List<ItemDrop.ItemData> items, string name)
@@ -719,7 +767,6 @@ public static class QuickBars
 
                 ElementExtraData extraData = GetElementExtraData(elementData);
                 EquipmentPanel.SetSlotLabel(extraData.BindingRect, extraData.BindingText, slot, hotbarElement: true);
-                ConfigureHotbarDragHandle(__instance, elementData.m_go);
 
                 if (!elementData.m_used)
                 {
@@ -742,6 +789,8 @@ public static class QuickBars
                 elementData.m_go.transform.localPosition =
                     new Vector3(index % widthInElements, (fillUp ? 1 : -1) * (index / widthInElements), 0f) * elementSpace;
             }
+
+            ConfigureHotbarDragHandle(__instance);
         }
 
         public static Exception Finalizer(Exception __exception)

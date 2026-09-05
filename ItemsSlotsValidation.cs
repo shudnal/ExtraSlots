@@ -12,6 +12,7 @@ namespace ExtraSlots
     public static class ItemsSlotsValidation
     {
         private static int playerLoadDepth;
+        private static bool validationInProgress;
 
         public static void ValidateSlots() => SlotsValidation.MarkDirty();
         public static void ValidateItems() => ItemsValidation.MarkDirty();
@@ -21,27 +22,37 @@ namespace ExtraSlots
             // Player.Load has several independent compatibility/topology postfixes. They are allowed
             // to mark validation dirty, but the actual pass must run only after all of them finish so
             // restore-slot metadata cannot be pruned between reconciliation passes.
-            if (playerLoadDepth > 0 || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading || PlayerInventory == null)
+            if (validationInProgress || playerLoadDepth > 0 || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading || PlayerInventory == null)
                 return;
 
             if (!ItemsValidation.IsDirty && !SlotsValidation.IsDirty)
                 return;
 
-            const int maxPasses = 64;
-            for (int pass = 0; pass < maxPasses; pass++)
+            // Equip and inventory callbacks can call API.UpdateSlots synchronously. Let them mark
+            // work dirty, but never restore the same deferred entry recursively before it is consumed.
+            validationInProgress = true;
+            try
             {
-                ItemsValidation.Validate();
-                SlotsValidation.Validate();
+                const int maxPasses = 64;
+                for (int pass = 0; pass < maxPasses; pass++)
+                {
+                    ItemsValidation.Validate();
+                    SlotsValidation.Validate();
 
-                bool placementValid = IsInventoryPlacementValid(out _, out _);
-                bool restoredDeferred = placementValid && DeferredInventory.TryRestoreAvailable();
+                    bool placementValid = IsInventoryPlacementValid(out _, out _);
+                    bool restoredDeferred = placementValid && DeferredInventory.TryRestoreAvailable();
 
-                if (!ItemsValidation.IsDirty && !SlotsValidation.IsDirty && !restoredDeferred)
-                    return;
+                    if (!ItemsValidation.IsDirty && !SlotsValidation.IsDirty && !restoredDeferred)
+                        return;
+                }
+
+                if (ItemsValidation.IsDirty || SlotsValidation.IsDirty)
+                    LogWarning("Inventory validation reached its safety pass limit before reaching a stable state.");
             }
-
-            if (ItemsValidation.IsDirty || SlotsValidation.IsDirty)
-                LogWarning("Inventory validation reached its safety pass limit before reaching a stable state.");
+            finally
+            {
+                validationInProgress = false;
+            }
         }
 
         private static bool TryPlaceEquippedItem(ItemDrop.ItemData item)

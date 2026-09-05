@@ -285,14 +285,32 @@ namespace ExtraSlots
                 if (PlayerInventory == null)
                     return;
 
-                if (Player.m_enableAutoPickup && __instance.m_body.transform.root.gameObject != __instance.gameObject && __instance.TryGetComponent(out FloatingTerrain floatingTerrain))
-                {
-                    LogDebug($"Destroyed tombstone component {__instance.m_body?.gameObject} to prevent NullReferenceException on AutoPickup");
-                    floatingTerrain.m_lastHeightmap = null;
-                    UnityEngine.Object.Destroy(__instance.m_body?.gameObject);
-                }
-
                 CurrentPlayer?.StartCoroutine(AutoEquipItemsOnTombstoneTakeAll());
+            }
+        }
+
+        [HarmonyPatch(typeof(FloatingTerrain), nameof(FloatingTerrain.OnDestroy))]
+        private static class FloatingTerrain_OnDestroy_DisableTombstonePickupDummy
+        {
+            private static void Prefix(FloatingTerrain __instance)
+            {
+                if (__instance == null || __instance.GetComponentInParent<TombStone>() == null)
+                    return;
+
+                // Destroying the dummy is deferred by Unity. Disable its pickup/physics surface
+                // synchronously while the parent still exists. This covers manual Take All, automatic
+                // recovery and scene unload without destroying the body of a still-live grave.
+                if (__instance.m_dummyCollider)
+                    __instance.m_dummyCollider.enabled = false;
+                if (__instance.m_dummyBody)
+                    __instance.m_dummyBody.detectCollisions = false;
+
+                if (__instance.m_dummy)
+                    __instance.m_dummy.gameObject.SetActive(false);
+                else if (__instance.m_dummyBody)
+                    __instance.m_dummyBody.gameObject.SetActive(false);
+
+                // Leave the references intact for FloatingTerrain.OnDestroy to destroy the dummy.
             }
         }
 
@@ -304,7 +322,7 @@ namespace ExtraSlots
                 __state = -1L;
                 if (!slotsTombstoneAutoEquipManualTakeAll.Value
                     || __instance.m_currentContainer == null
-                    || __instance.m_currentContainer.GetComponent<TombStone>() == null)
+                    || __instance.m_currentContainer.GetComponentInParent<TombStone>() == null)
                     return;
 
                 __state = __instance.m_currentContainer.GetInventory().GetAllItems().Sum(item => (long)item.m_stack);
@@ -453,6 +471,12 @@ namespace ExtraSlots
 
                 float effectiveMaxCarryWeight = player.GetMaxCarryWeight();
                 HashSet<int> accountedEffects = new HashSet<int>();
+
+                // GetMaxCarryWeight already includes every active status effect, not just equipment.
+                // A second grave refreshes an active Corpse Run; it does not grant another copy.
+                foreach (StatusEffect activeEffect in player.GetSEMan().GetStatusEffects())
+                    if (activeEffect != null)
+                        accountedEffects.Add(activeEffect.NameHash());
 
                 foreach (ItemDrop.ItemData equipped in playerInventory.m_inventory)
                 {

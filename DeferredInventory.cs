@@ -234,8 +234,13 @@ namespace ExtraSlots
                 Inventory singleItemInventory = new Inventory(CustomDataKey, null, 1, 1);
                 singleItemInventory.Load(itemPackage);
                 item = singleItemInventory.m_inventory.FirstOrDefault();
-                if (item == null)
+                if (singleItemInventory.m_inventory.Count != 1 || item == null
+                    || !string.Equals(item.m_dropPrefab?.name, entry.PrefabName, StringComparison.Ordinal))
+                {
+                    LogWarning($"Deferred item {entry.PrefabName} did not materialize as the expected single item. Original package will be preserved.");
+                    item = null;
                     return false;
+                }
 
                 singleItemInventory.m_inventory.Clear();
                 item.m_equipped = false;
@@ -264,17 +269,16 @@ namespace ExtraSlots
             if (item == null)
                 return "";
 
-            if (GetItemSlot(item) is Slot currentSlot && !currentSlot.IsEmptySlot)
-                return currentSlot.ID;
-
+            // A saved return address is stronger evidence than a transient cell during a rebuild.
             if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID)
                 && item.m_customData.TryGetValue(customKeySlotID, out string slotID)
+                && !string.IsNullOrEmpty(slotID)
                 && playerID == CurrentPlayerProfile?.GetPlayerID().ToString())
             {
                 return slotID;
             }
 
-            return "";
+            return GetItemSlot(item) is Slot currentSlot && !currentSlot.IsEmptySlot ? currentSlot.ID : "";
         }
 
         private static void ApplyPreferredSlotMetadata(Player player, ItemDrop.ItemData item, string preferredSlotId)
@@ -305,6 +309,8 @@ namespace ExtraSlots
             InventoryGui inventoryGui = InventoryGui.instance;
             if (inventoryGui != null && ReferenceEquals(inventoryGui.m_dragItem, item))
                 inventoryGui.SetupDragItem(null, null, 1);
+            if (inventoryGui != null && ReferenceEquals(inventoryGui.m_splitItem, item))
+                inventoryGui.OnSplitCancel();
         }
 
         internal static bool DeferExisting(ItemDrop.ItemData item, string reason = null, string preferredSlotId = null, bool restoreEquipped = false)
@@ -487,58 +493,73 @@ namespace ExtraSlots
             bool changed = false;
             using (PlayerInventoryOperations.Batch(PlayerInventory))
             {
-                for (int i = 0; i < entries.Count;)
+                try
                 {
-                    DeferredEntry entry = entries[i];
-                    if (!TryMaterialize(entry, out ItemDrop.ItemData item))
+                    for (int i = 0; i < entries.Count;)
                     {
-                        i++;
-                        continue;
-                    }
-
-                    ApplyPreferredSlotMetadata(player, item, entry.PreferredSlotId);
-                    Compatibility.EquipmentAndQuickSlotsCompat.ApplyCurrentSlotMetadata(player, item);
-                    Compatibility.InventorySlotsCompat.ApplyCurrentSlotMetadata(player, item);
-
-                    if (!PlayerInventoryOperations.TryInsertDetachedToBestAvailable(item, entry.PreferredSlotId, entry.RestoreEquipped, out ItemDrop.ItemData placedItem, out bool fullyInserted, out bool madeProgress))
-                    {
-                        i++;
-                        continue;
-                    }
-
-                    if (fullyInserted)
-                    {
-                        entries.RemoveAt(i);
-                        revision++;
-                        changed = true;
-
-                        if (entry.RestoreEquipped && placedItem != null
-                            && GetItemSlot(placedItem) is Slot placedSlot && placedSlot.IsEquipmentSlot
-                            && !player.IsItemEquiped(placedItem))
+                        DeferredEntry entry = entries[i];
+                        if (!TryMaterialize(entry, out ItemDrop.ItemData item))
                         {
-                            player.EquipItem(placedItem, triggerEquipEffects: false);
+                            i++;
+                            continue;
                         }
 
-                        LogMessage($"Deferred item {entry.PrefabName} was restored to player inventory.");
-                        continue;
-                    }
+                        ApplyPreferredSlotMetadata(player, item, entry.PreferredSlotId);
+                        Compatibility.EquipmentAndQuickSlotsCompat.ApplyCurrentSlotMetadata(player, item);
+                        Compatibility.InventorySlotsCompat.ApplyCurrentSlotMetadata(player, item);
 
-                    if (madeProgress && item.m_stack > 0)
-                    {
-                        if (TryCreateEntry(item, entry.PreferredSlotId, entry.RestoreEquipped, out DeferredEntry updatedEntry))
+                        if (!PlayerInventoryOperations.TryInsertDetachedToBestAvailable(item, entry.PreferredSlotId, entry.RestoreEquipped, out ItemDrop.ItemData placedItem, out bool fullyInserted, out bool madeProgress))
                         {
-                            entries[i] = updatedEntry;
+                            i++;
+                            continue;
+                        }
+
+                        if (fullyInserted)
+                        {
+                            entries.RemoveAt(i);
                             revision++;
                             changed = true;
-                        }
-                    }
 
-                    i++;
+                            if (entry.RestoreEquipped && placedItem != null && placedItem.IsEquipable()
+                                && PlayerInventory.ContainsItem(placedItem) && !player.IsItemEquiped(placedItem))
+                            {
+                                // The item already belongs to the live inventory, including a representative
+                                // stack after a full merge. An equip-provider failure must not import it twice.
+                                try
+                                {
+                                    player.EquipItem(placedItem, triggerEquipEffects: false);
+                                }
+                                catch (Exception ex)
+                                {
+                                    LogWarning($"Deferred item {entry.PrefabName} was restored, but could not be equipped:\n{ex}");
+                                }
+                            }
+
+                            LogMessage($"Deferred item {entry.PrefabName} was restored to player inventory.");
+                            continue;
+                        }
+
+                        if (madeProgress && item.m_stack > 0)
+                        {
+                            if (TryCreateEntry(item, entry.PreferredSlotId, entry.RestoreEquipped, out DeferredEntry updatedEntry))
+                            {
+                                entries[i] = updatedEntry;
+                                revision++;
+                                changed = true;
+                            }
+                        }
+
+                        i++;
+                    }
+                }
+                finally
+                {
+                    // Persist ownership before the outer batch notifies third-party observers.
+                    // Also flush consumed entries if a later callback interrupts this restoration pass.
+                    if (changed)
+                        Flush(player);
                 }
             }
-
-            if (changed)
-                Flush(player);
 
             lastAttemptRevision = revision;
             lastRestorationFingerprint = ComputeRestorationFingerprint();
@@ -552,6 +573,7 @@ namespace ExtraSlots
             if (player == null || graveInventory == null || !EnsureLoaded(player) || entries.Count == 0)
                 return false;
 
+            int appendStartHeight = graveInventory.m_height;
             bool changed = false;
             for (int i = 0; i < entries.Count;)
             {
@@ -565,11 +587,11 @@ namespace ExtraSlots
                 ApplyPreferredSlotMetadata(player, item, entry.PreferredSlotId);
                 item.m_equipped = false;
 
-                Vector2i target = graveInventory.FindEmptySlot(topFirst: true);
+                Vector2i target = FindTombstoneAppendPosition(graveInventory, appendStartHeight);
                 if (target.x < 0)
                 {
                     graveInventory.m_height++;
-                    target = graveInventory.FindEmptySlot(topFirst: true);
+                    target = FindTombstoneAppendPosition(graveInventory, appendStartHeight);
                 }
 
                 // A materialized deferred entry always represents one valid vanilla stack. Put the
@@ -594,6 +616,16 @@ namespace ExtraSlots
                 Flush(player);
 
             return changed;
+        }
+
+        private static Vector2i FindTombstoneAppendPosition(Inventory inventory, int startHeight)
+        {
+            for (int y = Math.Max(0, startHeight); y < inventory.m_height; y++)
+                for (int x = 0; x < inventory.m_width; x++)
+                    if (inventory.GetItemAt(x, y) == null)
+                        return new Vector2i(x, y);
+
+            return emptyPosition;
         }
 
         [HarmonyPatch(typeof(Player), nameof(Player.Load))]

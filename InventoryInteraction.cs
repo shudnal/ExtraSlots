@@ -279,7 +279,23 @@ namespace ExtraSlots
                 return item.m_quality == expectedQuality && item.m_variant == expectedVariant;
             }
 
-            internal static void HandleReplacementAddResult(ItemDrop.ItemData item, ref bool result)
+            internal static bool IsReplacementRequest(string name, int quality, int variant) =>
+                IsActive && PlayerInventory != null && !PlayerInventory.ContainsItem(UpgradeSourceItem)
+                && string.Equals(name, expectedPrefabName, StringComparison.Ordinal)
+                && quality == expectedQuality && variant == expectedVariant;
+
+            internal static void ObserveReplacementCreation(ItemDrop.ItemData result)
+            {
+                if (!IsActive || result == null)
+                    return;
+
+                // The successful AddItem(name, ...) call is authoritative even if another mod changed
+                // the output's prefab, quality or variant. Do not roll the original back over that output.
+                replacementAccepted = true;
+                acceptedReplacement = PlayerInventory?.ContainsItem(result) == true ? result : null;
+            }
+
+            internal static void HandleReplacementAddResult(ItemDrop.ItemData item, bool originalRan, ref bool result)
             {
                 if (!IsExpectedReplacement(item) || replacementAccepted)
                     return;
@@ -290,6 +306,11 @@ namespace ExtraSlots
                     acceptedReplacement = item;
                     return;
                 }
+
+                // A foreign prefix may deliberately reject the insertion for reasons other than
+                // capacity. Preserve that rejection and let the scoped finalizer restore the original.
+                if (!originalRan)
+                    return;
 
                 if (CurrentPlayer != null
                     && DeferredInventory.EnqueueDetached(
@@ -315,56 +336,77 @@ namespace ExtraSlots
 
                 Player player = CurrentPlayer;
                 Inventory inventory = PlayerInventory;
+                ItemDrop.ItemData originalItem = UpgradeSourceItem;
+                ItemDrop.ItemData originalSnapshot = sourceSnapshot;
+                ItemDrop.ItemData replacement = acceptedReplacement;
+                string preferredSlotId = sourceSlotId;
+                bool restoreEquipped = wasEquipped;
+                bool replacementWasAccepted = replacementAccepted;
+
+                // Close the scope before invoking providers or observers. A failure while restoring
+                // equipment must never make a second finalizer clone the original item again.
+                ResetState();
 
                 if (player != null && inventory != null)
                 {
-                    if (!replacementAccepted && !inventory.ContainsItem(UpgradeSourceItem) && sourceSnapshot != null)
+                    if (!replacementWasAccepted && !inventory.ContainsItem(originalItem) && originalSnapshot != null)
                     {
-                        ItemDrop.ItemData restoredOriginal = sourceSnapshot.Clone();
+                        ItemDrop.ItemData restoredOriginal = originalSnapshot.Clone();
                         restoredOriginal.m_equipped = false;
                         restoredOriginal.m_customData[customKeyPlayerID] = player.GetPlayerID().ToString();
-                        restoredOriginal.m_customData[customKeySlotID] = sourceSlotId;
+                        restoredOriginal.m_customData[customKeySlotID] = preferredSlotId;
 
-                        PlayerInventoryOperations.TryInsertDetachedToBestAvailable(
-                            restoredOriginal,
-                            sourceSlotId,
-                            wasEquipped,
-                            out ItemDrop.ItemData placedOriginal,
-                            out bool fullyRestored,
-                            out _);
-
-                        if (!fullyRestored)
+                        // Preserve ownership before invoking slot validators or equipment providers.
+                        // The normal validator restores the rollback item on its next pass.
+                        if (!DeferredInventory.EnqueueDetached(player, restoredOriginal, preferredSlotId, restoreEquipped, "upgrade rollback"))
                         {
-                            if (!DeferredInventory.EnqueueDetached(player, restoredOriginal, sourceSlotId, wasEquipped, "upgrade rollback"))
+                            using (PlayerInventoryOperations.Batch(inventory))
                             {
-                                // Deferred persistence itself is unavailable. Keep the original item
-                                // represented inside physical inventory bounds as the final loss-prevention
-                                // fallback; an overlap is preferable to dropping the item or breaking the
-                                // inventory UI with a persistent out-of-bounds coordinate.
-                                Vector2i emergencyPosition = new Vector2i(InventoryWidth - 1, InventoryHeightFull - 1);
-                                PlayerInventoryOperations.InsertForReconciliation(restoredOriginal, emergencyPosition);
-                                LogWarning($"Upgrade rollback for {restoredOriginal.m_shared.m_name} had to use emergency in-grid reconciliation staging because deferred persistence was unavailable.");
+                                bool fullyRestored = false;
+                                ItemDrop.ItemData placedOriginal = null;
+                                try
+                                {
+                                    PlayerInventoryOperations.TryInsertDetachedToBestAvailable(
+                                        restoredOriginal,
+                                        preferredSlotId,
+                                        restoreEquipped,
+                                        out placedOriginal,
+                                        out fullyRestored,
+                                        out _);
+                                }
+                                catch (Exception ex)
+                                {
+                                    fullyRestored = inventory.ContainsItem(restoredOriginal);
+                                    LogWarning($"Failed to place an upgrade rollback item normally:\n{ex}");
+                                }
+
+                                if (!fullyRestored)
+                                {
+                                    // Only corrupt/unavailable escrow reaches this emergency path.
+                                    Vector2i emergencyPosition = new Vector2i(InventoryWidth - 1, InventoryHeightFull - 1);
+                                    PlayerInventoryOperations.InsertForReconciliation(restoredOriginal, emergencyPosition);
+                                    LogWarning($"Upgrade rollback for {restoredOriginal.m_shared.m_name} used emergency in-grid reconciliation staging because deferred persistence was unavailable.");
+                                }
+                                else if (restoreEquipped && placedOriginal != null && placedOriginal.IsEquipable() && !player.IsItemEquiped(placedOriginal))
+                                {
+                                    player.EquipItem(placedOriginal, triggerEquipEffects: false);
+                                }
                             }
                         }
-                        else if (wasEquipped && placedOriginal != null && placedOriginal.IsEquipable() && !player.IsItemEquiped(placedOriginal))
-                        {
-                            player.EquipItem(placedOriginal, triggerEquipEffects: false);
-                        }
                     }
-                    else if (replacementAccepted && wasEquipped && acceptedReplacement != null
-                        && inventory.ContainsItem(acceptedReplacement) && !player.IsItemEquiped(acceptedReplacement))
+                    else if (replacementWasAccepted && restoreEquipped && replacement != null
+                        && inventory.ContainsItem(replacement) && !player.IsItemEquiped(replacement))
                     {
-                        player.EquipItem(acceptedReplacement, triggerEquipEffects: false);
+                        player.EquipItem(replacement, triggerEquipEffects: false);
                     }
                 }
 
                 ItemsSlotsValidation.ValidateItems();
                 ItemsSlotsValidation.ValidateSlots();
-                ResetState();
             }
 
-            private static void Postfix() => Complete();
-
+            // Run after all crafting postfixes, not before a mod can finish processing its output.
+            [HarmonyPriority(Priority.Last)]
             private static Exception Finalizer(Exception __exception)
             {
                 try
@@ -665,7 +707,7 @@ namespace ExtraSlots
                         __result = true;
                 }
 
-                InventoryGui_DoCrafting_UpgradeInSlot.HandleReplacementAddResult(item, ref __result);
+                InventoryGui_DoCrafting_UpgradeInSlot.HandleReplacementAddResult(item, __runOriginal, ref __result);
             }
         }
 
@@ -714,10 +756,10 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.Last)]
-            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, ref bool __result)
+            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, bool __runOriginal, ref bool __result)
             {
                 if (__instance == PlayerInventory)
-                    InventoryGui_DoCrafting_UpgradeInSlot.HandleReplacementAddResult(item, ref __result);
+                    InventoryGui_DoCrafting_UpgradeInSlot.HandleReplacementAddResult(item, __runOriginal, ref __result);
             }
         }
 
@@ -735,8 +777,10 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory __instance, string name)
+            private static void Prefix(Inventory __instance, string name, int quality, int variant, out bool __state)
             {
+                __state = __instance == PlayerInventory
+                    && InventoryGui_DoCrafting_UpgradeInSlot.IsReplacementRequest(name, quality, variant);
                 itemToFindSlot = null;
                 upgradePrecheckPending = false;
 
@@ -761,10 +805,15 @@ namespace ExtraSlots
                 upgradePrecheckPending = false;
             }
 
-            private static void Finalizer()
+            [HarmonyPriority(Priority.Last)]
+            private static Exception Finalizer(ItemDrop.ItemData __result, bool __state, Exception __exception)
             {
                 itemToFindSlot = null;
                 upgradePrecheckPending = false;
+                if (__state)
+                    InventoryGui_DoCrafting_UpgradeInSlot.ObserveReplacementCreation(__result);
+
+                return __exception;
             }
         }
 

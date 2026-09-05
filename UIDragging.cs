@@ -1,9 +1,8 @@
 ﻿using BepInEx.Configuration;
-using HarmonyLib;
 using System;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace ExtraSlots
 {
@@ -17,6 +16,9 @@ namespace ExtraSlots
             internal Action<Vector2> CommitPosition;
             internal Func<Vector2, Vector2> ConvertDelta;
             internal Func<Vector2, Vector2> SnapPosition;
+            internal RectTransform MovementSpace;
+            internal RectTransform RaycastSurface;
+            internal bool IsDragging => dragging;
 
             private bool dragging;
             private float canvasScale = 1f;
@@ -42,6 +44,15 @@ namespace ExtraSlots
                     return;
 
                 Vector2 delta = eventData.delta / canvasScale;
+                if (MovementSpace
+                    && RectTransformUtility.ScreenPointToLocalPointInRectangle(MovementSpace, eventData.position, eventData.pressEventCamera, out Vector2 current)
+                    && RectTransformUtility.ScreenPointToLocalPointInRectangle(MovementSpace, eventData.position - eventData.delta, eventData.pressEventCamera, out Vector2 previous))
+                {
+                    // Offsets are stored in parent coordinates. Canvas.scaleFactor alone does not
+                    // account for a scaled HUD/inventory parent or a non-overlay canvas.
+                    delta = current - previous;
+                }
+
                 if (ConvertDelta != null)
                     delta = ConvertDelta(delta);
 
@@ -66,6 +77,16 @@ namespace ExtraSlots
             private Vector2 ApplySnap(Vector2 position) => SnapPosition != null ? SnapPosition(position) : position;
         }
 
+        // Only the drag surface is filtered. Other graphics/controls on the panel keep their normal
+        // raycast behavior, and this transparent surface cannot intercept clicks without the drag key.
+        internal sealed class DragSurface : MonoBehaviour, ICanvasRaycastFilter
+        {
+            internal DragHandle Handle;
+
+            public bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera) =>
+                Handle && Handle.isActiveAndEnabled && (Handle.IsDragging || Handle.CanDrag?.Invoke() == true);
+        }
+
         internal static DragHandle Configure(
             GameObject handleObject,
             Func<bool> canDrag,
@@ -73,7 +94,8 @@ namespace ExtraSlots
             Action<Vector2> previewPosition,
             Action<Vector2> commitPosition,
             Func<Vector2, Vector2> convertDelta = null,
-            Func<Vector2, Vector2> snapPosition = null)
+            Func<Vector2, Vector2> snapPosition = null,
+            RectTransform movementSpace = null)
         {
             if (!handleObject)
                 return null;
@@ -85,7 +107,43 @@ namespace ExtraSlots
             handle.CommitPosition = commitPosition;
             handle.ConvertDelta = convertDelta;
             handle.SnapPosition = snapPosition;
+            handle.MovementSpace = movementSpace ? movementSpace : handleObject.transform.parent as RectTransform;
             return handle;
+        }
+
+        internal static void SetRaycastSurface(DragHandle handle, Rect bounds, bool visible)
+        {
+            if (!handle || handle.transform is not RectTransform panel)
+                return;
+
+            if (!handle.RaycastSurface && visible)
+            {
+                GameObject surface = new GameObject("ExtraSlotsDragSurface", typeof(RectTransform), typeof(Image), typeof(DragSurface));
+                surface.layer = handle.gameObject.layer;
+                handle.RaycastSurface = surface.GetComponent<RectTransform>();
+                handle.RaycastSurface.SetParent(panel, worldPositionStays: false);
+                // Intercept a drag over the whole panel only while dragging is explicitly allowed.
+                handle.RaycastSurface.SetAsLastSibling();
+                Image image = surface.GetComponent<Image>();
+                image.color = Color.clear;
+                image.raycastTarget = true;
+                surface.GetComponent<DragSurface>().Handle = handle;
+            }
+
+            if (!handle.RaycastSurface)
+                return;
+
+            handle.RaycastSurface.gameObject.SetActive(visible);
+            if (!visible)
+                return;
+
+            // bounds is expressed relative to the panel's local origin, not its lower-left corner.
+            handle.RaycastSurface.anchorMin = panel.pivot;
+            handle.RaycastSurface.anchorMax = panel.pivot;
+            handle.RaycastSurface.pivot = Vector2.zero;
+            handle.RaycastSurface.anchoredPosition = bounds.min;
+            handle.RaycastSurface.sizeDelta = bounds.size;
+            handle.RaycastSurface.SetAsLastSibling();
         }
 
         internal static bool CanDrag(bool alwaysDraggable, KeyboardShortcut dragKey) => alwaysDraggable || IsShortcutHeld(dragKey);
@@ -100,22 +158,6 @@ namespace ExtraSlots
                     return false;
 
             return true;
-        }
-
-        [HarmonyPatch]
-        private static class QuickBars_ConfigureHotbarDragHandle_UseBarRoot
-        {
-            private static MethodBase TargetMethod() =>
-                AccessTools.Method(typeof(HotBars.QuickBars), "ConfigureHotbarDragHandle");
-
-            private static void Prefix(HotkeyBar bar, ref GameObject handle)
-            {
-                // Pointer drag handlers are resolved through the clicked object's hierarchy. Attach
-                // one handler to the whole hotbar instead of attaching handlers to individual slot
-                // buttons; this makes the complete panel the drag surface and avoids competing item UI.
-                if (bar)
-                    handle = bar.gameObject;
-            }
         }
     }
 }

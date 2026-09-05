@@ -81,7 +81,16 @@ namespace ExtraSlots
         private static readonly HashSet<Inventory> pendingChanged = new HashSet<Inventory>();
 
         internal static IDisposable Batch(Inventory inventory = null) => new ChangeBatch(inventory ?? PlayerInventory);
-        private static IDisposable AutomaticBatch(Inventory inventory) => new ChangeBatch(inventory);
+        private sealed class NoopChangeBatch : IDisposable
+        {
+            internal static readonly NoopChangeBatch Instance = new NoopChangeBatch();
+            public void Dispose() { }
+        }
+
+        private static IDisposable AutomaticBatch(Inventory inventory) =>
+            Compatibility.CompatibilityHelper.InventoryChangedBatching?.Value == false
+                ? NoopChangeBatch.Instance
+                : new ChangeBatch(inventory);
 
         // Placement invariant: every item belongs to exactly one in-bounds cell. A regular cell
         // must be inside the visible player region; a hidden cell must resolve to one existing,
@@ -532,11 +541,11 @@ namespace ExtraSlots
                     target = quickSlot.GridPosition;
                 if (target.x < 0 && TryFindFreeSlotForItem(item, out Slot freeSlot))
                     target = freeSlot.GridPosition;
-                if (target.x < 0 && TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: false, out Vector2i freedPosition))
-                    target = freedPosition;
 
-                // Do not partially consume the deferred stack unless the remainder already has a
-                // concrete cell. This keeps deferred persistence atomic if no placement exists.
+                // Deferred recovery uses only existing capacity. Do not move unrelated residents to
+                // manufacture space immediately after the validator deliberately deferred an item.
+                // Structural/OOB repair retains its stronger relocation path separately.
+                // Keep the complete deferred stack authoritative until a concrete destination exists.
                 if (target.x < 0)
                     return false;
             }
@@ -544,6 +553,7 @@ namespace ExtraSlots
             if (item.m_shared.m_maxStackSize > 1 && stackCapacity >= item.m_stack)
             {
                 int originalStack = item.m_stack;
+                ItemDrop.ItemData representative = null;
                 List<(ItemDrop.ItemData Item, int Stack)> stackSnapshots = new List<(ItemDrop.ItemData, int)>();
 
                 while (item.m_stack > 0)
@@ -560,10 +570,13 @@ namespace ExtraSlots
                     int amount = Math.Min(capacity, item.m_stack);
                     stackItem.m_stack += amount;
                     item.m_stack -= amount;
+                    if (representative == null || CurrentPlayer?.IsItemEquiped(stackItem) == true)
+                        representative = stackItem;
                 }
 
                 if (item.m_stack <= 0)
                 {
+                    placedItem = representative;
                     MarkChanged(inventory);
                     fullyInserted = true;
                     madeProgress = true;
