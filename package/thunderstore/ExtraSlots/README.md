@@ -222,8 +222,10 @@ Mod is incompatible with other mods altering inventory in similar way or allowin
 
 The mod is localized on every official and unofficial language you can choose in the game. Some translations are hand made, other made with LLM and cross check on terms and cultural consistency.
 
-To add your own localization create a file with the name **Extra Slots.LanguageName.yml** or **Extra Slots.LanguageName.json** anywhere inside of the Bepinex folder.
-For example, to add a French translation you could create a **Extra Slots.French.yml** file inside of the config folder and add French translations there.
+To add or override localization, create a file named **Extra Slots.LanguageName.yml** or **Extra Slots.LanguageName.json** anywhere under `BepInEx/config` (subfolders are supported).
+For example, to add a French translation you could create **BepInEx/config/Extra Slots.French.yml** and add French translations there.
+
+External localization overrides are intentionally loaded only from `BepInEx/config`. The `BepInEx/plugins` directory is not scanned for overrides, so localization/reference files installed beside plugin DLLs by mod managers or modpacks cannot unexpectedly override a user's explicit config translation.
 
 Localization file will be loaded on the next game launch or on the next language change.
 
@@ -231,7 +233,7 @@ You can send me a file with your localization at [Discord](https://discord.gg/e3
 
 [Language list](https://valheim-modding.github.io/Jotunn/data/localization/language-list.html).
 
-English localization example is located in `Extra Slots.English.json` file next to plugin dll.
+The `Extra Slots.English.json` file shipped next to the plugin DLL is a reference copy. Runtime bundled localizations are embedded in the plugin; put user overrides under `BepInEx/config`.
 
 ## Installation (manual)
 extract ExtraSlots.dll into your BepInEx\Plugins\ folder

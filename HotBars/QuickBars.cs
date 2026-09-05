@@ -26,16 +26,126 @@ public static class QuickBars
     {
         public readonly RectTransform BindingRect;
         public readonly TMP_Text BindingText;
+        public readonly UnityEngine.UI.Image QueuedImage;
 
-        public ElementExtraData(RectTransform bindingRect, TMP_Text bindingText)
+        public ElementExtraData(RectTransform bindingRect, TMP_Text bindingText, UnityEngine.UI.Image queuedImage)
         {
             BindingRect = bindingRect;
             BindingText = bindingText;
+            QueuedImage = queuedImage;
         }
     }
 
     private static readonly Dictionary<GameObject, ElementExtraData> elementsExtraData = new Dictionary<GameObject, ElementExtraData>(32);
+    private static readonly Dictionary<HotkeyBar, HotkeyBarRefreshGate> refreshGates = new Dictionary<HotkeyBar, HotkeyBarRefreshGate>();
+    private static readonly Dictionary<ItemDrop.ItemData, Vector2i> projectedItemPositions = new Dictionary<ItemDrop.ItemData, Vector2i>();
     private static readonly List<ItemDrop.ItemData> itemsToUse = new List<ItemDrop.ItemData>();
+    private static readonly Vector3[] dragBoundsCorners = new Vector3[4];
+
+    private sealed class HotkeyBarRefreshGate
+    {
+        private const float HeartbeatInterval = 1f;
+        private static int inventoryRevision;
+
+        private ItemDrop.ItemData[] items = new ItemDrop.ItemData[8];
+        private int[] stacks = new int[8];
+        private float[] durabilities = new float[8];
+        private bool[] equipped = new bool[8];
+        private int[] qualities = new int[8];
+        private int[] variants = new int[8];
+        private int[] gridX = new int[8];
+
+        private int itemCount;
+        private int elementCount = -1;
+        private int selected;
+        private int revision;
+        private int actionQueueCount;
+        private bool gamepadActive;
+        private bool playerAlive;
+        private float lastRefreshTime;
+
+        internal bool ShouldRefresh(HotkeyBar bar, Player player)
+        {
+            if (elementCount == -1
+                || !player.IsDead() != playerAlive
+                || bar.m_elements.Count != elementCount
+                || bar.m_selected != selected
+                || revision != inventoryRevision
+                || ZInput.IsGamepadActive() != gamepadActive
+                || player.GetActionQueueCount() != actionQueueCount
+                || Time.unscaledTime - lastRefreshTime > HeartbeatInterval)
+                return true;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                ItemDrop.ItemData item = items[i];
+                if (item == null
+                    || item.m_stack != stacks[i]
+                    || item.m_durability != durabilities[i]
+                    || item.m_equipped != equipped[i]
+                    || item.m_quality != qualities[i]
+                    || item.m_variant != variants[i]
+                    || item.m_gridPos.x != gridX[i])
+                    return true;
+
+                if (item.m_shared.m_useDurability && item.m_durability <= 0f)
+                    return true;
+            }
+
+            return false;
+        }
+
+        internal void Resample(HotkeyBar bar, Player player)
+        {
+            playerAlive = !player.IsDead();
+            itemCount = playerAlive ? bar.m_items.Count : 0;
+
+            if (itemCount > items.Length)
+                Grow(itemCount);
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                ItemDrop.ItemData item = bar.m_items[i];
+                items[i] = item;
+                if (item == null)
+                    continue;
+
+                stacks[i] = item.m_stack;
+                durabilities[i] = item.m_durability;
+                equipped[i] = item.m_equipped;
+                qualities[i] = item.m_quality;
+                variants[i] = item.m_variant;
+                gridX[i] = item.m_gridPos.x;
+            }
+
+            for (int i = itemCount; i < items.Length; i++)
+                items[i] = null;
+
+            elementCount = bar.m_elements.Count;
+            selected = bar.m_selected;
+            revision = inventoryRevision;
+            actionQueueCount = player.GetActionQueueCount();
+            gamepadActive = ZInput.IsGamepadActive();
+            lastRefreshTime = Time.unscaledTime;
+        }
+
+        private void Grow(int size)
+        {
+            items = new ItemDrop.ItemData[size];
+            stacks = new int[size];
+            durabilities = new float[size];
+            equipped = new bool[size];
+            qualities = new int[size];
+            variants = new int[size];
+            gridX = new int[size];
+        }
+
+        internal static void BumpRevision(Humanoid humanoid)
+        {
+            if (humanoid == Player.m_localPlayer)
+                inventoryRevision++;
+        }
+    }
 
     public static RectTransform InstantiateHotKeyBar(string barName)
     {
@@ -50,9 +160,18 @@ public static class QuickBars
 
     public static void ResetBars()
     {
+        RestoreProjectedGridPositions();
         elementsExtraData.Clear();
+        refreshGates.Clear();
         _currentBarIndex = -1;
         bars = null;
+    }
+
+    public static void InvalidateRendering()
+    {
+        RestoreProjectedGridPositions();
+        elementsExtraData.Clear();
+        refreshGates.Clear();
     }
 
     // Patch this method if you want your bar to be controlled in the same way
@@ -70,16 +189,223 @@ public static class QuickBars
         if (elementsExtraData.TryGetValue(go, out ElementExtraData extraData))
             return extraData;
 
+        if (elementsExtraData.Count > 128)
+            elementsExtraData.Where(entry => !entry.Key).Select(entry => entry.Key).ToList().ForEach(key => elementsExtraData.Remove(key));
+
         Transform binding = go.transform.Find("binding");
 
         extraData = new ElementExtraData(
             binding.GetComponent<RectTransform>(),
-            binding.GetComponent<TMP_Text>()
+            binding.GetComponent<TMP_Text>(),
+            go.transform.Find("queued")?.GetComponent<UnityEngine.UI.Image>()
         );
 
         elementsExtraData.Add(go, extraData);
 
         return extraData;
+    }
+
+    private static Slot[] GetSlotsForBar(string name)
+    {
+        if (name == QuickSlotsHotBar.barName)
+            return GetQuickSlots();
+        if (name == AmmoSlotsHotBar.barName)
+            return GetAmmoSlots();
+        if (name == FoodSlotsHotBar.barName)
+            return GetFoodSlots();
+        return Array.Empty<Slot>();
+    }
+
+    private static int GetSlotOffset(string name)
+    {
+        if (name == AmmoSlotsHotBar.barName)
+            return AmmoSlotsHotBar.barSlotIndex;
+        if (name == FoodSlotsHotBar.barName)
+            return FoodSlotsHotBar.barSlotIndex;
+        return QuickSlotsHotBar.barSlotIndex;
+    }
+
+    private static int GetDesiredElementCount(string name)
+    {
+        if (!ExtraSlots.alwaysShowEmptyHotbarSlots.Value)
+            return 0;
+
+        Slot[] barSlots = GetSlotsForBar(name);
+        for (int i = barSlots.Length - 1; i >= 0; i--)
+            if (barSlots[i]?.IsActive == true)
+                return i + 1;
+
+        return 0;
+    }
+
+    private static void EnsureEmptyElementsVisible(HotkeyBar bar)
+    {
+        int desiredCount = GetDesiredElementCount(bar.name);
+        if (desiredCount <= bar.m_elements.Count || !Player.m_localPlayer || Player.m_localPlayer.IsDead())
+            return;
+
+        for (int i = bar.m_elements.Count; i < desiredCount; i++)
+        {
+            HotkeyBar.ElementData element = new HotkeyBar.ElementData();
+            element.m_go = UnityEngine.Object.Instantiate(bar.m_elementPrefab, bar.transform);
+            element.m_icon = element.m_go.transform.Find("icon").GetComponent<UnityEngine.UI.Image>();
+            element.m_durability = element.m_go.transform.Find("durability").GetComponent<GuiBar>();
+            element.m_amount = element.m_go.transform.Find("amount").GetComponent<TMP_Text>();
+            element.m_equiped = element.m_go.transform.Find("equiped").gameObject;
+            element.m_queued = element.m_go.transform.Find("queued").gameObject;
+            element.m_selection = element.m_go.transform.Find("selected").gameObject;
+            element.m_used = false;
+
+            element.m_icon.gameObject.SetActive(false);
+            element.m_durability.gameObject.SetActive(false);
+            element.m_amount.gameObject.SetActive(false);
+            element.m_equiped.SetActive(false);
+            element.m_queued.SetActive(false);
+            element.m_selection.SetActive(false);
+            bar.m_elements.Add(element);
+        }
+    }
+
+    private static ItemDrop.ItemData GetItemForElement(HotkeyBar bar, int index)
+    {
+        if (bar.name == vanillaBarName)
+            return bar.m_items.FirstOrDefault(item => item != null && item.m_gridPos.y == 0 && item.m_gridPos.x == index);
+
+        int slotIndex = index + GetSlotOffset(bar.name);
+        if (slotIndex < 0 || slotIndex >= slots.Length)
+            return null;
+
+        Slot slot = slots[slotIndex];
+        return slot?.IsActive == true ? slot.Item : null;
+    }
+
+    private static void UpdateQueuedIndicators(HotkeyBar bar, Player player)
+    {
+        if (!bar || player == null)
+            return;
+
+        for (int i = 0; i < bar.m_elements.Count; i++)
+        {
+            HotkeyBar.ElementData element = bar.m_elements[i];
+            if (element?.m_go == null)
+                continue;
+
+            ElementExtraData extraData = GetElementExtraData(element);
+            QueuedEquipIndicator.Update(extraData.QueuedImage, GetItemForElement(bar, i), player);
+        }
+    }
+
+    private static void ConfigureHotbarDragHandle(HotkeyBar bar)
+    {
+        if (!bar || bar.name == vanillaBarName)
+            return;
+
+        UIDragging.DragHandle dragHandle = bar.GetComponent<UIDragging.DragHandle>();
+        if (dragHandle == null || dragHandle.GetPosition == null)
+        {
+            Func<Vector2> getPosition;
+            Action<Vector2> commitPosition;
+
+            if (bar.name == QuickSlotsHotBar.barName)
+            {
+                getPosition = () => ExtraSlots.quickSlotsHotBarOffset.Value;
+                commitPosition = value => ExtraSlots.quickSlotsHotBarOffset.Value = value;
+            }
+            else if (bar.name == AmmoSlotsHotBar.barName)
+            {
+                getPosition = () => ExtraSlots.ammoSlotsHotBarOffset.Value;
+                commitPosition = value => ExtraSlots.ammoSlotsHotBarOffset.Value = value;
+            }
+            else if (bar.name == FoodSlotsHotBar.barName)
+            {
+                getPosition = () => ExtraSlots.foodSlotsHotBarOffset.Value;
+                commitPosition = value => ExtraSlots.foodSlotsHotBarOffset.Value = value;
+            }
+            else
+            {
+                return;
+            }
+
+            // Attach directly to the persistent panel, never to disposable/rebuilt slot elements.
+            // Remove any obsolete element handles before they can win EventSystem drag resolution.
+            foreach (UIDragging.DragHandle oldHandle in bar.GetComponentsInChildren<UIDragging.DragHandle>(true))
+            {
+                if (oldHandle.gameObject == bar.gameObject)
+                    continue;
+
+                oldHandle.enabled = false;
+                UnityEngine.Object.Destroy(oldHandle);
+            }
+
+            dragHandle = UIDragging.Configure(
+                bar.gameObject,
+                () => Player.m_localPlayer && !Player.m_localPlayer.IsDead()
+                    && InventoryGui.instance?.m_dragItem == null
+                    && UIDragging.CanDrag(ExtraSlots.panelsDraggable.Value, ExtraSlots.panelsDragKey.Value),
+                getPosition,
+                value =>
+                {
+                    if (bar.transform is RectTransform rect)
+                        rect.anchoredPosition = value;
+                },
+                commitPosition,
+                movementSpace: bar.transform.parent as RectTransform);
+        }
+
+        // Vanilla hotbar graphics need not be raycast targets. Provide one conditional surface whose
+        // bounds follow the actual wrapped/upward layout, including gaps between slot elements.
+        bool hasBounds = false;
+        Vector2 min = Vector2.zero;
+        Vector2 max = Vector2.zero;
+        foreach (HotkeyBar.ElementData element in bar.m_elements)
+        {
+            if (element?.m_go == null || !element.m_go.activeSelf || element.m_go.transform is not RectTransform rect)
+                continue;
+
+            rect.GetWorldCorners(dragBoundsCorners);
+            foreach (Vector3 corner in dragBoundsCorners)
+            {
+                Vector2 point = bar.transform.InverseTransformPoint(corner);
+                if (!hasBounds)
+                {
+                    min = max = point;
+                    hasBounds = true;
+                }
+                else
+                {
+                    min = Vector2.Min(min, point);
+                    max = Vector2.Max(max, point);
+                }
+            }
+        }
+
+        UIDragging.SetRaycastSurface(dragHandle, new Rect(min, max - min), hasBounds);
+    }
+
+    private static void ProjectGridPositionsForBar(List<ItemDrop.ItemData> items, string name)
+    {
+        Slot[] barSlots = GetSlotsForBar(name);
+        for (int i = 0; i < items.Count; i++)
+        {
+            ItemDrop.ItemData item = items[i];
+            if (item == null)
+                continue;
+
+            if (!projectedItemPositions.ContainsKey(item))
+                projectedItemPositions[item] = item.m_gridPos;
+
+            int localIndex = Array.FindIndex(barSlots, slot => slot != null && slot.IsActive && ReferenceEquals(slot.Item, item));
+            item.m_gridPos = new Vector2i(localIndex >= 0 ? localIndex : i, item.m_gridPos.y);
+        }
+    }
+
+    private static void RestoreProjectedGridPositions()
+    {
+        foreach (KeyValuePair<ItemDrop.ItemData, Vector2i> entry in projectedItemPositions)
+            if (entry.Key != null)
+                entry.Key.m_gridPos = entry.Value;
+
+        projectedItemPositions.Clear();
     }
 
     private static Vector3 LeftTopPoint => Hud.instance ? new Vector3(-Hud.instance.m_rootObject.transform.position.x, Hud.instance.m_rootObject.transform.position.y, 0) : new Vector3(-1280, 720, 0);
@@ -309,9 +635,39 @@ public static class QuickBars
                     ? Mathf.Clamp(bar.m_selected, -1, bar.m_elements.Count - 1)
                     : -1;
 
-                bar.UpdateIcons(player);
+                if (!refreshGates.TryGetValue(bar, out HotkeyBarRefreshGate refreshGate))
+                {
+                    refreshGate = new HotkeyBarRefreshGate();
+                    refreshGates[bar] = refreshGate;
+                }
+
+                if (refreshGate.ShouldRefresh(bar, player))
+                {
+                    bar.UpdateIcons(player);
+                    refreshGate.Resample(bar, player);
+                }
+
+                UpdateQueuedIndicators(bar, player);
             }
         }
+    }
+
+    [HarmonyPatch(typeof(Player), nameof(Player.OnInventoryChanged))]
+    private static class Player_OnInventoryChanged_BumpHotbarRevision
+    {
+        private static void Postfix(Player __instance) => HotkeyBarRefreshGate.BumpRevision(__instance);
+    }
+
+    [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.EquipItem))]
+    private static class Humanoid_EquipItem_BumpHotbarRevision
+    {
+        private static void Postfix(Humanoid __instance) => HotkeyBarRefreshGate.BumpRevision(__instance);
+    }
+
+    [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.UnequipItem))]
+    private static class Humanoid_UnequipItem_BumpHotbarRevision
+    {
+        private static void Postfix(Humanoid __instance) => HotkeyBarRefreshGate.BumpRevision(__instance);
     }
 
     [HarmonyPatch(typeof(Hud), nameof(Hud.OnDestroy))]
@@ -359,8 +715,9 @@ public static class QuickBars
 
             string currentBarName = barName;
 
-            if (currentBarName == FoodSlotsHotBar.barName)
-                FoodSlotsHotBar.RestoreGridPos();
+            EnsureEmptyElementsVisible(__instance);
+
+            RestoreProjectedGridPositions();
 
             int slotOffset;
             bool hideStackSize;
@@ -411,6 +768,16 @@ public static class QuickBars
                 ElementExtraData extraData = GetElementExtraData(elementData);
                 EquipmentPanel.SetSlotLabel(extraData.BindingRect, extraData.BindingText, slot, hotbarElement: true);
 
+                if (!elementData.m_used)
+                {
+                    elementData.m_icon.gameObject.SetActive(false);
+                    elementData.m_durability.gameObject.SetActive(false);
+                    elementData.m_equiped.SetActive(false);
+                    elementData.m_queued.SetActive(false);
+                    elementData.m_amount.gameObject.SetActive(false);
+                }
+                elementData.m_selection.SetActive(ZInput.IsGamepadActive() && index == __instance.m_selected);
+
                 if (hideStackSize
                     && elementData.m_amount.gameObject.activeInHierarchy
                     && slot.Item is ItemDrop.ItemData item
@@ -422,12 +789,13 @@ public static class QuickBars
                 elementData.m_go.transform.localPosition =
                     new Vector3(index % widthInElements, (fillUp ? 1 : -1) * (index / widthInElements), 0f) * elementSpace;
             }
+
+            ConfigureHotbarDragHandle(__instance);
         }
 
         public static Exception Finalizer(Exception __exception)
         {
-            if (barName == FoodSlotsHotBar.barName)
-                FoodSlotsHotBar.RestoreGridPos();
+            RestoreProjectedGridPositions();
 
             inCall = false;
             barName = null;
@@ -450,6 +818,7 @@ public static class QuickBars
             {
                 bound.Clear();
                 QuickSlotsHotBar.GetItems(bound);
+                ProjectGridPositionsForBar(bound, currentBarName);
                 return false;
             }
 
@@ -457,13 +826,15 @@ public static class QuickBars
             {
                 bound.Clear();
                 AmmoSlotsHotBar.GetItems(bound);
+                ProjectGridPositionsForBar(bound, currentBarName);
                 return false;
             }
 
             if (currentBarName == FoodSlotsHotBar.barName)
             {
                 bound.Clear();
-                FoodSlotsHotBar.GetItems(bound, adaptGridPos: true);
+                FoodSlotsHotBar.GetItems(bound);
+                ProjectGridPositionsForBar(bound, currentBarName);
                 return false;
             }
 

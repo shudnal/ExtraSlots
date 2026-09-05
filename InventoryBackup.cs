@@ -23,6 +23,11 @@ namespace ExtraSlots
 
         public const string customKeyBackupID = "ExtraSlotsInventoryBackup";
 
+        // If Inventory.Load cannot materialize every serialized backup entry (typically because an
+        // item prefab is temporarily unavailable), keep the original opaque backup payload intact.
+        // Deferred storage can adopt every materializable item without making us discard unreadable data.
+        private static Player preserveRawBackupForPlayer;
+
         private static ExtraSlotsBackup GetExtraSlotsBackup(Inventory inventory)
         {
             int width = InventoryWidth;
@@ -81,16 +86,15 @@ namespace ExtraSlots
         {
             extraSlotsBackup = null;
 
-            if (HasServerCharactersActive)
+            if (HasServerCharactersActive || player == null || !player.m_customData.ContainsKey(customKeyBackupID))
                 return false;
 
-            if (player == null || !player.m_customData.ContainsKey(customKeyBackupID))
-                return false;
+            if (TryGetBackup(player, out extraSlotsBackup))
+                return true;
 
-            if (player.GetInventory().GetAllItems().Any(item => IsItemInSlot(item)))
-                return false;
-
-            return TryGetBackup(player, out extraSlotsBackup);
+            // Never overwrite a backup payload merely because this version cannot parse it.
+            preserveRawBackupForPlayer = player;
+            return false;
         }
 
         private static void TryRestoreBackup(Player player, ExtraSlotsBackup extraSlotsBackup)
@@ -102,54 +106,45 @@ namespace ExtraSlots
             try
             {
                 Inventory backup = new Inventory(customKeyBackupID, null, extraSlotsBackup.width, extraSlotsBackup.height);
-
                 backup.Load(new ZPackage(extraSlotsBackup.inventoryBase64).ReadCompressedPackage());
 
-                if (backup.NrOfItems() == 0)
-                    return;
+                var backupItems = backup.GetAllItemsInGridOrder().Where(item => item != null).ToList();
+                bool allMaterialized = backupItems.Count == extraSlotsBackup.nrOfItems;
 
-                if (inventory.m_height < InventoryHeightPlayer + backup.m_height)
-                    inventory.m_height = InventoryHeightPlayer + backup.m_height;
+                int imported = Compatibility.InventoryMigration.ImportMissingItemsToDeferred(
+                    player,
+                    backupItems,
+                    "ExtraSlots backup",
+                    item => item.m_customData.TryGetValue(customKeySlotID, out string slotId) ? slotId : null,
+                    item => item.m_equipped,
+                    out bool allRepresented);
 
-                if (ExtraRowsPlayer > extraSlotsBackup.extraRows && CheckForRowChange(inventory, backup, extraSlotsBackup.extraRows))
+                if (!allMaterialized || !allRepresented)
                 {
-                    LogMessage($"Extra slots backup skipped. Number of inventory rows was changed {extraSlotsBackup.extraRows} -> {ExtraRowsPlayer}.");
-                    return;
+                    preserveRawBackupForPlayer = player;
+                    if (!allMaterialized)
+                        LogWarning($"ExtraSlots backup materialized {backupItems.Count}/{extraSlotsBackup.nrOfItems} item(s). The original backup payload will be preserved until every prefab is available.");
+                    else
+                        LogWarning("ExtraSlots backup could not be fully adopted. The original backup payload will be preserved for a later retry.");
+                }
+                else if (ReferenceEquals(preserveRawBackupForPlayer, player))
+                {
+                    preserveRawBackupForPlayer = null;
                 }
 
-                foreach (ItemDrop.ItemData backupItem in backup.GetAllItemsInGridOrder().Reverse<ItemDrop.ItemData>())
+                if (imported > 0)
                 {
-                    Vector2i restoredPosition = new Vector2i(backupItem.m_gridPos.x, backupItem.m_gridPos.y + InventoryHeightPlayer);
-                    ItemDrop.ItemData restoredItem = backupItem.Clone();
-
-                    if (!inventory.AddItem(restoredItem, restoredPosition))
-                        continue;
-
-                    // AddItem can place references in the inventory list; re-resolve by position instead of
-                    // scanning the entire list and taking Last() for each restored item.
-                    restoredItem = inventory.GetItemAt(restoredPosition.x, restoredPosition.y) ?? restoredItem;
-
-                    if (restoredItem.IsEquipable() && restoredItem.m_equipped && !player.EquipItem(restoredItem, triggerEquipEffects: false))
-                        restoredItem.m_equipped = false;
+                    ItemsSlotsValidation.ValidateItems();
+                    ItemsSlotsValidation.ValidateSlots();
                 }
+
+                LogMessage($"Extra slots backup checked. Backup date {extraSlotsBackup.date}, world {extraSlotsBackup.worldName}, items {extraSlotsBackup.nrOfItems}, newly deferred {imported}");
             }
             catch (Exception ex)
             {
-                LogWarning($"Error while loading inventory backup from player:\n{ex}");
-                return;
+                preserveRawBackupForPlayer = player;
+                LogWarning($"Error while loading inventory backup from player. The original backup payload will be preserved:\n{ex}");
             }
-
-            LogMessage($"Extra slots backup restored. Backup date {extraSlotsBackup.date}, world {extraSlotsBackup.worldName}, items {extraSlotsBackup.nrOfItems}");
-        }
-
-        private static bool CheckForRowChange(Inventory playerInventory, Inventory backup, int previousRows)
-        {
-            int delta = ExtraRowsPlayer - previousRows;
-
-            return backup.GetAllItems().All(item => playerInventory.GetItemAt(item.m_gridPos.x, item.m_gridPos.y + InventoryHeightPlayer - delta) is ItemDrop.ItemData playerItem 
-                                                    && playerItem.m_shared.m_name == item.m_shared.m_name
-                                                    && playerItem.m_stack == item.m_stack
-                                                    && playerItem.m_quality == item.m_quality);
         }
 
         [HarmonyPatch(typeof(Player), nameof(Player.Save))]
@@ -158,8 +153,16 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.Last)]
             public static void Prefix(Player __instance)
             {
-                if (backupEnabled.Value && __instance == CurrentPlayer)
-                    __instance.m_customData[customKeyBackupID] = JsonUtility.ToJson(GetExtraSlotsBackup(__instance.GetInventory()));
+                if (!backupEnabled.Value || __instance != CurrentPlayer)
+                    return;
+
+                if (ReferenceEquals(preserveRawBackupForPlayer, __instance))
+                {
+                    LogDebug("Extra slots backup save skipped because the existing backup contains data that could not be fully materialized or adopted.");
+                    return;
+                }
+
+                __instance.m_customData[customKeyBackupID] = JsonUtility.ToJson(GetExtraSlotsBackup(__instance.GetInventory()));
             }
         }
 
@@ -169,6 +172,9 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.HigherThanNormal)]
             public static void Postfix(Player __instance)
             {
+                if (ReferenceEquals(preserveRawBackupForPlayer, __instance))
+                    preserveRawBackupForPlayer = null;
+
                 if (!backupEnabled.Value)
                     return;
 

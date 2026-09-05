@@ -1,3 +1,24 @@
+# 1.2.0
+* fixed error spam and stale slot state when loading a character in a world with fewer inventory rows or available extra slots
+* improved automatic recovery of items left in invalid, inactive, hidden, overlapping, or otherwise unavailable extra slot cells after slot or inventory layout changes
+* tombstone auto-loot now simulates actual stacking and valid destination cells before taking everything, reducing partial recovery when inventory or slot availability changed after death
+* fixed upgrading items in extra slots with a full regular inventory, preserving their slot and equipped state
+* added an option to apply tombstone auto-equip settings after using the Take All button on an opened tombstone
+* added an option to keep the equipped state of items that are kept on death
+* tombstones now preserve their inventory dimensions across reloads when inventory size settings change before recovery
+* optimized hotbar refreshes to reduce repeated UI work, especially with mods that decorate hotbars
+* occupied custom slots now safely relocate their item or preserve it in deferred inventory when the slot is removed
+* equipment, Quick, Ammo, and Food panels can now be repositioned by dragging; the equipment panel can optionally snap to its default position or nearby inventory UI edges
+* added an option, enabled by default, to fade the queued equip indicator as the current equip action progresses
+* added an option to keep empty available Quick, Ammo, and Food hotbar slots visible, disabled by default
+* added deferred inventory recovery to prevent items from being lost when inventory topology changes and no valid slot is immediately available
+* deferred items are preserved across character saves and can be recovered after running the character without ExtraSlots
+* deferred items are moved into an automatically expanded tombstone on death when possible
+* improved migration and recovery from EquipmentAndQuickSlots 2.x/3.x, ComfyQuickSlots and InventorySlots
+* improved upgrade safety for items stored in ExtraSlots slots when inventory topology changes during crafting
+* added a compatibility option to disable Inventory.Changed batching when diagnosing interactions with other inventory mods
+* external localization overrides are now intentionally loaded only from BepInEx/config
+
 # 1.1.21
 * updated Epic Loot compatibility for legacy versions and the 0.13.0+ API, including magic effects, set bonuses, and sacrifice filtering in extra slots
 
