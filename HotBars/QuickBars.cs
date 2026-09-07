@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using TMPro;
 using UnityEngine;
 using static ExtraSlots.Slots;
@@ -40,7 +42,6 @@ public static class QuickBars
     private static readonly Dictionary<HotkeyBar, HotkeyBarRefreshGate> refreshGates = new Dictionary<HotkeyBar, HotkeyBarRefreshGate>();
     private static readonly Dictionary<ItemDrop.ItemData, Vector2i> projectedItemPositions = new Dictionary<ItemDrop.ItemData, Vector2i>();
     private static readonly List<ItemDrop.ItemData> itemsToUse = new List<ItemDrop.ItemData>();
-    private static readonly Vector3[] dragBoundsCorners = new Vector3[4];
 
     private sealed class HotkeyBarRefreshGate
     {
@@ -60,6 +61,7 @@ public static class QuickBars
         private int selected;
         private int revision;
         private int actionQueueCount;
+        private Player.MinorActionData firstQueuedAction;
         private bool gamepadActive;
         private bool playerAlive;
         private float lastRefreshTime;
@@ -73,6 +75,7 @@ public static class QuickBars
                 || revision != inventoryRevision
                 || ZInput.IsGamepadActive() != gamepadActive
                 || player.GetActionQueueCount() != actionQueueCount
+                || !ReferenceEquals(player.m_actionQueue.Count > 0 ? player.m_actionQueue[0] : null, firstQueuedAction)
                 || Time.unscaledTime - lastRefreshTime > HeartbeatInterval)
                 return true;
 
@@ -125,6 +128,7 @@ public static class QuickBars
             selected = bar.m_selected;
             revision = inventoryRevision;
             actionQueueCount = player.GetActionQueueCount();
+            firstQueuedAction = actionQueueCount > 0 ? player.m_actionQueue[0] : null;
             gamepadActive = ZInput.IsGamepadActive();
             lastRefreshTime = Time.unscaledTime;
         }
@@ -170,6 +174,13 @@ public static class QuickBars
     public static void InvalidateRendering()
     {
         RestoreProjectedGridPositions();
+        // Vanilla caches only the numeric stack, not our choice of compact/full stack text.
+        if (bars != null)
+            foreach (HotkeyBar bar in bars)
+                if (bar)
+                    foreach (HotkeyBar.ElementData element in bar.m_elements)
+                        if (element != null)
+                            element.m_stackText = -1;
         elementsExtraData.Clear();
         refreshGates.Clear();
     }
@@ -227,7 +238,10 @@ public static class QuickBars
 
     private static int GetDesiredElementCount(string name)
     {
-        if (!ExtraSlots.alwaysShowEmptyHotbarSlots.Value)
+        bool showEmpty = name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsAlwaysShowEmpty.Value
+            : name == AmmoSlotsHotBar.barName ? ExtraSlots.ammoSlotsAlwaysShowEmpty.Value
+            : name == FoodSlotsHotBar.barName && ExtraSlots.foodSlotsAlwaysShowEmpty.Value;
+        if (!showEmpty)
             return 0;
 
         Slot[] barSlots = GetSlotsForBar(name);
@@ -238,31 +252,70 @@ public static class QuickBars
         return 0;
     }
 
-    private static void EnsureEmptyElementsVisible(HotkeyBar bar)
+    // Use the configured empty tail when vanilla decides whether to rebuild m_elements. Appending
+    // elements in a postfix makes the next UpdateIcons destroy and recreate them on every refresh.
+    private static int ResolveElementCount(int occupiedCount, HotkeyBar bar) =>
+        bar ? Math.Max(occupiedCount, GetDesiredElementCount(bar.name)) : occupiedCount;
+
+    [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.UpdateIcons))]
+    private static class HotkeyBar_UpdateIcons_StableElementCount
     {
-        int desiredCount = GetDesiredElementCount(bar.name);
-        if (desiredCount <= bar.m_elements.Count || !Player.m_localPlayer || Player.m_localPlayer.IsDead())
-            return;
-
-        for (int i = bar.m_elements.Count; i < desiredCount; i++)
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
-            HotkeyBar.ElementData element = new HotkeyBar.ElementData();
-            element.m_go = UnityEngine.Object.Instantiate(bar.m_elementPrefab, bar.transform);
-            element.m_icon = element.m_go.transform.Find("icon").GetComponent<UnityEngine.UI.Image>();
-            element.m_durability = element.m_go.transform.Find("durability").GetComponent<GuiBar>();
-            element.m_amount = element.m_go.transform.Find("amount").GetComponent<TMP_Text>();
-            element.m_equiped = element.m_go.transform.Find("equiped").gameObject;
-            element.m_queued = element.m_go.transform.Find("queued").gameObject;
-            element.m_selection = element.m_go.transform.Find("selected").gameObject;
-            element.m_used = false;
+            List<CodeInstruction> code = instructions.ToList();
+            FieldInfo elements = AccessTools.Field(typeof(HotkeyBar), nameof(HotkeyBar.m_elements));
+            MethodInfo countGetter = AccessTools.PropertyGetter(typeof(List<HotkeyBar.ElementData>), "Count");
+            int match = -1;
+            CodeInstruction storeCount = null;
 
-            element.m_icon.gameObject.SetActive(false);
-            element.m_durability.gameObject.SetActive(false);
-            element.m_amount.gameObject.SetActive(false);
-            element.m_equiped.SetActive(false);
-            element.m_queued.SetActive(false);
-            element.m_selection.SetActive(false);
-            bar.m_elements.Add(element);
+            for (int i = 0; i + 3 < code.Count; i++)
+            {
+                if (!code[i].LoadsField(elements) || !code[i + 1].Calls(countGetter))
+                    continue;
+
+                CodeInstruction store = StoreLoadedLocal(code[i + 2]);
+                OpCode comparison = code[i + 3].opcode;
+                if (store == null || comparison != OpCodes.Beq && comparison != OpCodes.Beq_S
+                    && comparison != OpCodes.Bne_Un && comparison != OpCodes.Bne_Un_S && comparison != OpCodes.Ceq)
+                    continue;
+
+                if (match >= 0)
+                {
+                    ExtraSlots.LogWarning("Hotbar element-count patch found multiple allocation checks. Empty hotbar slots are unavailable; vanilla rendering is unchanged.");
+                    return code;
+                }
+
+                match = i + 2;
+                storeCount = store;
+            }
+
+            if (match < 0)
+            {
+                ExtraSlots.LogWarning("Hotbar element-count patch could not find the allocation check. Empty hotbar slots are unavailable; vanilla rendering is unchanged.");
+                return code;
+            }
+
+            // Stack before insertion: [m_elements.Count, requiredCount]. Update the local as well as
+            // the comparison operand, so vanilla's allocation loop uses the same adjusted count.
+            code.InsertRange(match + 1, new[]
+            {
+                new CodeInstruction(OpCodes.Ldarg_0),
+                new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(QuickBars), nameof(ResolveElementCount))),
+                new CodeInstruction(OpCodes.Dup),
+                storeCount
+            });
+            return code;
+        }
+
+        private static CodeInstruction StoreLoadedLocal(CodeInstruction load)
+        {
+            if (load.opcode == OpCodes.Ldloc_0) return new CodeInstruction(OpCodes.Stloc_0);
+            if (load.opcode == OpCodes.Ldloc_1) return new CodeInstruction(OpCodes.Stloc_1);
+            if (load.opcode == OpCodes.Ldloc_2) return new CodeInstruction(OpCodes.Stloc_2);
+            if (load.opcode == OpCodes.Ldloc_3) return new CodeInstruction(OpCodes.Stloc_3);
+            if (load.opcode == OpCodes.Ldloc_S) return new CodeInstruction(OpCodes.Stloc_S, load.operand);
+            if (load.opcode == OpCodes.Ldloc) return new CodeInstruction(OpCodes.Stloc, load.operand);
+            return null;
         }
     }
 
@@ -281,7 +334,7 @@ public static class QuickBars
 
     private static void UpdateQueuedIndicators(HotkeyBar bar, Player player)
     {
-        if (!bar || player == null)
+        if (!bar || player == null || player.m_actionQueue.Count == 0)
             return;
 
         for (int i = 0; i < bar.m_elements.Count; i++)
@@ -293,93 +346,6 @@ public static class QuickBars
             ElementExtraData extraData = GetElementExtraData(element);
             QueuedEquipIndicator.Update(extraData.QueuedImage, GetItemForElement(bar, i), player);
         }
-    }
-
-    private static void ConfigureHotbarDragHandle(HotkeyBar bar)
-    {
-        if (!bar || bar.name == vanillaBarName)
-            return;
-
-        UIDragging.DragHandle dragHandle = bar.GetComponent<UIDragging.DragHandle>();
-        if (dragHandle == null || dragHandle.GetPosition == null)
-        {
-            Func<Vector2> getPosition;
-            Action<Vector2> commitPosition;
-
-            if (bar.name == QuickSlotsHotBar.barName)
-            {
-                getPosition = () => ExtraSlots.quickSlotsHotBarOffset.Value;
-                commitPosition = value => ExtraSlots.quickSlotsHotBarOffset.Value = value;
-            }
-            else if (bar.name == AmmoSlotsHotBar.barName)
-            {
-                getPosition = () => ExtraSlots.ammoSlotsHotBarOffset.Value;
-                commitPosition = value => ExtraSlots.ammoSlotsHotBarOffset.Value = value;
-            }
-            else if (bar.name == FoodSlotsHotBar.barName)
-            {
-                getPosition = () => ExtraSlots.foodSlotsHotBarOffset.Value;
-                commitPosition = value => ExtraSlots.foodSlotsHotBarOffset.Value = value;
-            }
-            else
-            {
-                return;
-            }
-
-            // Attach directly to the persistent panel, never to disposable/rebuilt slot elements.
-            // Remove any obsolete element handles before they can win EventSystem drag resolution.
-            foreach (UIDragging.DragHandle oldHandle in bar.GetComponentsInChildren<UIDragging.DragHandle>(true))
-            {
-                if (oldHandle.gameObject == bar.gameObject)
-                    continue;
-
-                oldHandle.enabled = false;
-                UnityEngine.Object.Destroy(oldHandle);
-            }
-
-            dragHandle = UIDragging.Configure(
-                bar.gameObject,
-                () => Player.m_localPlayer && !Player.m_localPlayer.IsDead()
-                    && InventoryGui.instance?.m_dragItem == null
-                    && UIDragging.CanDrag(ExtraSlots.panelsDraggable.Value, ExtraSlots.panelsDragKey.Value),
-                getPosition,
-                value =>
-                {
-                    if (bar.transform is RectTransform rect)
-                        rect.anchoredPosition = value;
-                },
-                commitPosition,
-                movementSpace: bar.transform.parent as RectTransform);
-        }
-
-        // Vanilla hotbar graphics need not be raycast targets. Provide one conditional surface whose
-        // bounds follow the actual wrapped/upward layout, including gaps between slot elements.
-        bool hasBounds = false;
-        Vector2 min = Vector2.zero;
-        Vector2 max = Vector2.zero;
-        foreach (HotkeyBar.ElementData element in bar.m_elements)
-        {
-            if (element?.m_go == null || !element.m_go.activeSelf || element.m_go.transform is not RectTransform rect)
-                continue;
-
-            rect.GetWorldCorners(dragBoundsCorners);
-            foreach (Vector3 corner in dragBoundsCorners)
-            {
-                Vector2 point = bar.transform.InverseTransformPoint(corner);
-                if (!hasBounds)
-                {
-                    min = max = point;
-                    hasBounds = true;
-                }
-                else
-                {
-                    min = Vector2.Min(min, point);
-                    max = Vector2.Max(max, point);
-                }
-            }
-        }
-
-        UIDragging.SetRaycastSurface(dragHandle, new Rect(min, max - min), hasBounds);
     }
 
     private static void ProjectGridPositionsForBar(List<ItemDrop.ItemData> items, string name)
@@ -715,8 +681,6 @@ public static class QuickBars
 
             string currentBarName = barName;
 
-            EnsureEmptyElementsVisible(__instance);
-
             RestoreProjectedGridPositions();
 
             int slotOffset;
@@ -789,8 +753,6 @@ public static class QuickBars
                 elementData.m_go.transform.localPosition =
                     new Vector3(index % widthInElements, (fillUp ? 1 : -1) * (index / widthInElements), 0f) * elementSpace;
             }
-
-            ConfigureHotbarDragHandle(__instance);
         }
 
         public static Exception Finalizer(Exception __exception)

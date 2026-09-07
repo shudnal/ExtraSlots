@@ -13,6 +13,12 @@ namespace ExtraSlots
     {
         private static readonly Dictionary<Image, float> baseAlphas = new Dictionary<Image, float>();
 
+        internal static void OnSettingChanged()
+        {
+            if (!queuedEquipFade.Value)
+                RestoreAndClearCache();
+        }
+
         private static bool IsFadeEnabled()
         {
             if (queuedEquipFade.Value)

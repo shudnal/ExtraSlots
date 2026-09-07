@@ -112,7 +112,9 @@ namespace ExtraSlots
         public static ConfigEntry<bool> panelsDraggable;
         public static ConfigEntry<KeyboardShortcut> panelsDragKey;
         public static ConfigEntry<bool> queuedEquipFade;
-        public static ConfigEntry<bool> alwaysShowEmptyHotbarSlots;
+        public static ConfigEntry<bool> quickSlotsAlwaysShowEmpty;
+        public static ConfigEntry<bool> ammoSlotsAlwaysShowEmpty;
+        public static ConfigEntry<bool> foodSlotsAlwaysShowEmpty;
         public static ConfigEntry<bool> quickSlotsAlignmentCenter;
         public static ConfigEntry<bool> equipmentSlotsShowTooltip;
         public static ConfigEntry<bool> equipmentSlotsPreventStackAll;
@@ -518,10 +520,10 @@ namespace ExtraSlots
             equipmentPanelTooltipOffset = config("Panels - Equipment slots", "Gamepad Tooltip Offset", Vector2.zero, "Offset relative to original position of tooltip at upper right corner of the inventory (side elements included)");
             equipmentSlotsPreventStackAll = config("Panels - Equipment slots", "Prevent Stack All", defaultValue: true, "Prevent items from equipment slots to be placed into container when Stack All feature is used.");
 
-            panelsDraggable = config("Panels - Dragging", "Always allow dragging", defaultValue: false, "Allow dragging ExtraSlots panels without holding the drag key");
-            panelsDragKey = config("Panels - Dragging", "Drag key", new KeyboardShortcut(KeyCode.LeftAlt), "Hold this key while dragging ExtraSlots panels");
+            panelsDraggable = config("Panels - Equipment slots", "Always allow dragging", defaultValue: false, "Allow dragging the equipment panel without holding the drag key");
+            panelsDragKey = config("Panels - Equipment slots", "Drag key", new KeyboardShortcut(KeyCode.LeftAlt), "Hold this key while dragging the equipment panel");
             queuedEquipFade = config("Panels - Item indicators", "Fade queued equip indicator", defaultValue: true, "Fade the yellow queued indicator from opaque to transparent while an item is being equipped");
-            alwaysShowEmptyHotbarSlots = config("Panels - Hotbars", "Always show empty slots", defaultValue: false, "Keep all currently available Quick, Ammo and Food hotbar slots visible even when they are empty");
+            queuedEquipFade.SettingChanged += (s, e) => QueuedEquipIndicator.OnSettingChanged();
 
             vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
             equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
@@ -557,6 +559,7 @@ namespace ExtraSlots
             quickSlotsHotBarOffset = config("Panels - Quick slots", "Offset", defaultValue: new Vector2(230f, 156f), "On screen position of quick slots hotbar panel");
             quickSlotsHotBarAnchor = config("Panels - Quick slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for quick slots hotbar panel");
             quickSlotsHotBarScale = config("Panels - Quick slots", "Scale", defaultValue: 1f, "Relative size");
+            quickSlotsAlwaysShowEmpty = config("Panels - Quick slots", "Always show empty slots", defaultValue: false, "Keep all currently available quick hotbar slots visible even when they are empty");
             quickSlotsShowLabel = config("Panels - Quick slots", "Show label", defaultValue: false, "Show slot label");
             quickSlotsShowHintImage = config("Panels - Quick slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             quickSlotsShowTooltip = config("Panels - Quick slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
@@ -568,16 +571,18 @@ namespace ExtraSlots
             quickSlotsStackColor = config("Panels - Quick slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             quickSlotsPreventStackAll = config("Panels - Quick slots", "Prevent Stack All", defaultValue: true, "Prevent items from quick slots to be placed into container when Stack All feature is used.");
 
+            quickSlotsAlwaysShowEmpty.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
+            quickSlotsHideStackSize.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             quickSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarScale.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
-            alwaysShowEmptyHotbarSlots.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
 
             ammoSlotsHotBarEnabled = serverConfig("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots [Synced with Server]");
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 228f), "On screen position of ammo slots hotbar panel");
             ammoSlotsHotBarAnchor = config("Panels - Ammo slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for ammo slots hotbar panel");
             ammoSlotsHotBarScale = config("Panels - Ammo slots", "Scale", defaultValue: 1f, "Relative size");
+            ammoSlotsAlwaysShowEmpty = config("Panels - Ammo slots", "Always show empty slots", defaultValue: false, "Keep all currently available ammo hotbar slots visible even when they are empty");
             ammoSlotsShowLabel = config("Panels - Ammo slots", "Show label", defaultValue: false, "Show slot label");
             ammoSlotsShowHintImage = config("Panels - Ammo slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             ammoSlotsShowTooltip = config("Panels - Ammo slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
@@ -607,6 +612,8 @@ namespace ExtraSlots
                 API.UpdateSlotActivation();
             };
 
+            ammoSlotsAlwaysShowEmpty.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
+            ammoSlotsHideStackSize.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
             ammoSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
             ammoSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
@@ -616,6 +623,7 @@ namespace ExtraSlots
             foodSlotsHotBarOffset = config("Panels - Food slots", "Offset", defaultValue: new Vector2(230f, 84f), "On screen position of Food slots hotbar panel");
             foodSlotsHotBarAnchor = config("Panels - Food slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for Food slots hotbar panel");
             foodSlotsHotBarScale = config("Panels - Food slots", "Scale", defaultValue: 1f, "Relative size");
+            foodSlotsAlwaysShowEmpty = config("Panels - Food slots", "Always show empty slots", defaultValue: false, "Keep all currently available food hotbar slots visible even when they are empty");
             foodSlotsShowLabel = config("Panels - Food slots", "Show label", defaultValue: false, "Show slot label");
             foodSlotsShowHintImage = config("Panels - Food slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             foodSlotsShowTooltip = config("Panels - Food slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
@@ -644,6 +652,8 @@ namespace ExtraSlots
                 API.UpdateSlotActivation();
             };
 
+            foodSlotsAlwaysShowEmpty.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
+            foodSlotsHideStackSize.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             foodSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
             foodSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
             foodSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();

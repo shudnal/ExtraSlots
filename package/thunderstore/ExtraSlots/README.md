@@ -170,7 +170,7 @@ Default progression is designed to gradually get slots the moment you obtain ite
 * Ammo slots are obtained when you get your first ammo or fishing bait
 * Misc slots are obtained alongside with quick, ammo and food slots
 * Every vanilla equipment slots are obtained when you touch corresponding item
-* Utility slot are obtained when you get your first utility item
+* Utility slot are obtained after acquiring first utility item
 * First extra utility slot are obtained after Bonemass kill (or touching Wishbone)
 * Second extra utility slot are obtained after Yagluth kill (or touching Wisplight)
 
@@ -217,6 +217,15 @@ Mod is incompatible with other mods altering inventory in similar way or allowin
 * [Extended Player Inventory (aedenthorn)](https://www.nexusmods.com/valheim/mods/1356)
 * [Equip Multiple Utility Items (aedenthorn)](https://www.nexusmods.com/valheim/mods/1348)
 * [EquipMultipleUtilityItems (toombe)](https://thunderstore.io/c/valheim/p/JackFrostCC/ToombeEquipMultipleUtilityItemsUnofficialUpdate/)
+
+## Panel placement and empty hotbar slots
+
+Dragging is available only for the equipment panel. Configure `Always allow dragging`, `Drag key`, `Sticky`, and `Sticky distance` under `Panels - Equipment slots`.
+Quick, Ammo, and Food hotbars do not support mouse dragging; use `Offset`, `Offset Anchor`, and `Scale` in each panel's section to position them.
+
+Each of `Panels - Quick slots`, `Panels - Ammo slots`, and `Panels - Food slots` has its own `Always show empty slots` option, disabled by default.
+It keeps currently available slots visible without changing inventory capacity or slot progression. Empty cells between occupied logical positions are retained even when the option is disabled.
+The former shared `Panels - Hotbars / Always show empty slots` setting and `Panels - Dragging` section are no longer used.
 
 ## Localization
 
