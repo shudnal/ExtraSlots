@@ -108,10 +108,20 @@ namespace ExtraSlots
             public static bool preventAddItem = false;
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Player __instance) => preventAddItem = preventAutoPickup.Value && __instance == CurrentPlayer;
+            private static void Prefix(Player __instance, out bool __state)
+            {
+                __state = preventAddItem;
+                preventAddItem = preventAutoPickup.Value && __instance == CurrentPlayer;
+            }
 
             [HarmonyPriority(Priority.First)]
-            private static void Postfix() => preventAddItem = false;
+            private static void Postfix(bool __state) => preventAddItem = __state;
+
+            private static Exception Finalizer(bool __state, Exception __exception)
+            {
+                preventAddItem = __state;
+                return __exception;
+            }
         }
 
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.SlotsUsedPercentage))]
@@ -628,64 +638,108 @@ namespace ExtraSlots
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.CanAddItem), typeof(ItemDrop.ItemData), typeof(int))]
         private static class Inventory_CanAddItem_ItemData_TryFindAppropriateExtraSlot
         {
-            private static readonly List<ItemDrop.ItemData> tempItems = new();
+            // Capacity checks can be nested by other patches. Pool per-call snapshots instead of
+            // sharing one scratch list, and always restore the exact inventory in the finalizer.
+            private static readonly Stack<CapacityQueryState> statePool = new Stack<CapacityQueryState>();
 
-            [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory __instance)
+            private sealed class CapacityQueryState
             {
-                if (__instance != PlayerInventory)
-                    return;
+                private readonly List<(int Index, ItemDrop.ItemData Item)> removedItems = new List<(int, ItemDrop.ItemData)>(40);
+                private Inventory inventory;
+                private int originalHeight;
+                private bool restored;
+                private bool released;
 
-                __instance.m_height = InventoryHeightPlayer;
-
-                tempItems.Clear();
-
-                for (int i = __instance.m_inventory.Count - 1; i >= 0; i--)
+                internal void Begin(Inventory target)
                 {
-                    ItemDrop.ItemData invItem = __instance.m_inventory[i];
-                    if (API.IsItemInSlot(invItem))
+                    inventory = target;
+                    originalHeight = target.m_height;
+                    restored = false;
+                    released = false;
+                    target.m_height = InventoryHeightPlayer;
+
+                    for (int i = target.m_inventory.Count - 1; i >= 0; i--)
                     {
-                        tempItems.Add(invItem);
-                        __instance.m_inventory.RemoveAt(i);
+                        ItemDrop.ItemData item = target.m_inventory[i];
+                        if (item == null || !API.IsItemInSlot(item))
+                            continue;
+
+                        removedItems.Add((i, item));
+                        target.m_inventory.RemoveAt(i);
                     }
                 }
 
-                tempItems.Reverse();
+                internal void Restore()
+                {
+                    if (restored || inventory == null)
+                        return;
+
+                    inventory.m_height = originalHeight;
+                    // Entries were removed in descending index order. Restore ascending order so
+                    // querying capacity cannot reorder resource consumption or identical stacks.
+                    for (int i = removedItems.Count - 1; i >= 0; i--)
+                    {
+                        (int index, ItemDrop.ItemData item) = removedItems[i];
+                        if (!inventory.m_inventory.Contains(item))
+                            inventory.m_inventory.Insert(Math.Min(index, inventory.m_inventory.Count), item);
+                    }
+
+                    restored = true;
+                }
+
+                internal void Release()
+                {
+                    if (released)
+                        return;
+
+                    released = true;
+                    removedItems.Clear();
+                    inventory = null;
+                    if (statePool.Count < 8)
+                        statePool.Push(this);
+                }
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, int stack, ref bool __result)
+            private static void Prefix(Inventory __instance, out CapacityQueryState __state)
             {
+                __state = null;
                 if (__instance != PlayerInventory)
                     return;
 
-                __instance.m_height = InventoryHeightFull;
+                __state = statePool.Count > 0 ? statePool.Pop() : new CapacityQueryState();
+                __state.Begin(__instance);
+            }
 
-                if (tempItems.Count > 0)
-                {
-                    __instance.m_inventory.AddRange(tempItems);
-                    tempItems.Clear();
-                }
-
-                if (__result)
+            [HarmonyPriority(Priority.First)]
+            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, int stack, bool __runOriginal, CapacityQueryState __state, ref bool __result)
+            {
+                __state?.Restore();
+                if (__state == null || !__runOriginal || __result || item?.m_shared == null)
                     return;
 
+                int requestedStack = stack > 0 ? stack : item.m_stack;
                 int freeStackSpace = __instance.FindFreeStackSpace(item.m_shared.m_name, item.m_worldLevel);
-                int freeQuickSlotStackSpace = __instance.GetEmptySlots() * item.m_shared.m_maxStackSize;
+                long freeQuickSlotStackSpace = (long)Math.Max(0, __instance.GetEmptySlots()) * item.m_shared.m_maxStackSize;
+                long sizeCombined = Math.Max(0, freeStackSpace) + freeQuickSlotStackSpace;
 
-                int sizeCombined = freeStackSpace + freeQuickSlotStackSpace;
-                if (sizeCombined < 0)
-                    sizeCombined = int.MaxValue;
-
-                if (__result = sizeCombined >= stack)
+                if (__result = sizeCombined >= requestedStack)
                 {
                     LogDebug($"Inventory.CanAddItem_ItemData_int item {item.m_shared.m_name} result {__result}, free stack space: {freeStackSpace}, free quick slot stack space: {freeQuickSlotStackSpace}, have free stack space");
                 }
-                else if (stack <= item.m_shared.m_maxStackSize && !Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem)
+                else if (requestedStack <= item.m_shared.m_maxStackSize && !Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem)
                 {
                     if (__result = TryFindFreeSlotForItem(item, out Slot slot))
                         LogDebug($"Inventory.CanAddItem_ItemData_int item {item.m_shared.m_name} result {__result}, free stack space: {freeStackSpace}, free quick slot stack space: {freeQuickSlotStackSpace}, no free stack space, free single slot found {slot} {slot.GridPosition}");
                 }
+            }
+
+            [HarmonyPriority(Priority.Last)]
+            private static Exception Finalizer(CapacityQueryState __state, Exception __exception)
+            {
+                __state?.Restore();
+                __state?.Release();
+                return __exception;
             }
         }
 
@@ -823,10 +877,20 @@ namespace ExtraSlots
             public static bool inCall = false;
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix() => inCall = true;
+            private static void Prefix(out bool __state)
+            {
+                __state = inCall;
+                inCall = true;
+            }
 
             [HarmonyPriority(Priority.First)]
-            private static void Postfix() => inCall = false;
+            private static void Postfix(bool __state) => inCall = __state;
+
+            private static Exception Finalizer(bool __state, Exception __exception)
+            {
+                inCall = __state;
+                return __exception;
+            }
         }
 
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.MoveInventoryToGrave))]
@@ -848,9 +912,19 @@ namespace ExtraSlots
         {
             public static bool inCall = false;
 
-            private static void Prefix(Inventory __instance) => inCall = __instance == PlayerInventory;
+            private static void Prefix(Inventory __instance, out bool __state)
+            {
+                __state = inCall;
+                inCall = __instance == PlayerInventory;
+            }
 
-            private static void Postfix() => inCall = false;
+            private static void Postfix(bool __state) => inCall = __state;
+
+            private static Exception Finalizer(bool __state, Exception __exception)
+            {
+                inCall = __state;
+                return __exception;
+            }
         }
 
         [HarmonyPatch(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.GetWeight))]

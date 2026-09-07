@@ -191,11 +191,23 @@ namespace ExtraSlots
 
             internal static bool TryAddNewSlotAfter(string[] slotIDs, string slotID, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
             {
-                Slot slotToAdd = slots.LastOrDefault(slot => slot.IsCustomSlot && slotIDs.Contains(slot.ID));
-                if (slotToAdd != null)
-                    return TryAddNewSlotWithIndex(slotID, slotToAdd.Index, getName, itemIsValid, isActive);
+                if (slots.Any(slot => slot.ID == GetSlotID(slotID)))
+                    return true;
 
-                return TryAddNewSlotWithIndex(slotID, -1, getName, itemIsValid, isActive);
+                Slot precedingSlot = slots.LastOrDefault(slot => slot.IsCustomSlot && !slot.IsEmptySlot
+                    && slotIDs != null && slotIDs.Any(id => slot.ID == id || slot.ID == GetSlotID(id)));
+                if (precedingSlot == null)
+                    return TryAddNewSlotWithIndex(slotID, -1, getName, itemIsValid, isActive);
+
+                if (precedingSlot.Index + 1 >= slots.Length)
+                {
+                    LogWarning($"Error adding new slot {slotID} after {precedingSlot.ID}. No following custom slot is available.");
+                    return false;
+                }
+
+                // The public insertion index is relative to the custom region, not the full grid.
+                int customIndex = precedingSlot.Index - customSlotStartingIndex + 1;
+                return TryAddNewSlotWithIndex(slotID, customIndex, getName, itemIsValid, isActive);
             }
 
             internal static bool TryAddNewSlotWithIndex(string slotID, int slotIndex = -1, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
@@ -204,7 +216,7 @@ namespace ExtraSlots
                     return true;
 
                 // index < 0 - first available slot
-                // index > 0 - clamp between custom slot starting index and max slots count then insert with shifting other slots right
+                // index >= 0 - clamp within the custom region, then insert with shifting other slots right
                 int index = slotIndex < 0 ? Array.FindIndex(slots, slot => slot.IsCustomSlot && slot.IsEmptySlot) : Mathf.Clamp(slotIndex + customSlotStartingIndex, customSlotStartingIndex, slots.Length - 1);
                 if (index < 0)
                 {
@@ -225,7 +237,7 @@ namespace ExtraSlots
                 if (slots[index].IsEmptySlot)
                     slots[index] = new Slot(GetSlotID(slotID), index, getName, itemIsValid, isActive);
                 else
-                    InsertSlot(index, GetSlotID(slotID), getName, itemIsValid, isActive);
+                    InsertSlot(index, slotID, getName, itemIsValid, isActive);
 
                 API.UpdateSlots();
 
@@ -245,6 +257,13 @@ namespace ExtraSlots
                         slots[i].CacheItem();
 
                     ItemDrop.ItemData item = slots[index].Item;
+                    if (item != null && CurrentPlayer != null)
+                    {
+                        // The old cell will belong to the next slot after compaction. Preserve the
+                        // removed slot's identity before recovery can interpret that transient cell.
+                        item.m_customData[customKeyPlayerID] = CurrentPlayer.GetPlayerID().ToString();
+                        item.m_customData[customKeySlotID] = slots[index].ID;
+                    }
 
                     for (int i = index + 1; i < slots.Length; i++)
                     {

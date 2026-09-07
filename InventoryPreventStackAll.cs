@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using static ExtraSlots.Slots;
 using static ExtraSlots.ExtraSlots;
@@ -7,32 +8,68 @@ namespace ExtraSlots
 {
     internal static class InventoryPreventStackAll
     {
-        private static readonly List<ItemDrop.ItemData> removedItems = new List<ItemDrop.ItemData>();
-
-        private static void RemoveItemsFromPlayerInventory()
+        private sealed class StackAllState : IDisposable
         {
-            for (int i = PlayerInventory.m_inventory.Count - 1; i >= 0; i--)
-            {
-                ItemDrop.ItemData item = PlayerInventory.m_inventory[i];
-                if (AllowStackAll(item))
-                    continue;
+            private readonly Inventory inventory;
+            private readonly IDisposable batch;
+            private readonly List<(int Index, ItemDrop.ItemData Item)> removedItems = new List<(int, ItemDrop.ItemData)>();
+            private bool restored;
+            private bool disposed;
 
-                removedItems.Add(item);
-                PlayerInventory.m_inventory.RemoveAt(i);
+            internal StackAllState(Inventory inventory)
+            {
+                this.inventory = inventory;
+                batch = PlayerInventoryOperations.Batch(inventory);
             }
 
-            LogDebug($"Removed {removedItems.Count} items from player inventory before StackAll");
-        }
+            internal void RemoveProtectedItems()
+            {
+                for (int i = inventory.m_inventory.Count - 1; i >= 0; i--)
+                {
+                    ItemDrop.ItemData item = inventory.m_inventory[i];
+                    if (item == null || AllowStackAll(item))
+                        continue;
 
-        private static void BringItemsBack()
-        {
-            if (removedItems.Count == 0)
-                return;
+                    removedItems.Add((i, item));
+                    inventory.m_inventory.RemoveAt(i);
+                }
 
-            PlayerInventory.m_inventory.AddRange(removedItems);
+                LogDebug($"Removed {removedItems.Count} items from player inventory before StackAll");
+            }
 
-            LogDebug($"Returned {removedItems.Count} items to player inventory after StackAll");
-            removedItems.Clear();
+            internal void Restore()
+            {
+                if (restored)
+                    return;
+
+                for (int i = removedItems.Count - 1; i >= 0; i--)
+                {
+                    (int index, ItemDrop.ItemData item) = removedItems[i];
+                    if (!inventory.m_inventory.Contains(item))
+                        inventory.m_inventory.Insert(Math.Min(index, inventory.m_inventory.Count), item);
+                }
+
+                restored = true;
+                ClearCachedItems();
+                LogDebug($"Returned {removedItems.Count} items to player inventory after StackAll");
+                removedItems.Clear();
+            }
+
+            public void Dispose()
+            {
+                if (disposed)
+                    return;
+
+                try
+                {
+                    Restore();
+                }
+                finally
+                {
+                    disposed = true;
+                    batch.Dispose();
+                }
+            }
         }
 
         private static bool AllowStackAll(ItemDrop.ItemData item)
@@ -57,38 +94,27 @@ namespace ExtraSlots
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.StackAll))]
         private static class Inventory_StackAll_PreventStackingItemsFromSlots
         {
-            public static bool inCall = false;
-
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory fromInventory)
+            private static void Prefix(Inventory fromInventory, out StackAllState __state)
             {
-                if ((inCall = (fromInventory == PlayerInventory && !Compatibility.ZenBeehiveCompat.IsHoneyOpen)) == false)
+                __state = null;
+                if (fromInventory == null || fromInventory != PlayerInventory || Compatibility.ZenBeehiveCompat.IsHoneyOpen)
                     return;
 
-                RemoveItemsFromPlayerInventory();
+                // Every nested call owns only its own removed items. Notification batching keeps
+                // ordinary observers from seeing the temporarily incomplete player inventory.
+                __state = new StackAllState(fromInventory);
+                __state.RemoveProtectedItems();
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Postfix()
+            private static void Postfix(StackAllState __state) => __state?.Restore();
+
+            [HarmonyPriority(Priority.Last)]
+            private static Exception Finalizer(StackAllState __state, Exception __exception)
             {
-                if (inCall)
-                    BringItemsBack();
-
-                inCall = false;
-            }
-
-            // Just in case to prevent item loss in case of error
-            private static void Finally() => Postfix();
-        }
-
-        [HarmonyPatch(typeof(Inventory), nameof(Inventory.Changed))]
-        private static class Inventory_Changed_BringItemsBack
-        {
-            [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory __instance)
-            {
-                if (__instance == PlayerInventory && Inventory_StackAll_PreventStackingItemsFromSlots.inCall)
-                    BringItemsBack();
+                __state?.Dispose();
+                return __exception;
             }
         }
     }

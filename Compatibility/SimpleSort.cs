@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using BepInEx.Bootstrap;
 using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using static ExtraSlots.Slots;
@@ -11,8 +12,65 @@ namespace ExtraSlots.Compatibility
     {
         public const string GUID = "aedenthorn.SimpleSort";
 
-        private static readonly List<ItemDrop.ItemData> itemsToKeep = new List<ItemDrop.ItemData>();
-        private static Inventory sortedInventory;
+        private sealed class SortState : IDisposable
+        {
+            private readonly Inventory inventory;
+            private readonly IDisposable batch;
+            private readonly List<ItemDrop.ItemData> itemsToKeep = new List<ItemDrop.ItemData>();
+            private bool restored;
+            private bool disposed;
+
+            internal SortState(Inventory inventory)
+            {
+                this.inventory = inventory;
+                batch = PlayerInventoryOperations.Batch(inventory);
+            }
+
+            internal void KeepSlotItems()
+            {
+                foreach (Slot slot in slots)
+                {
+                    ItemDrop.ItemData item = slot.Item;
+                    if (item == null || !inventory.ContainsItem(item))
+                        continue;
+
+                    itemsToKeep.Add(item);
+                    inventory.m_inventory.Remove(item);
+                    ExtraSlots.LogDebug($"SimpleSort.SortByType.Prefix: Sorting prevented for item {item.m_shared.m_name} from slot {slot}.");
+                }
+            }
+
+            internal void Restore()
+            {
+                if (restored)
+                    return;
+
+                foreach (ItemDrop.ItemData item in itemsToKeep)
+                    if (!inventory.ContainsItem(item))
+                        inventory.m_inventory.Add(item);
+
+                restored = true;
+                ClearCachedItems();
+                ExtraSlots.LogDebug($"SimpleSort.SortByType: {itemsToKeep.Count} item(s) returned to player inventory after sorting.");
+                itemsToKeep.Clear();
+            }
+
+            public void Dispose()
+            {
+                if (disposed)
+                    return;
+
+                try
+                {
+                    Restore();
+                }
+                finally
+                {
+                    disposed = true;
+                    batch.Dispose();
+                }
+            }
+        }
 
         [HarmonyPatch]
         public static class SimpleSort_InternalIsEquipOrQuickSlot_IgnoreExtraSlots
@@ -36,46 +94,25 @@ namespace ExtraSlots.Compatibility
 
             public static MethodBase TargetMethod() => target;
 
-            public static void Prefix(Inventory inventory)
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix(Inventory inventory, out SortState __state)
             {
-                if (inventory != PlayerInventory)
+                __state = null;
+                if (inventory == null || inventory != PlayerInventory)
                     return;
 
-                sortedInventory = inventory;
-
-                itemsToKeep.Clear();
-                slots.DoIf(slot => !slot.IsFree, KeepItem);
-                
-                void KeepItem(Slot slot)
-                {
-                    ItemDrop.ItemData item = slot.Item;
-
-                    itemsToKeep.Add(item);
-                    inventory.m_inventory.Remove(item);
-                    ExtraSlots.LogDebug($"SimpleSort.SortByType.Prefix: Sorting prevented for item {item.m_shared.m_name} from slot {slot}. Item temporary removed from player inventory.");
-                }
+                __state = new SortState(inventory);
+                __state.KeepSlotItems();
             }
 
-            public static void Finalizer() => sortedInventory = null;
+            [HarmonyPriority(Priority.First)]
+            private static void Postfix(SortState __state) => __state?.Restore();
 
-            [HarmonyPatch(typeof(Inventory), nameof(Inventory.Changed))]
-            private static class Inventory_Changed_BringItemsBack
+            [HarmonyPriority(Priority.Last)]
+            private static Exception Finalizer(SortState __state, Exception __exception)
             {
-                [HarmonyPriority(Priority.First)]
-                private static void Prefix(Inventory __instance)
-                {
-                    if (__instance != sortedInventory)
-                        return;
-
-                    if (itemsToKeep.Count == 0)
-                        return;
-
-                    __instance.m_inventory.AddRange(itemsToKeep);
-
-                    ExtraSlots.LogDebug($"SimpleSort.SortByType.Postfix: {itemsToKeep.Count} item(s) returned to player inventory after sorting preventing.");
-
-                    itemsToKeep.Clear();
-                }
+                __state?.Dispose();
+                return __exception;
             }
         }
     }

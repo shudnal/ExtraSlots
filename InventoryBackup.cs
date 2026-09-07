@@ -38,7 +38,10 @@ namespace ExtraSlots
             {
                 ItemDrop.ItemData backupItem = item.Clone();
 
-                backup.AddItem(backupItem, new Vector2i(backupItem.m_gridPos.x, backupItem.m_gridPos.y - InventoryHeightPlayer));
+                // A backup is a snapshot, not an inventory transfer. AddItem would merge separate
+                // source stacks and change their identity, causing false "missing item" recovery.
+                backupItem.m_gridPos = new Vector2i(backupItem.m_gridPos.x, backupItem.m_gridPos.y - InventoryHeightPlayer);
+                backup.m_inventory.Add(backupItem);
             }
 
             ZPackage pkg = new ZPackage();
@@ -48,7 +51,7 @@ namespace ExtraSlots
             compressed.WriteCompressed(pkg);
 
             ExtraSlotsBackup extraSlotsBackup = new ExtraSlotsBackup { 
-                date = DateTime.Now.ToString(), 
+                date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture), 
                 worldName = ZNet.instance?.GetWorldName(), 
                 nrOfItems = backup.NrOfItems(), 
                 width = width, 
