@@ -116,16 +116,14 @@ namespace ExtraSlots
             return null;
         }
 
-        private static string GetLiveSlotId(ItemDrop.ItemData item)
+        private static string GetPersistedSlotId(ItemDrop.ItemData item)
         {
             if (item == null)
                 return null;
 
-            // A current physical slot is the strongest evidence. Saved return-address metadata is
-            // used when the item is temporarily outside its slot during topology reconciliation.
-            if (GetItemSlot(item) is Slot currentSlot && !currentSlot.IsEmptySlot)
-                return currentSlot.ID;
-
+            // Physical placement is not ownership provenance: topology reconciliation may move an
+            // unrelated regular item into a free ExtraSlots cell. Only the return address written
+            // during Player.Save proves that this live item represents a slot-only backup entry.
             if (TryGetSavedPlayerSlot(item, out Slot savedSlot) && savedSlot != null && !savedSlot.IsEmptySlot)
                 return savedSlot.ID;
 
@@ -139,13 +137,14 @@ namespace ExtraSlots
         {
             string sourceSlotId = GetSourceSlotId(sourceItem);
 
-            // Old backups may not contain slot metadata. Preserve the historical conservative fallback:
-            // any slot-backed copy can represent such an entry, but a regular unprovenanced copy cannot.
+            // Old backups may not contain slot metadata. Preserve the conservative fallback only for
+            // candidates that themselves have persisted/deferred slot provenance; current physical
+            // placement alone is deliberately not enough evidence of ownership.
             if (string.IsNullOrEmpty(sourceSlotId))
-                return playerItem != null ? !string.IsNullOrEmpty(GetLiveSlotId(playerItem)) : !string.IsNullOrEmpty(deferredPreferredSlotId);
+                return playerItem != null ? !string.IsNullOrEmpty(GetPersistedSlotId(playerItem)) : !string.IsNullOrEmpty(deferredPreferredSlotId);
 
             if (playerItem != null)
-                return string.Equals(GetLiveSlotId(playerItem), sourceSlotId, StringComparison.Ordinal);
+                return string.Equals(GetPersistedSlotId(playerItem), sourceSlotId, StringComparison.Ordinal);
 
             return string.Equals(deferredPreferredSlotId, sourceSlotId, StringComparison.Ordinal);
         }
@@ -159,7 +158,7 @@ namespace ExtraSlots
             // reassurance, but never mutate deferred storage or consume/mark the durable backup here.
             // The real world Player will perform the authoritative deferred adoption after SetLocalPlayer.
             List<ItemDrop.ItemData> represented = inventory.m_inventory
-                .Where(existing => !string.IsNullOrEmpty(GetLiveSlotId(existing)))
+                .Where(existing => !string.IsNullOrEmpty(GetPersistedSlotId(existing)))
                 .ToList();
 
             List<ItemDrop.ItemData> itemsToEquip = new List<ItemDrop.ItemData>();
