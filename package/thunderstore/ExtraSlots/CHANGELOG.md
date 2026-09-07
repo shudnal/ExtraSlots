@@ -22,6 +22,7 @@
 * fixed extra-slot backups merging separate stacks and incorrectly restoring additional items on later loads
 * protected slot items are now restored even when capacity checks, Stack All, or SimpleSort are interrupted by another mod
 * fixed custom slot insertion IDs and AddSlotAfter ordering, and preserved the removed slot return address during recovery
+* recovered backup equipment is now shown immediately on the character selection preview before entering a world
 
 # 1.1.21
 * updated Epic Loot compatibility for legacy versions and the 0.13.0+ API, including magic effects, set bonuses, and sacrifice filtering in extra slots
@@ -80,246 +81,229 @@
 * changed behaviour of "fixed item list" in "Death tweaks" section to always keep configured items regardless of group configs "Keep items at X slots".
 
 # 1.1.4
-* item weight reduction percent in slots tooltip (if set)
-* a bit more compatible CanAddItem algorithm with support of absurdly high item stack sizes causing signed integer overflow
-* fixed mod breaking on startup if localization file is incorrect
-* fixed vanilla slots reordering not working properly
+* config SyncEquipmentSlots changed to SyncOtherModsSettings with expanded functionality
+* some death tweaks
 
 # 1.1.3
-* new config for Death Tweaks and Tombstone Auto Equip - item list. You can set your custom items to be kept on death or auto equipped
-* Infused Megingjord from NorseDemigods added to unique-equipped items along with other belts increasing carry weight
-* added support of equippable items with custom "increase carry weight" algorithms (like said Infused Megingjord from NorseDemigods)
-* items auto equip after tombstone pickup was improved a bit for better support of mods altering respawning or tombstone interaction (like Afterdeath and Resurrection)
+* equipped item used in craft will be equipped back
 
 # 1.1.2
-* fixed item icons in lightened slot visuals (less saturated and less size)
-* new configs to show/hide lightened slots background icon and tooltip
+* added identification of slots with similar hotkeys (if several slots have same hotkey only one will be used if config "Use only one hotkey item" is on)
 
 # 1.1.1
-* fixed issue with progression based on item name not working in some cases
+* added option to use only one item for pressed hotkey
+* added option to prevent changing equipped item from regular inventory when there is an equipped item in slot
+* item dragged from extra slot to regular inventory as the same item will return back to slot
+* misc slots now accept equipped items (wishbone, demister, etc)
+* multiple Equipped Status Effects are supported in custom slots (except for Extra Utility slots)
+* fixed slot custom config items not applying properly at loading
 
 # 1.1.0
-* more translations and current translations polished a bit
-* new feature: lightened slots. Make regular inventory rows to have reduced item weight. By default config is set for last two extra inventory rows to have item weight reduction. You can configure extra inventory rows to work as kinda embedded backpack upgraded on boss kills. If you are interested but confused by configs pls feel free to contact me at discord.
-* new config: black lists for items in food, ammo, misc slots
-* fixed mouse side buttons not available to bind
-* increased performance when looking at Fermenter with AzuCraftyBoxes and BowBeforeHoes enabled
+* ItemDataManager removed as dependency
+* ServerSync removed as dependency
+* conditional configs (from mods with ConditionalConfigSync) are local or server defined by policy file, policies are found in ConditionalConfigSync.yml
+
+# 1.0.55
+* fixed custom named item equip key hint display
+* dropped ConditionalConfigSync library in favor of item customData
+* custom equipment slot names are localized
+* Extra Utility config moved in config sections
+* ItemDataManager integration replaced with ItemData customData integration
+* extra items rearrangement after amount of items change
+* Extra utility, helmet, cape, chest, legs, trinket and custom slots items are now added to trophy list for game to register the texture for player profile outside current world
+* added support for [conditionalconfigsync](https://thunderstore.io/c/valheim/p/shudnal/ConditionalConfigSync/) as optional dependency with config sync mode policies
+
+# 1.0.54
+* extra utility slots amount increased up to 8
+* project compiled with .NET Framework 4.8
+
+# 1.0.53
+* Epic Loot 0.11.4 dropped legacy compatibility type `ExtendedItemDataFramework` in favor of `ItemData` directly
+
+# 1.0.52
+* added full equipped unique keys support of Epic Loot
 
 # 1.0.51
-* rehauled approach to repositioning of side panels with reduced inventory size
+* fixed internal errors
 
 # 1.0.50
-* items from quick, ammo and food slots are now shown at [ValheimRadial](https://thunderstore.io/c/valheim/p/PerspectiveBroad4501/ValheimRadial/) menu (disableable at Mods compatibility - Valheim Radial)
+* fixed hotbar anchoring to lower right corner
+* added alternative option to set regular rows amount
+* added panels alignment and free space configs
+* item position in slot is now defaulted to taken slot position
+* prevented dropping equipped item to regular inventory if it is in equipment slot
+* stack all prevention for regular hotbar items
+* fixed equipment slots tooltips not updating correctly
 
 # 1.0.49
-* ZenUI assigned gear slots compatibility
-* fixed potential loss of Jewelcrafting extended tooltip
+* added option to make vanilla-like item weight discounts for equipped items and other slot groups
+* added option to make extra inventory row contain extra slots (to keep inventory slots hidden)
+* added item positions inventory backup to restore slot items if you run game without ExtraSlots mod and those items get deleted
+* removed AzuEPI compatibility until codebase redesign
 
 # 1.0.48
 * extra rows amount can now be set up to -3 to reduce regular inventory size
-* added new configs for regular inventory rows progression
+* new configs for regular inventory rows progression
 * items in extra utility slots made visible on player (disableable in config)
 
 # 1.0.47
-* you can now use prefab names instead of item names ($item_...). For example BeltStrength instead of $item_beltstrength
-* changed default values of configs related to changes in item name -> prefab name. Previously configurated values still work.
-* fixed wrong state of player inventory after obtaining player unique key expanding extra inventory rows (like when you get Forsaken Power first time and that Forsaken Power was supposed to add inventory row)
+* fixed extra slots panels (especially tooltips and item dragging) shifted in certain cases when crafting panel is on the left
+* config to sync extra slots with other mods
+* fixed custom equipment slot items visibility when config is disabled
 
 # 1.0.46
-* maximum amount of custom slots increased to 16 to support used defined custom slots from ExtraSlotsCustomSlots
+* added new config "Custom slot items could go into regular equipment slots" disabled by default
+* fixed possible issue with not picking up previously unknown item into quick slot
+* list changes now applied instantly in game and consistently between config managers
 
 # 1.0.45
-* RequipMe compatibility
-* black and white lists for items to be kept on death
-* black and white lists for items to be auto equipped after tombstone interaction
+* automatic grid width adjustment to visible slots
+* custom config list saving/loading made culture invariant
 
 # 1.0.44
-* fix for utility items from custom slot competing for extra utility slots
+* fixed plugin compatibility
 
 # 1.0.43
-* minor fixes
+* equipment panel dragging is limited by main inventory screen rect
+* fixed custom slot items returned from other inventories in case of not placing them to custom slot with regular inventory filled
 
 # 1.0.42
-* fixed occasional error on loading
+* added drag-and-drop equipment panel offsets
+* added option to prevent slots dragging from UI when item is equipped
 
 # 1.0.41
-* fixed invisible element prevented drag'n'droping item out of inventory
+* added option to set custom Equipment slot items with item list or customData filters
 
 # 1.0.40
-* fixed binding of gamepad buttons to slots hotkeys (apparently it worked with some controllers)
+* added API for custom slots
+* added gamepad slots navigation
 
 # 1.0.39
-* Wrong format hotkeys will be clear automatically to prevent issues. Use a configuration manager to set up hotkeys.
-* fixed rare issue with incorrect item in items collection
+* added server synced config to disable custom slots
 
 # 1.0.38
-* new config in Mods compatibility to rebind F2 (open connect panel)
+* fixed ArmorStand gear interactions with custom slots
+* fixed tooltips for equipment slots while using controller
 
 # 1.0.37
-* final SimpleSort compatibility
+* extra slot amount increase to 16
 
 # 1.0.36
-* fixed items lose on death inside a dungeon
-* further SimpleSort compatibility (post sorting weight calculations)
+* left and right equipment slot panel positioning
+* optional equipment panel offset control
+* added icons to custom slots
 
 # 1.0.35
-* SimpleSort compatibility (exclude extra slots from sorting)
-* Recycle_N_Reclaim compatibility (ignore hotbar config ignores extra slots items)
+* added item quality overlay in equipment slots
 
 # 1.0.34
-* Call To Arms patch (trinket slot)
-* BowsBeforeHoes arrow finding and counting compatibility
-* Bombs and throwables now also go to ammo slot
+* switched mod network version check to CSync
 
 # 1.0.33
-* compatibility with ZenBeehive
-* minor optimization
+* fixed custom slots positions after load
 
 # 1.0.32
-* Quick Stack Store Sort Trash Restock mod compatibility for restock of quick, misc, food and ammo slots
-* fix for error on mod initialization when language has not been set explicitly
-* thunderstore version now has YamlDotNet as dependency
+* added custom slot active control
+* item can be placed into an empty custom slot manually regardless of item filters
 
 # 1.0.31
-* another attempt at better ValheimPlus inventory rows count compatibility
-* fixed hotbars cycling when alternative placing is up
+* custom slot API
 
 # 1.0.30
-* fixed duping things after death
+* moved equipment slots to separate rows by default
+* added config to hide arrows and equipped weapon/shield slots from equipment panel
+* readme rewrite
 
 # 1.0.29
+* added support for ExtendedPlayerInventory and aedenthorn's EquipMultipleUtilityItems
 * players without mod installed should now see extra items in Tombstone on interaction
 * Czech translation added
-* custom item lists for food and ammo slot items (you can now add bombs to ammo slots)
+* custom item lists for food and ammo slot items (by default includes items required to summon bosses)
+* vanilla slot order and Unique utility items configs now use custom config drawers to easier format handling
 
 # 1.0.28
 * custom item list for misc slot items (by default includes items required to summon bosses)
-* vanilla slot order and Unique utility items configs now use custom config drawers to easier format handling
 
 # 1.0.27
-* Polish translation refined
-* ServerSync updated
-* more compat for mods altering original hotkey bar
+* added no-item-drop mode for death
 
 # 1.0.26
-* patch 0.220.3
-* minor performance improvements
+* equipment slots custom rows order
 
 # 1.0.25
-* Ukrainian translation
-* fix for rare error related to equipment effects
+* added custom equipment slots
 
 # 1.0.24
-* hotbars now has configurable anchor to make it work the same on clients with different resolutions and GUI scales (if you moved panels you may need to reposition it again)
-* new config options to change weight of items in corresponding slots
+* fixed ancient bark stacking
 
 # 1.0.23
-* new config option to prevent auto pickup items to extra slots
+* added external config for ammo slot items
 
 # 1.0.22
-* more compatibility for Valheim+ inventory
+* config sync refactor
 
 # 1.0.21
-* fixed Backpacks and BBH's Quiver pushing some items to quick slots on player load
+* compatibility fixes
 
 # 1.0.20
-* new configs for slot groups to prevent "Stack All" from pulling items from configured slot types
-* new config to prevent "Stack All" from pulling items from hotbar
-* rare issue: some outdated custom meads now will properly go into Food slots
-* default hotkeys for Food slots now: Alt + Q, Alt + E, Alt + R
+* inventory hotkeys prevent game hotkeys conflicts
 
 # 1.0.19
-* more intuitive handling for similar hotkeys use in quick bars
+* food and ammo slots visual updates
 
 # 1.0.18
-* new config option for stack size Color of slots in equipment panel
-* quick slots hotbars will no longer overlap map window
+* extended equipment slots features
 
 # 1.0.17
-* new config option to use several hotbar items at once
-* changed the logic of checking quick slots and utility slots activity. If only one of the values ​​(global key or discovered item) is specified - checking for the unfilled one will not be performed
-* keyboard shortcuts will be ordered in similar manner to prevent potential issues with button order and to be more homogenous for similar hotkeys usage
+* fixed inventory in other mods compatibility
 
 # 1.0.16
-* ValheimPlus multiplayer compatibility
-* tooltip names format for hotkey slots made configurable
+* fixed on death inventory slotting
 
 # 1.0.15
-* AzuAutoStore compatibility to ignore items in extra slots
-* Quick Stack Store Sort Trash Restock compatibility to ignore items in extra slots
+* item slots custom config
 
 # 1.0.14
-* ok fine there is food slots hotbar now
-* and you can place potions in food slots
-* hotbar gamepad selection will now properly cycle through hotbars in order (top -> bottom, left -> right) if hotbars were repositioned
-* PlantEasily gamepad double selection fixed
-* MagicPlugin custom slot compatibility
+* extra slot display changes
 
 # 1.0.13
-* ammo and quickslots hotbar made more configurable
-* options to keep items in slots after death (compatible with Death Tweaks)
+* misc slots fixes
 
 # 1.0.12
-* fix for error on new character creation
+* slots amount config
 
 # 1.0.11
-* Chinese translations refined
-* BetterProgression compatibility
-* Valheim Enchantment System compatibility
-* Inventory rows amount can now be changed ingame without issues
-* Inventory rows obtaining progression
-* Fix for spamming error on tooltip
+* hotbar first release
 
 # 1.0.10
-* german translation refined
-* new option to hide stack size in hot bars
+* added food slots
 
 # 1.0.9
-* EpicLoot enchantments will work at any custom slot
-* EpicLoot support for ignoring sacrifice of hotbar items (quickslots and misc slots could be excluded as well)
+* added ammo slots
 
 # 1.0.8
-* new API methods
-* translations fixed
-* mod name in translation section fixed (it lacked space)
-* Backpacks compatibility
-* Extra Slots Custom Slots mod support
+* added quick slots
 
 # 1.0.7
-* fixed an issue where you could not drag unequipped item in slot
+* added equipment slot panel
 
 # 1.0.6
-* incompatibility with RequipMe
-* option to auto equip last equipped weapon/shield on tombstone interaction
-* better check if tombstone easy fits into inventory
+* inventory size config
 
 # 1.0.5
-* even better ValheimPlus compat
-* fix for tombstone extra utility items preventing tombstone spawn
+* compatibility updates
 
 # 1.0.4
-* more built-in translations
-* hotbars refinements
-* prevent simultaneous hotbar item use with similar hotkeys
-* quick and extra utility slots progression requires previous slots to be obtained
-* PlantEasily gamepad compatibility
-* dragging item visuals and logic refinements
+* initial inventory extension
 
 # 1.0.3
-* configurable autoequip on tombstone interaction
-* fixed major issue with BetterArchery compatibility on tombstone interaction
-* hotbars made more responsive and stable
-* hotbars visibility can now be toggled ingame
-* perfomance improvements
-* +2 more extra utility slots (up to 5 total utility items)
-* +3 more extra rows (up to 5 extra rows and total 9 rows of player inventory)
+* release setup
 
 # 1.0.2
-* compatibility with EpicLoot enchantments for extra utility slot items
+* initial public build
 
 # 1.0.1
-* unique-equipped utility items configurable
-* valheim plus better compatibility yet it's recommended to disable inventory section
+* package fixes
 
 # 1.0.0
- * Initial Release
+* initial release
