@@ -118,14 +118,20 @@ namespace ExtraSlots
 
         private static string GetPersistedSlotId(ItemDrop.ItemData item)
         {
-            if (item == null)
+            if (item?.m_customData == null)
                 return null;
 
             // Physical placement is not ownership provenance: topology reconciliation may move an
-            // unrelated regular item into a free ExtraSlots cell. Only the return address written
-            // during Player.Save proves that this live item represents a slot-only backup entry.
-            if (TryGetSavedPlayerSlot(item, out Slot savedSlot) && savedSlot != null && !savedSlot.IsEmptySlot)
-                return savedSlot.ID;
+            // unrelated regular item into a free ExtraSlots cell. Read the saved return address
+            // directly instead of resolving it through today's slot topology, because the original
+            // slot may currently be disabled or no longer registered while the provenance is valid.
+            if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerId)
+                && item.m_customData.TryGetValue(customKeySlotID, out string slotId)
+                && !string.IsNullOrEmpty(slotId)
+                && playerId == CurrentPlayerProfile?.GetPlayerID().ToString())
+            {
+                return slotId;
+            }
 
             return null;
         }
