@@ -104,18 +104,50 @@ namespace ExtraSlots
 
         private static bool IsCharacterPreview() => FejdStartup.instance != null && Player.m_localPlayer == null;
 
-        private static bool IsSlotBackedRepresentation(ItemDrop.ItemData item)
+        private static string GetSourceSlotId(ItemDrop.ItemData item)
+        {
+            if (item?.m_customData != null
+                && item.m_customData.TryGetValue(customKeySlotID, out string slotId)
+                && !string.IsNullOrEmpty(slotId))
+            {
+                return slotId;
+            }
+
+            return null;
+        }
+
+        private static string GetLiveSlotId(ItemDrop.ItemData item)
         {
             if (item == null)
-                return false;
+                return null;
 
-            // ExtraSlots' own backup contains only slot-region items. An identical regular item is
-            // therefore not evidence that a backed-up copy still exists. Accept only live items that
-            // still resolve to an ExtraSlots slot or carry the saved return address of one.
+            // A current physical slot is the strongest evidence. Saved return-address metadata is
+            // used when the item is temporarily outside its slot during topology reconciliation.
+            if (GetItemSlot(item) is Slot currentSlot && !currentSlot.IsEmptySlot)
+                return currentSlot.ID;
+
             if (TryGetSavedPlayerSlot(item, out Slot savedSlot) && savedSlot != null && !savedSlot.IsEmptySlot)
-                return true;
+                return savedSlot.ID;
 
-            return GetItemSlot(item) is Slot currentSlot && !currentSlot.IsEmptySlot;
+            return null;
+        }
+
+        private static bool SlotBackedRepresentationMatchesSource(
+            ItemDrop.ItemData sourceItem,
+            ItemDrop.ItemData playerItem,
+            string deferredPreferredSlotId)
+        {
+            string sourceSlotId = GetSourceSlotId(sourceItem);
+
+            // Old backups may not contain slot metadata. Preserve the historical conservative fallback:
+            // any slot-backed copy can represent such an entry, but a regular unprovenanced copy cannot.
+            if (string.IsNullOrEmpty(sourceSlotId))
+                return playerItem != null ? !string.IsNullOrEmpty(GetLiveSlotId(playerItem)) : !string.IsNullOrEmpty(deferredPreferredSlotId);
+
+            if (playerItem != null)
+                return string.Equals(GetLiveSlotId(playerItem), sourceSlotId, StringComparison.Ordinal);
+
+            return string.Equals(deferredPreferredSlotId, sourceSlotId, StringComparison.Ordinal);
         }
 
         private static int ProjectBackupToCharacterPreview(Player player, Inventory inventory, IReadOnlyList<ItemDrop.ItemData> backupItems)
@@ -126,10 +158,9 @@ namespace ExtraSlots
             // Character selection uses an ephemeral Player. Show the recovery result immediately for
             // reassurance, but never mutate deferred storage or consume/mark the durable backup here.
             // The real world Player will perform the authoritative deferred adoption after SetLocalPlayer.
-            Dictionary<string, int> represented = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach (ItemDrop.ItemData existing in inventory.m_inventory)
-                if (IsSlotBackedRepresentation(existing))
-                    AddRepresented(DeferredInventory.GetMigrationKey(existing));
+            List<ItemDrop.ItemData> represented = inventory.m_inventory
+                .Where(existing => !string.IsNullOrEmpty(GetLiveSlotId(existing)))
+                .ToList();
 
             List<ItemDrop.ItemData> itemsToEquip = new List<ItemDrop.ItemData>();
             int projected = 0;
@@ -140,9 +171,12 @@ namespace ExtraSlots
                     continue;
 
                 string key = DeferredInventory.GetMigrationKey(backupItem);
-                if (!string.IsNullOrEmpty(key) && represented.TryGetValue(key, out int count) && count > 0)
+                int representedIndex = represented.FindIndex(existing =>
+                    string.Equals(DeferredInventory.GetMigrationKey(existing), key, StringComparison.Ordinal)
+                    && SlotBackedRepresentationMatchesSource(backupItem, existing, null));
+                if (representedIndex >= 0)
                 {
-                    represented[key] = count - 1;
+                    represented.RemoveAt(representedIndex);
                     continue;
                 }
 
@@ -178,15 +212,6 @@ namespace ExtraSlots
             }
 
             return projected;
-
-            void AddRepresented(string key)
-            {
-                if (string.IsNullOrEmpty(key))
-                    return;
-
-                represented.TryGetValue(key, out int count);
-                represented[key] = count + 1;
-            }
         }
 
         private static Vector2i GetPreviewTarget(Inventory inventory, ItemDrop.ItemData item, Vector2i backupPosition)
@@ -248,7 +273,7 @@ namespace ExtraSlots
                     item => item.m_customData.TryGetValue(customKeySlotID, out string slotId) ? slotId : null,
                     item => item.m_equipped,
                     out bool allRepresented,
-                    IsSlotBackedRepresentation);
+                    SlotBackedRepresentationMatchesSource);
 
                 if (!allMaterialized || !allRepresented)
                 {
