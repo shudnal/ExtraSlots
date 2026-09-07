@@ -40,7 +40,8 @@ internal static class InventoryMigration
         string sourceName,
         Func<ItemDrop.ItemData, string> preferredSlot,
         Func<ItemDrop.ItemData, bool> restoreEquipped,
-        out bool allRepresented)
+        out bool allRepresented,
+        Func<ItemDrop.ItemData, bool> playerItemRepresentsSource = null)
     {
         allRepresented = true;
         if (player == null || sourceItems == null)
@@ -53,7 +54,8 @@ internal static class InventoryMigration
         Dictionary<string, int> available = new Dictionary<string, int>(StringComparer.Ordinal);
         IEnumerable<ItemDrop.ItemData> playerItems = player.GetInventory()?.m_inventory ?? new List<ItemDrop.ItemData>();
         foreach (ItemDrop.ItemData item in playerItems)
-            AddAvailable(DeferredInventory.GetMigrationKey(item));
+            if (playerItemRepresentsSource?.Invoke(item) != false)
+                AddAvailable(DeferredInventory.GetMigrationKey(item));
         foreach (string key in DeferredInventory.GetMaterializedMigrationKeys(player))
             AddAvailable(key);
 
