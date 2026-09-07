@@ -24,6 +24,25 @@ internal static class InventoryMigration
         internal bool RolledBack;
     }
 
+    private sealed class AvailableRepresentation
+    {
+        internal string Key;
+        internal ItemDrop.ItemData PlayerItem;
+        internal string DeferredPreferredSlotId;
+    }
+
+    private readonly struct DeferredRepresentation
+    {
+        internal readonly string Key;
+        internal readonly string PreferredSlotId;
+
+        internal DeferredRepresentation(string key, string preferredSlotId)
+        {
+            Key = key;
+            PreferredSlotId = preferredSlotId;
+        }
+    }
+
     internal static int ImportMissingItemsToDeferred(
         Player player,
         IEnumerable<ItemDrop.ItemData> sourceItems,
@@ -41,7 +60,7 @@ internal static class InventoryMigration
         Func<ItemDrop.ItemData, string> preferredSlot,
         Func<ItemDrop.ItemData, bool> restoreEquipped,
         out bool allRepresented,
-        Func<ItemDrop.ItemData, bool> playerItemRepresentsSource = null)
+        Func<ItemDrop.ItemData, ItemDrop.ItemData, string, bool> representationMatchesSource = null)
     {
         allRepresented = true;
         if (player == null || sourceItems == null)
@@ -51,13 +70,24 @@ internal static class InventoryMigration
         }
 
         DeferredPayloadSnapshot deferredBeforeImport = CaptureDeferredPayload(player);
-        Dictionary<string, int> available = new Dictionary<string, int>(StringComparer.Ordinal);
+        List<AvailableRepresentation> available = new List<AvailableRepresentation>();
         IEnumerable<ItemDrop.ItemData> playerItems = player.GetInventory()?.m_inventory ?? new List<ItemDrop.ItemData>();
         foreach (ItemDrop.ItemData item in playerItems)
-            if (playerItemRepresentsSource?.Invoke(item) != false)
-                AddAvailable(DeferredInventory.GetMigrationKey(item));
-        foreach (string key in DeferredInventory.GetMaterializedMigrationKeys(player))
-            AddAvailable(key);
+        {
+            string key = DeferredInventory.GetMigrationKey(item);
+            if (!string.IsNullOrEmpty(key))
+                available.Add(new AvailableRepresentation { Key = key, PlayerItem = item });
+        }
+
+        foreach (DeferredRepresentation representation in GetMaterializedDeferredRepresentations(player))
+        {
+            if (!string.IsNullOrEmpty(representation.Key))
+                available.Add(new AvailableRepresentation
+                {
+                    Key = representation.Key,
+                    DeferredPreferredSlotId = representation.PreferredSlotId
+                });
+        }
 
         int imported = 0;
         try
@@ -65,9 +95,14 @@ internal static class InventoryMigration
             foreach (ItemDrop.ItemData item in sourceItems.Where(item => item != null))
             {
                 string key = DeferredInventory.GetMigrationKey(item);
-                if (!string.IsNullOrEmpty(key) && available.TryGetValue(key, out int count) && count > 0)
+                int representedIndex = available.FindIndex(candidate =>
+                    string.Equals(candidate.Key, key, StringComparison.Ordinal)
+                    && (representationMatchesSource == null
+                        || representationMatchesSource(item, candidate.PlayerItem, candidate.DeferredPreferredSlotId)));
+
+                if (representedIndex >= 0)
                 {
-                    available[key] = count - 1;
+                    available.RemoveAt(representedIndex);
                     continue;
                 }
 
@@ -96,15 +131,69 @@ internal static class InventoryMigration
             LogMessage($"Imported {imported} missing item(s) from {sourceName} into deferred inventory.");
 
         return imported;
+    }
 
-        void AddAvailable(string key)
+    private static List<DeferredRepresentation> GetMaterializedDeferredRepresentations(Player player)
+    {
+        List<DeferredRepresentation> result = new List<DeferredRepresentation>();
+        if (player == null || !DeferredInventory.EnsureLoaded(player)
+            || !player.m_customData.TryGetValue(DeferredInventory.CustomDataKey, out string payload)
+            || string.IsNullOrEmpty(payload))
         {
-            if (string.IsNullOrEmpty(key))
-                return;
-
-            available.TryGetValue(key, out int count);
-            available[key] = count + 1;
+            return result;
         }
+
+        try
+        {
+            ZPackage envelope = new ZPackage(payload);
+            if (envelope.ReadInt() != DeferredInventory.EnvelopeVersion)
+                return result;
+
+            int count = envelope.ReadInt();
+            if (count < 0)
+                return result;
+
+            for (int i = 0; i < count; i++)
+            {
+                string prefabName = envelope.ReadString();
+                string preferredSlotId = envelope.ReadString();
+                envelope.ReadBool();
+                int originalStack = envelope.ReadInt();
+                string itemPackageBase64 = envelope.ReadString();
+
+                if (string.IsNullOrEmpty(prefabName) || string.IsNullOrEmpty(itemPackageBase64)
+                    || ObjectDB.instance?.GetItemPrefab(prefabName) == null)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    ZPackage compressedItemPackage = new ZPackage(itemPackageBase64);
+                    Inventory singleItemInventory = new Inventory(DeferredInventory.CustomDataKey, null, 1, 1);
+                    singleItemInventory.Load(compressedItemPackage.ReadCompressedPackage());
+                    ItemDrop.ItemData item = singleItemInventory.m_inventory.Count == 1 ? singleItemInventory.m_inventory[0] : null;
+                    if (item == null || item.m_stack != originalStack
+                        || !string.Equals(item.m_dropPrefab?.name, prefabName, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    result.Add(new DeferredRepresentation(DeferredInventory.GetMigrationKey(item), preferredSlotId));
+                }
+                catch
+                {
+                    // DeferredInventory owns diagnostics and preservation for malformed/unavailable entries.
+                    // A representation that cannot be materialized must not suppress recovery from a backup.
+                }
+            }
+        }
+        catch
+        {
+            // EnsureLoaded already validates and reports the authoritative deferred envelope.
+        }
+
+        return result;
     }
 
     internal static bool TryLoadInventoryPackage(string base64, string name, int width, int height, out Inventory inventory)
