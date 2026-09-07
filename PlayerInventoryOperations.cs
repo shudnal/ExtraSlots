@@ -536,11 +536,7 @@ namespace ExtraSlots
             Vector2i target = emptyPosition;
             if (stackCapacity < item.m_stack)
             {
-                target = FindEmptyRegularPosition(item);
-                if (target.x < 0 && TryFindEmptyQuickSlot(out Slot quickSlot) && quickSlot.ItemFits(item))
-                    target = quickSlot.GridPosition;
-                if (target.x < 0 && TryFindFreeSlotForItem(item, out Slot freeSlot))
-                    target = freeSlot.GridPosition;
+                target = FindDirectEmptyDestination(item);
 
                 // Deferred recovery uses only existing capacity. Do not move unrelated residents to
                 // manufacture space immediately after the validator deliberately deferred an item.
@@ -583,12 +579,16 @@ namespace ExtraSlots
                     return true;
                 }
 
-                // This should only be reachable if another patch changed stack semantics during the
-                // operation. Roll the tentative merge back so the deferred source stays authoritative.
+                // Another patch may reject stacks that satisfy vanilla's coarse name/quality/world
+                // capacity check (for example because custom data differs). Roll back the tentative
+                // merge and then try a genuinely empty destination before keeping the item deferred.
                 foreach ((ItemDrop.ItemData stackItem, int previousStack) in stackSnapshots)
                     stackItem.m_stack = previousStack;
                 item.m_stack = originalStack;
-                return false;
+
+                target = FindDirectEmptyDestination(item);
+                if (target.x < 0)
+                    return false;
             }
 
             // When existing stacks cannot consume the whole deferred item, keep the operation
@@ -1328,6 +1328,17 @@ namespace ExtraSlots
             }
 
             inventory.Changed();
+        }
+
+        private static Vector2i FindDirectEmptyDestination(ItemDrop.ItemData item)
+        {
+            Vector2i target = FindEmptyRegularPosition(item);
+            if (target.x < 0 && TryFindEmptyQuickSlot(out Slot quickSlot) && quickSlot.ItemFits(item))
+                target = quickSlot.GridPosition;
+            if (target.x < 0 && TryFindFreeSlotForItem(item, out Slot freeSlot))
+                target = freeSlot.GridPosition;
+
+            return target;
         }
 
         private static Vector2i FindEmptyRegularPosition(ItemDrop.ItemData item)
