@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using static ExtraSlots.Slots;
@@ -96,8 +97,111 @@ namespace ExtraSlots
                 return true;
 
             // Never overwrite a backup payload merely because this version cannot parse it.
-            preserveRawBackupForPlayer = player;
+            if (!IsCharacterPreview())
+                preserveRawBackupForPlayer = player;
             return false;
+        }
+
+        private static bool IsCharacterPreview() => FejdStartup.instance != null && Player.m_localPlayer == null;
+
+        private static int ProjectBackupToCharacterPreview(Player player, Inventory inventory, IReadOnlyList<ItemDrop.ItemData> backupItems)
+        {
+            if (player == null || inventory?.m_inventory == null || backupItems == null || !IsCharacterPreview())
+                return 0;
+
+            // Character selection uses an ephemeral Player. Show the recovery result immediately for
+            // reassurance, but never mutate deferred storage or consume/mark the durable backup here.
+            // The real world Player will perform the authoritative deferred adoption after SetLocalPlayer.
+            Dictionary<string, int> represented = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (ItemDrop.ItemData existing in inventory.m_inventory)
+                AddRepresented(DeferredInventory.GetMigrationKey(existing));
+
+            List<ItemDrop.ItemData> itemsToEquip = new List<ItemDrop.ItemData>();
+            int projected = 0;
+
+            foreach (ItemDrop.ItemData backupItem in backupItems)
+            {
+                if (backupItem == null)
+                    continue;
+
+                string key = DeferredInventory.GetMigrationKey(backupItem);
+                if (!string.IsNullOrEmpty(key) && represented.TryGetValue(key, out int count) && count > 0)
+                {
+                    represented[key] = count - 1;
+                    continue;
+                }
+
+                ItemDrop.ItemData previewItem = backupItem.Clone();
+                bool shouldEquip = previewItem.m_equipped;
+                previewItem.m_equipped = false;
+
+                Vector2i target = GetPreviewTarget(inventory, previewItem, backupItem.m_gridPos);
+                previewItem.m_gridPos = target;
+                inventory.m_inventory.Add(previewItem);
+                projected++;
+
+                if (shouldEquip && previewItem.IsEquipable())
+                    itemsToEquip.Add(previewItem);
+            }
+
+            if (projected == 0)
+                return 0;
+
+            inventory.Changed();
+            foreach (ItemDrop.ItemData item in itemsToEquip)
+            {
+                try
+                {
+                    if (!player.EquipItem(item, triggerEquipEffects: false))
+                        item.m_equipped = false;
+                }
+                catch (Exception ex)
+                {
+                    item.m_equipped = false;
+                    LogWarning($"Backup preview item {item.m_shared?.m_name ?? item.m_dropPrefab?.name ?? "<unknown>"} could not be equipped:\n{ex}");
+                }
+            }
+
+            return projected;
+
+            void AddRepresented(string key)
+            {
+                if (string.IsNullOrEmpty(key))
+                    return;
+
+                represented.TryGetValue(key, out int count);
+                represented[key] = count + 1;
+            }
+        }
+
+        private static Vector2i GetPreviewTarget(Inventory inventory, ItemDrop.ItemData item, Vector2i backupPosition)
+        {
+            Vector2i target = new Vector2i(backupPosition.x, backupPosition.y + InventoryHeightPlayer);
+
+            if (item.m_customData.TryGetValue(customKeySlotID, out string slotId)
+                && API.FindSlot(slotId) is Slot savedSlot)
+            {
+                target = savedSlot.GridPosition;
+            }
+
+            EnsurePreviewCellExists(inventory, target);
+            if (inventory.GetItemAt(target.x, target.y) == null)
+                return target;
+
+            for (int y = 0; y < inventory.m_height; y++)
+                for (int x = 0; x < inventory.m_width; x++)
+                    if (inventory.GetItemAt(x, y) == null)
+                        return new Vector2i(x, y);
+
+            int appendedRow = inventory.m_height;
+            inventory.m_height++;
+            return new Vector2i(0, appendedRow);
+        }
+
+        private static void EnsurePreviewCellExists(Inventory inventory, Vector2i target)
+        {
+            if (target.x >= 0 && target.x < inventory.m_width && target.y >= 0)
+                inventory.m_height = Math.Max(inventory.m_height, target.y + 1);
         }
 
         private static void TryRestoreBackup(Player player, ExtraSlotsBackup extraSlotsBackup)
@@ -112,6 +216,14 @@ namespace ExtraSlots
                 backup.Load(new ZPackage(extraSlotsBackup.inventoryBase64).ReadCompressedPackage());
 
                 var backupItems = backup.GetAllItemsInGridOrder().Where(item => item != null).ToList();
+
+                if (IsCharacterPreview())
+                {
+                    int projected = ProjectBackupToCharacterPreview(player, inventory, backupItems);
+                    LogMessage($"Extra slots backup preview checked. Backup date {extraSlotsBackup.date}, world {extraSlotsBackup.worldName}, items {extraSlotsBackup.nrOfItems}, projected {projected}");
+                    return;
+                }
+
                 bool allMaterialized = backupItems.Count == extraSlotsBackup.nrOfItems;
 
                 int imported = Compatibility.InventoryMigration.ImportMissingItemsToDeferred(
@@ -145,7 +257,8 @@ namespace ExtraSlots
             }
             catch (Exception ex)
             {
-                preserveRawBackupForPlayer = player;
+                if (!IsCharacterPreview())
+                    preserveRawBackupForPlayer = player;
                 LogWarning($"Error while loading inventory backup from player. The original backup payload will be preserved:\n{ex}");
             }
         }
