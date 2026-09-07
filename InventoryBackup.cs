@@ -104,6 +104,20 @@ namespace ExtraSlots
 
         private static bool IsCharacterPreview() => FejdStartup.instance != null && Player.m_localPlayer == null;
 
+        private static bool IsSlotBackedRepresentation(ItemDrop.ItemData item)
+        {
+            if (item == null)
+                return false;
+
+            // ExtraSlots' own backup contains only slot-region items. An identical regular item is
+            // therefore not evidence that a backed-up copy still exists. Accept only live items that
+            // still resolve to an ExtraSlots slot or carry the saved return address of one.
+            if (TryGetSavedPlayerSlot(item, out Slot savedSlot) && savedSlot != null && !savedSlot.IsEmptySlot)
+                return true;
+
+            return GetItemSlot(item) is Slot currentSlot && !currentSlot.IsEmptySlot;
+        }
+
         private static int ProjectBackupToCharacterPreview(Player player, Inventory inventory, IReadOnlyList<ItemDrop.ItemData> backupItems)
         {
             if (player == null || inventory?.m_inventory == null || backupItems == null || !IsCharacterPreview())
@@ -114,7 +128,8 @@ namespace ExtraSlots
             // The real world Player will perform the authoritative deferred adoption after SetLocalPlayer.
             Dictionary<string, int> represented = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (ItemDrop.ItemData existing in inventory.m_inventory)
-                AddRepresented(DeferredInventory.GetMigrationKey(existing));
+                if (IsSlotBackedRepresentation(existing))
+                    AddRepresented(DeferredInventory.GetMigrationKey(existing));
 
             List<ItemDrop.ItemData> itemsToEquip = new List<ItemDrop.ItemData>();
             int projected = 0;
@@ -232,7 +247,8 @@ namespace ExtraSlots
                     "ExtraSlots backup",
                     item => item.m_customData.TryGetValue(customKeySlotID, out string slotId) ? slotId : null,
                     item => item.m_equipped,
-                    out bool allRepresented);
+                    out bool allRepresented,
+                    IsSlotBackedRepresentation);
 
                 if (!allMaterialized || !allRepresented)
                 {
