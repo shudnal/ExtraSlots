@@ -14,27 +14,28 @@ internal static class InventorySlotsCompat
     private const string BackupKey = "InventorySlotsBackup";
     private const string BackupMigrationKey = "ExtraSlotsMigrationInventorySlotsBackup";
 
-    internal static void ApplyCurrentSlotMetadata(Player player, ItemDrop.ItemData item)
+    internal static bool ApplyCurrentSlotMetadata(Player player, ItemDrop.ItemData item)
     {
         if (player == null || item == null || item.m_customData.ContainsKey(customKeySlotID))
-            return;
+            return false;
 
         if (!item.m_customData.TryGetValue(SlotIdKey, out string sourceSlotId) || string.IsNullOrWhiteSpace(sourceSlotId))
-            return;
+            return false;
 
         if (item.m_customData.TryGetValue(EquippedByKey, out string equippedBy)
             && !string.IsNullOrEmpty(equippedBy)
             && equippedBy != player.GetPlayerID().ToString())
         {
-            return;
+            return false;
         }
 
         string mappedSlotId = MapSlotId(sourceSlotId);
         if (string.IsNullOrEmpty(mappedSlotId))
-            return;
+            return false;
 
         item.m_customData[customKeyPlayerID] = player.GetPlayerID().ToString();
         item.m_customData[customKeySlotID] = mappedSlotId;
+        return true;
     }
 
     private static string MapSlotId(string sourceSlotId)
@@ -78,13 +79,16 @@ internal static class InventorySlotsCompat
         return TryGetYamlScalar(yaml, key, out string text) && int.TryParse(text, out value);
     }
 
-    private static void ApplyCurrentInventoryMetadata(Player player)
+    private static bool ApplyCurrentInventoryMetadata(Player player)
     {
         if (player?.GetInventory()?.m_inventory == null)
-            return;
+            return false;
 
+        bool changed = false;
         foreach (ItemDrop.ItemData item in player.GetInventory().m_inventory)
-            ApplyCurrentSlotMetadata(player, item);
+            changed |= ApplyCurrentSlotMetadata(player, item);
+
+        return changed;
     }
 
     private static void ImportBackup(Player player)
@@ -147,8 +151,9 @@ internal static class InventorySlotsCompat
             if (__instance == null || (!FejdStartup.instance && !IsValidPlayer(__instance)))
                 return;
 
-            ApplyCurrentInventoryMetadata(__instance);
-            PlayerInventoryOperations.ReconcileLoadedTopology();
+            if (ApplyCurrentInventoryMetadata(__instance))
+                PlayerInventoryOperations.ReconcileLoadedTopology();
+
             ImportBackup(__instance);
         }
     }
