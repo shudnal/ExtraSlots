@@ -176,7 +176,9 @@ namespace ExtraSlots
                 _isActive = isActive;
             }
 
-            public override string ToString() => (Name == "" ? ID : Name) + (IsActive ? "" : " (inactive)");
+            // ToString is used by diagnostics throughout the mod. Keep it stable and language-neutral;
+            // visible UI uses Name/GetShortcutText explicitly when localization is desired.
+            public override string ToString() => ID + (IsActive ? "" : " (inactive)");
 
             public static bool IsShortcutDown(KeyboardShortcut shortcut) => HotBars.PreventSimilarHotkeys.IsShortcutDown(shortcut);
 
@@ -365,10 +367,7 @@ namespace ExtraSlots
 
             if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == CurrentPlayerProfile?.GetPlayerID().ToString())
                 if ((slot = API.FindSlot(slotID)) != null)
-                {
-                    LogDebug($"Previous slot {slot} found for item {item.m_shared.m_name}");
                     return true;
-                }
 
             return false;
         }
