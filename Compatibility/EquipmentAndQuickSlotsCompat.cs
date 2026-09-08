@@ -24,27 +24,28 @@ internal class EquipmentAndQuickSlotsCompat
     private const string EaQSBackupKey = "eaqs_backup";
     private const string EaQSBackupMigrationKey = "ExtraSlotsMigrationEaQSBackup";
 
-    internal static void ApplyCurrentSlotMetadata(Player player, ItemDrop.ItemData item)
+    internal static bool ApplyCurrentSlotMetadata(Player player, ItemDrop.ItemData item)
     {
         if (player == null || item == null || item.m_customData.ContainsKey(customKeySlotID))
-            return;
+            return false;
 
         if (!item.m_customData.TryGetValue(EaQSSlotKey, out string eaqsSlotId) || string.IsNullOrEmpty(eaqsSlotId))
-            return;
+            return false;
 
         if (item.m_customData.TryGetValue(EaQSPlayerKey, out string eaqsPlayer)
             && !string.IsNullOrEmpty(eaqsPlayer)
             && eaqsPlayer != player.GetPlayerID().ToString())
         {
-            return;
+            return false;
         }
 
         string mappedSlotId = MapCurrentSlotId(eaqsSlotId);
         if (string.IsNullOrEmpty(mappedSlotId))
-            return;
+            return false;
 
         item.m_customData[customKeyPlayerID] = player.GetPlayerID().ToString();
         item.m_customData[customKeySlotID] = mappedSlotId;
+        return true;
     }
 
     private static string MapCurrentSlotId(string eaqsSlotId)
@@ -239,13 +240,16 @@ internal class EquipmentAndQuickSlotsCompat
         player.m_knownTexts.Remove(Sentinel + key);
     }
 
-    private static void ApplyCurrentInventoryMetadata(Player player)
+    private static bool ApplyCurrentInventoryMetadata(Player player)
     {
         if (player?.GetInventory()?.m_inventory == null)
-            return;
+            return false;
 
+        bool changed = false;
         foreach (ItemDrop.ItemData item in player.GetInventory().m_inventory)
-            ApplyCurrentSlotMetadata(player, item);
+            changed |= ApplyCurrentSlotMetadata(player, item);
+
+        return changed;
     }
 
     private static void ImportCurrentBackup(Player player)
@@ -323,8 +327,8 @@ internal class EquipmentAndQuickSlotsCompat
             playerToLoad = __instance;
             try
             {
-                ApplyCurrentInventoryMetadata(__instance);
-                PlayerInventoryOperations.ReconcileLoadedTopology();
+                if (ApplyCurrentInventoryMetadata(__instance))
+                    PlayerInventoryOperations.ReconcileLoadedTopology();
 
                 if (HasLegacyData(__instance, nameof(EquipmentSlotInventory)) || HasLegacyData(__instance, nameof(QuickSlotInventory)))
                     Load();
