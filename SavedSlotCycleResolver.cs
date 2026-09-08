@@ -72,7 +72,7 @@ namespace ExtraSlots
 
                         Vector2i target = targetSlot.GridPosition;
                         ItemDrop.ItemData occupant = inventory.GetItemAt(target.x, target.y);
-                        if (occupant == null || ReferenceEquals(occupant, current) || !assignments.ContainsKey(occupant))
+                        if (occupant == null || object.ReferenceEquals(occupant, current) || !assignments.ContainsKey(occupant))
                             break;
 
                         current = occupant;
