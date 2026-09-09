@@ -95,8 +95,16 @@ public static class PreventSimilarHotkeys
 
         foreach (KeyValuePair<string, ZInput.ButtonDef> button in __instance.m_buttons)
         {
-            AddButtonPath(button.Value.GetActionPath(effective: true), button.Key);
-            AddButtonPath(button.Value.GetActionPath(effective: false), button.Key);
+            // Valheim 1.0 registers presentation-only actions without bindings. GetActionPath()
+            // indexes binding zero, so enumerate the actual bindings instead (including overrides).
+            if (button.Value?.ButtonAction == null)
+                continue;
+
+            foreach (InputBinding binding in button.Value.ButtonAction.bindings)
+            {
+                AddButtonPath(binding.effectivePath, button.Key);
+                AddButtonPath(binding.path, button.Key);
+            }
         }
 
         foreach (Slot slot in slots)
@@ -326,10 +334,8 @@ public static class PreventSimilarHotkeys
         private static IEnumerable<MethodBase> TargetMethods()
         {
             yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetKBMButtons));
-            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadButtonsGeneric));
-            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadToClassic));
-            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadToAlt1));
-            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetGamepadToAlt2));
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.UpdateGamepadInputLayout));
+            yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.Reset));
             yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.OnRebindComplete));
             yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.ResetToDefault));
             yield return AccessTools.Method(typeof(ZInput), nameof(ZInput.Load));
