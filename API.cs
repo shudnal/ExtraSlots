@@ -8,6 +8,19 @@ namespace ExtraSlots;
 public static class API
 {
     /// <summary>
+    /// Player custom-data key containing ExtraSlots deferred inventory escrow.
+    /// Format: int envelope version, int entry count, then for each entry
+    /// prefab name, preferred slot id, restore-equipped flag, original stack size,
+    /// and an opaque Base64 string containing a ZPackage whose first value is a compressed
+    /// vanilla Inventory.Save ZPackage with exactly one item. Readers can check the prefab
+    /// name before decompressing or parsing the item payload.
+    /// </summary>
+    public const string DeferredInventoryCustomDataKey = DeferredInventory.CustomDataKey;
+
+    /// <summary>Current deferred inventory envelope version.</summary>
+    public const int DeferredInventoryEnvelopeVersion = DeferredInventory.EnvelopeVersion;
+
+    /// <summary>
     /// Returns list of all slots
     /// </summary>
     public static List<Slot> GetExtraSlots() => slots.ToList();
@@ -202,9 +215,21 @@ public static class API
     public static void UpdateSlots()
     {
         UpdateSlotsGridPosition();
-        EquipmentPanel.UpdatePanel();
+        UpdateSlotActivation();
         LightenedSlots.UpdateState();
         HotBars.PreventSimilarHotkeys.FillSimilarHotkey();
+    }
+
+    internal static void UpdateSlotActivation()
+    {
+        DeferredInventory.InvalidateRestorationOpportunity();
+        ClearCachedItems();
+        EquipmentPanel.UpdatePanel();
+        ItemsSlotsValidation.ValidateItems();
+        ItemsSlotsValidation.ValidateSlots();
+        HotBars.QuickSlotsHotBar.MarkDirty();
+        HotBars.AmmoSlotsHotBar.MarkDirty();
+        HotBars.FoodSlotsHotBar.MarkDirty();
         Compatibility.EpicLootCompat.InvalidatePlayerEffectCache(Player.m_localPlayer);
     }
 }

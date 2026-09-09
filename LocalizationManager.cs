@@ -163,8 +163,10 @@ public class Localizer
             }
         }
 
+        // External localization overrides are intentionally config-only. Do not scan Paths.PluginPath:
+        // translation/reference files shipped beside DLLs by mod managers or modpacks are installation
+        // content and must not compete with an explicit user override under BepInEx/config.
         Scan(Paths.ConfigPath, true);
-        Scan(Paths.PluginPath, false);
 
         if (LoadTranslationFromAssembly(defaultLanguage) is not { } englishAssemblyData)
             throw new Exception($"Found no English localizations in mod {Plugin.Info.Metadata.Name}. Expected an embedded resource Translations/English.json or Translations/English.yml.");

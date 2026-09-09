@@ -1,3 +1,14 @@
+# 1.2.0
+* significantly strengthened item-loss prevention when inventory rows, slot availability, or mod setup changes; items that cannot be placed safely are preserved and restored when a valid destination becomes available
+* deferred items survive character saves, temporarily missing item prefabs, and running the character without ExtraSlots before returning to the mod
+* improved tombstone recovery, including safer full-loot checks, preservation of deferred items in graves, and optional auto-equip after using Take All
+* improved migration and recovery from EquipmentAndQuickSlots 2.x/3.x, ComfyQuickSlots and InventorySlots
+* optimized hotbar updates
+* added independent options to keep empty available Quick, Ammo, and Food hotbar slots visible
+* the equipment panel can now be repositioned by dragging and optionally snapped to its default position or nearby inventory UI edges
+* added an option to fade the queued equip indicator as the current equip action progresses
+* added an option to keep the equipped state of items that are kept on death
+
 # 1.1.21
 * updated Epic Loot compatibility for legacy versions and the 0.13.0+ API, including magic effects, set bonuses, and sacrifice filtering in extra slots
 

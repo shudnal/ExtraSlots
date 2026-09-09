@@ -298,7 +298,7 @@ namespace ExtraSlots
                 if (__state != __instance.m_knownMaterial.Count)
                 {
                     itemTypes.Add(item.m_shared.m_itemType);
-                    if (IsRowProgressionActive() || LightenedSlots.IsEnabled)
+                    if (slotsProgressionEnabled.Value || IsRowProgressionActive() || LightenedSlots.IsEnabled)
                         instance.StartSlotsUpdateNextFrame();
                 }
             }
@@ -346,7 +346,7 @@ namespace ExtraSlots
 
             private static void Postfix()
             {
-                if (IsRowProgressionActive() || LightenedSlots.IsEnabled)
+                if (slotsProgressionEnabled.Value || IsRowProgressionActive() || LightenedSlots.IsEnabled)
                     instance.StartSlotsUpdateNextFrame();
             }
         }
@@ -357,9 +357,20 @@ namespace ExtraSlots
             private static void Postfix(Player __instance)
             {
                 loadedPlayer = __instance;
-                if (IsRowProgressionActive())
-                    UpdateSlotsGridPosition();
-                loadedPlayer = null;
+                try
+                {
+                    using (PlayerInventoryOperations.Batch(__instance.GetInventory()))
+                    {
+                        if (IsRowProgressionActive())
+                            UpdateSlotsGridPosition(moveResidents: false);
+
+                        PlayerInventoryOperations.ReconcileLoadedTopology();
+                    }
+                }
+                finally
+                {
+                    loadedPlayer = null;
+                }
             }
         }
 

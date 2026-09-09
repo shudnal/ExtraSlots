@@ -1,115 +1,205 @@
 ﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using static ExtraSlots.Slots;
-using static ExtraSlots.ExtraSlots;
 using System.Reflection;
+using static ExtraSlots.ExtraSlots;
+using static ExtraSlots.PlayerInventoryOperations;
+using static ExtraSlots.Slots;
 
 namespace ExtraSlots
 {
     public static class ItemsSlotsValidation
     {
-        private static bool PutIntoFirstEmptySlot(ItemDrop.ItemData item)
-        {
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
-            {
-                LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into previous slot {prevSlot} {prevSlot.GridPosition}");
-                item.m_gridPos = prevSlot.GridPosition;
-                return true;
-            }
-
-            Vector2i gridPos = PlayerInventory.FindEmptySlot(true);
-            if (gridPos.x > -1 && gridPos.y > -1)
-            {
-                LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into first free slot {gridPos}");
-                item.m_gridPos = gridPos;
-                return true;
-            }
-
-            if (TryFindFreeSlotForItem(item, out Slot slot))
-            {
-                LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into first free valid slot {slot} {slot.GridPosition}");
-                item.m_gridPos = slot.GridPosition;
-                return true;
-            }
-
-            if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPosEmptied))
-            {
-                LogDebug($"Item {item.m_shared.m_name} {item.m_gridPos} was put into created free space {gridPosEmptied}");
-                item.m_gridPos = gridPosEmptied;
-                return true;
-            }
-
-            return false;
-        }
+        private static int playerLoadDepth;
+        private static bool validationInProgress;
 
         public static void ValidateSlots() => SlotsValidation.MarkDirty();
         public static void ValidateItems() => ItemsValidation.MarkDirty();
 
         public static void Validate()
         {
-            ItemsValidation.Validate();
-            SlotsValidation.Validate();
+            // Player.Load has several independent compatibility/topology postfixes. They are allowed
+            // to mark validation dirty, but the actual pass must run only after all of them finish so
+            // restore-slot metadata cannot be pruned between reconciliation passes.
+            if (validationInProgress || playerLoadDepth > 0 || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading || PlayerInventory == null)
+                return;
+
+            if (!ItemsValidation.IsDirty && !SlotsValidation.IsDirty)
+                return;
+
+            // Equip and inventory callbacks can call API.UpdateSlots synchronously. Let them mark
+            // work dirty, but never restore the same deferred entry recursively before it is consumed.
+            validationInProgress = true;
+            try
+            {
+                const int maxPasses = 64;
+                for (int pass = 0; pass < maxPasses; pass++)
+                {
+                    ItemsValidation.Validate();
+                    SlotsValidation.Validate();
+
+                    bool placementValid = IsInventoryPlacementValid(out _, out _);
+                    bool restoredDeferred = placementValid && DeferredInventory.TryRestoreAvailable();
+
+                    if (!ItemsValidation.IsDirty && !SlotsValidation.IsDirty && !restoredDeferred)
+                        return;
+                }
+
+                if (ItemsValidation.IsDirty || SlotsValidation.IsDirty)
+                    LogWarning("Inventory validation reached its safety pass limit before reaching a stable state.");
+            }
+            finally
+            {
+                validationInProgress = false;
+            }
+        }
+
+        private static bool TryPlaceEquippedItem(ItemDrop.ItemData item)
+        {
+            if (item == null || PlayerInventory == null || !PlayerInventory.ContainsItem(item))
+                return false;
+
+            if (TryFindFreeEquipmentSlotForItem(item, out Slot freeEquipmentSlot))
+            {
+                Vector2i oldPosition = item.m_gridPos;
+                if (MoveToSlot(item, freeEquipmentSlot))
+                {
+                    LogDebug($"Equipped item {item.m_shared.m_name} was moved from {oldPosition} to equipment slot {freeEquipmentSlot} {freeEquipmentSlot.GridPosition}");
+                    return true;
+                }
+            }
+
+            if (!TryFindFirstUnequippedSlotForItem(item, out Slot slotToSwap))
+                return false;
+
+            if (slotToSwap.IsFree)
+            {
+                Vector2i oldPosition = item.m_gridPos;
+                if (MoveToSlot(item, slotToSwap))
+                {
+                    LogDebug($"Equipped item {item.m_shared.m_name} was moved from {oldPosition} to unequipped slot {slotToSwap} {slotToSwap.GridPosition}");
+                    return true;
+                }
+
+                return false;
+            }
+
+            ItemDrop.ItemData itemToSwap = slotToSwap.Item;
+            if (itemToSwap == null)
+                return false;
+
+            Vector2i equippedOldPosition = item.m_gridPos;
+            Vector2i unequippedOldPosition = itemToSwap.m_gridPos;
+            if (!Swap(item, itemToSwap))
+                return false;
+
+            LogDebug($"Equipped item {item.m_shared.m_name} {equippedOldPosition} was swapped with unequipped {itemToSwap.m_shared.m_name} {unequippedOldPosition} into slot {slotToSwap}");
+            return true;
+        }
+
+        private static bool TryRelocateInvalidSlotWithoutDisplacing(ItemDrop.ItemData item)
+        {
+            Inventory inventory = PlayerInventory;
+            if (item == null || inventory == null || !inventory.ContainsItem(item))
+                return false;
+
+            ClearCachedItems();
+
+            if (TryGetSavedPlayerSlot(item, out Slot savedSlot)
+                && savedSlot.IsActive
+                && savedSlot.ItemFits(item)
+                && (savedSlot.IsFree || ReferenceEquals(savedSlot.Item, item))
+                && MoveToSlot(item, savedSlot))
+            {
+                return true;
+            }
+
+            bool topFirst = inventory.TopFirst(item);
+            if (topFirst)
+            {
+                for (int y = 0; y < InventoryHeightPlayer; y++)
+                    for (int x = 0; x < InventoryWidth; x++)
+                        if (inventory.GetItemAt(x, y) == null && Move(item, new Vector2i(x, y)))
+                            return true;
+            }
+            else
+            {
+                for (int y = InventoryHeightPlayer - 1; y >= 0; y--)
+                    for (int x = 0; x < InventoryWidth; x++)
+                        if (inventory.GetItemAt(x, y) == null && Move(item, new Vector2i(x, y)))
+                            return true;
+            }
+
+            if (TryFindEmptyQuickSlot(out Slot quickSlot) && quickSlot.ItemFits(item) && MoveToSlot(item, quickSlot))
+                return true;
+
+            if (TryFindFreeSlotForItem(item, out Slot freeSlot) && MoveToSlot(item, freeSlot))
+                return true;
+
+            // A slot becoming inactive or rejecting its resident is a topology transition, not a
+            // reason to reshuffle unrelated regular items merely to manufacture space. If all direct
+            // destinations are occupied, preserve the resident in deferred storage and retry when
+            // capacity/topology changes.
+            return DeferredInventory.DeferExisting(item, "no non-disruptive destination remained for an invalid slot resident");
+        }
+
+        private static bool EquippedItemNeedsEquipmentSlot(ItemDrop.ItemData item)
+        {
+            if (item == null || CurrentPlayer == null || !CurrentPlayer.IsItemEquiped(item) || !IsEquipmentSlotItem(item))
+                return false;
+
+            if (GetItemSlot(item) is not Slot currentSlot || !currentSlot.IsEquipmentSlot)
+                return true;
+
+            return !customSlotItemsCanUseRegularEquipmentSlots.Value && !currentSlot.IsCustomSlot && IsCustomSlotItem(item);
         }
 
         internal static class SlotsValidation
         {
-            private static bool isDirty = false;
+            private static bool isDirty;
 
+            internal static bool IsDirty => isDirty;
             internal static void MarkDirty() => isDirty = true;
 
             internal static void Validate()
             {
-                if (!isDirty || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
+                if (!isDirty || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading || PlayerInventory == null)
                     return;
 
                 isDirty = false;
 
-                for (int i = 0; i < slots.Length; i++)
+                using (Batch(PlayerInventory))
                 {
-                    Slot slot = slots[i];
-                    ItemDrop.ItemData item = slot.Item;
-                    if (item == null || slot.ItemFits(item))
-                        continue;
-                
-                    LogInfo($"SlotValidation: Item {item.m_shared.m_name} unfits slot {slot}");
-                    
-                    if (slot.IsEquipmentSlot && (item.m_equipped || Player.m_localPlayer.IsItemEquiped(item)))
+                    EnsureCurrentGeometry();
+
+                    for (int i = 0; i < slots.Length; i++)
                     {
-                        slot.ClearItemCache();
-                        if (TryFindFreeEquipmentSlotForItem(item, out Slot freeEquipmentSlot))
+                        Slot slot = slots[i];
+                        ItemDrop.ItemData item = slot.Item;
+                        if (item == null)
+                            continue;
+
+                        // A cache entry is never allowed to make a slot claim an item that has already moved away.
+                        if (item.m_gridPos != slot.GridPosition)
                         {
-                            LogDebug($"SlotValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into first free equipment slot {freeEquipmentSlot}");
-                            item.m_gridPos = freeEquipmentSlot.GridPosition;
-                            freeEquipmentSlot.ClearItemCache();
+                            slot.ClearItemCache();
                             continue;
                         }
-                        else if (TryFindFirstUnequippedSlotForItem(item, out Slot slotToSwap))
-                        {
-                            if (slotToSwap.IsFree)
-                            {
-                                LogDebug($"SlotValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into unequipped slot {slotToSwap} {slotToSwap.GridPosition}");
-                                item.m_gridPos = slotToSwap.GridPosition;
-                                slotToSwap.ClearItemCache();
-                                continue;
-                            }
-                            else
-                            {
-                                ItemDrop.ItemData itemToSwap = slotToSwap.Item;
-                                
-                                LogDebug($"SlotValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was swapped with unequipped {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos} into slot {slotToSwap} {slotToSwap.GridPosition}");
-                                
-                                itemToSwap.m_gridPos = item.m_gridPos;
-                                item.m_gridPos = slotToSwap.GridPosition;
 
-                                slotToSwap.ClearItemCache();
-                                if (slot.ItemFits(item = slot.Item))
-                                    continue;
-                            }
-                        }
+                        if (IsPlacementValid(item, out PlacementIssue issue, out _))
+                            continue;
+
+                        LogInfo($"SlotValidation: Item {item.m_shared.m_name} no longer has a valid placement in slot {slot}");
+
+                        if ((item.m_equipped || Player.m_localPlayer.IsItemEquiped(item)) && TryPlaceEquippedItem(item))
+                            continue;
+
+                        if (issue == PlacementIssue.InactiveSlot || issue == PlacementIssue.InvalidForSlot)
+                            TryRelocateInvalidSlotWithoutDisplacing(item);
+                        else
+                            RelocateToBestAvailable(item, deferIfNoSpace: true);
                     }
-
-                    PutIntoFirstEmptySlot(item);
                 }
             }
 
@@ -129,10 +219,11 @@ namespace ExtraSlots
                 private static void Postfix(Player __instance)
                 {
                     ClearCachedItems();
-                    
+
                     if (!IsValidPlayer(__instance) || __instance.m_isLoading)
                         return;
 
+                    ItemsValidation.MarkDirty();
                     MarkDirty();
                 }
             }
@@ -140,105 +231,119 @@ namespace ExtraSlots
 
         internal static class ItemsValidation
         {
-            private static readonly HashSet<Vector2i> occupiedPositions = new HashSet<Vector2i>();
-            private static readonly List<ItemDrop.ItemData> tempItems = new List<ItemDrop.ItemData>();
+            private static bool isDirty;
 
-            private static bool isDirty = false;
+            internal static bool IsDirty => isDirty;
+            internal static void MarkDirty() => isDirty = true;
 
             internal static void Validate()
             {
-                if (!isDirty || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading)
+                if (!isDirty || !Player.m_localPlayer || Player.m_localPlayer.m_isLoading || PlayerInventory?.m_inventory == null)
                     return;
 
                 isDirty = false;
 
-                if (PlayerInventory == null || PlayerInventory.m_inventory == null)
-                    return;
-
-                occupiedPositions.Clear();
-                tempItems.Clear();
-                for (int index = 0; index < PlayerInventory.m_inventory.Count; index++)
+                using (Batch(PlayerInventory))
                 {
-                    ItemDrop.ItemData item = PlayerInventory.m_inventory[index];
-                    if (item == null) 
-                        continue;
+                    EnsureCurrentGeometry();
+                    RepairStructuralIntegrity();
 
-                    if (Player.m_localPlayer.IsItemEquiped(item) && IsEquipmentSlotItem(item) &&
-                        (GetItemSlot(item) is not Slot slotItem ||
-                         !slotItem.IsEquipmentSlot ||
-                         !customSlotItemsCanUseRegularEquipmentSlots.Value && !slotItem.IsCustomSlot && IsCustomSlotItem(item)))
+                    List<ItemDrop.ItemData> itemsInGridOrder = PlayerInventory.m_inventory
+                        .Select((item, index) => new { Item = item, Index = index })
+                        .OrderBy(entry => entry.Item?.m_gridPos.y ?? int.MaxValue)
+                        .ThenBy(entry => entry.Item?.m_gridPos.x ?? int.MaxValue)
+                        .ThenBy(entry => entry.Index)
+                        .Select(entry => entry.Item)
+                        .ToList();
+
+                    foreach (ItemDrop.ItemData item in itemsInGridOrder)
                     {
-                        LogInfo($"ItemsValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} is not in equipment slot");
-                        // Try putting equipped item in slot
-                        if (TryFindFreeEquipmentSlotForItem(item, out Slot slot))
+                        if (item == null)
+                            continue;
+
+                        if (!IsPlacementValid(item, out PlacementIssue issue, out Slot currentSlot))
                         {
-                            LogDebug($"ItemsValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into free equipment slot {slot} {slot.GridPosition}");
-                            item.m_gridPos = slot.GridPosition;
-                            PlayerInventory.Changed();
+                            LogWarning($"ItemsValidation: Item {item.m_shared.m_name} {item.m_gridPos} has invalid placement: {DescribePlacementIssue(issue)}");
+
+                            if (issue == PlacementIssue.InvalidStack)
+                            {
+                                Remove(item);
+                                continue;
+                            }
+
+                            // If an equipped item was invalidated by a topology change, first move it
+                            // directly to another equipment slot. The generic relocation path prefers
+                            // regular cells and would otherwise move the same item twice in one pass.
+                            bool relocated = (item.m_equipped || CurrentPlayer?.IsItemEquiped(item) == true)
+                                && TryPlaceEquippedItem(item);
+
+                            if (!relocated)
+                            {
+                                relocated = issue == PlacementIssue.InactiveSlot || issue == PlacementIssue.InvalidForSlot
+                                    ? TryRelocateInvalidSlotWithoutDisplacing(item)
+                                    : RelocateToBestAvailable(item, deferIfNoSpace: true);
+                            }
+
+                            if (!relocated || !PlayerInventory.ContainsItem(item))
+                                continue;
+
+                            if (!IsPlacementValid(item, out issue, out currentSlot))
+                            {
+                                LogWarning($"ItemsValidation: Item {item.m_shared.m_name} remains invalid after relocation attempt: {DescribePlacementIssue(issue)}");
+                                continue;
+                            }
                         }
-                        else if (TryFindFirstUnequippedSlotForItem(item, out Slot slotToSwap))
+
+                        if (EquippedItemNeedsEquipmentSlot(item))
                         {
-                            if (slotToSwap.IsFree)
-                            {
-                                LogDebug($"ItemsValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was moved into unequipped slot {slotToSwap} {slotToSwap.GridPosition}");
-                                item.m_gridPos = slotToSwap.GridPosition;
-                            }
-                            else
-                            {
-                                ItemDrop.ItemData itemToSwap = slotToSwap.Item;
-                                LogDebug($"ItemsValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} was swapped with unequipped {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos} into slot {slotToSwap} {slotToSwap.GridPosition}");
-                                itemToSwap.m_gridPos = item.m_gridPos;
-                                item.m_gridPos = slotToSwap.GridPosition;
-                                LogDebug($"ItemsValidation: swap result {item.m_shared.m_name} {item.m_gridPos} {itemToSwap.m_shared.m_name} {itemToSwap.m_gridPos}");
-                            }
-                            PlayerInventory.Changed();
+                            LogInfo($"ItemsValidation: Equipped item {item.m_shared.m_name} {item.m_gridPos} is not in its preferred equipment slot");
+                            TryPlaceEquippedItem(item);
                         }
                     }
 
-                    if (ItemIsOverlapping(item) && PlayerInventory.GetOtherItemAt(item.m_gridPos.x, item.m_gridPos.y, item) is ItemDrop.ItemData otherItem)
+                    if (!IsInventoryPlacementValid(out ItemDrop.ItemData invalidItem, out PlacementIssue invariantIssue))
                     {
-                        LogWarning($"ItemsValidation: Item {item.m_shared.m_name} {item.m_gridPos} is overlapping other item {otherItem.m_shared.m_name} {otherItem.m_gridPos}");
-                        tempItems.Add(item);
-                    }
-                    else if (ItemIsOutOfGrid(item))
-                    {
-                        LogWarning($"ItemsValidation: Item {item.m_shared.m_name} {item.m_gridPos} is out of inventory grid");
-                        tempItems.Add(item);
+                        string itemName = invalidItem?.m_shared?.m_name ?? "<unknown>";
+                        LogWarning($"ItemsValidation: Player inventory placement invariant is still broken by {itemName}: {DescribePlacementIssue(invariantIssue)}");
                     }
 
-                    occupiedPositions.Add(item.m_gridPos);
+                    // Slot return-address metadata is only needed while an item is in transit.
+                    // Remove it only from items that are currently in a valid active slot.
+                    foreach (ItemDrop.ItemData item in PlayerInventory.m_inventory.ToList())
+                    {
+                        if (item != null
+                            && IsPlacementValid(item, out _, out Slot currentSlot)
+                            && currentSlot != null)
+                        {
+                            PruneLastEquippedSlotFromItem(item);
+                        }
+                    }
                 }
-
-                if (tempItems.Count(PutIntoFirstEmptySlot) > 0)
-                    PlayerInventory.Changed();
-
-                API.GetAllExtraSlotsItems().Do(PruneLastEquippedSlotFromItem);
             }
-
-            private static bool ItemIsOverlapping(ItemDrop.ItemData itemData) => occupiedPositions.Contains(itemData.m_gridPos);
-
-            private static bool ItemIsOutOfGrid(ItemDrop.ItemData itemData) => itemData.m_gridPos.x < 0 || itemData.m_gridPos.x >= InventoryWidth
-                                                                            || itemData.m_gridPos.y < 0 || itemData.m_gridPos.y >= InventoryHeightFull;
-
-            internal static void MarkDirty() => isDirty = true;
 
             [HarmonyPatch(typeof(Inventory), nameof(Inventory.MoveAll))]
             internal static class Inventory_MoveAll_ValidateItemPositions
             {
-                static void Postfix(Inventory __instance, Inventory fromInventory)
+                private static void Postfix(Inventory __instance, Inventory fromInventory)
                 {
                     if (__instance == PlayerInventory || fromInventory == PlayerInventory)
+                    {
                         MarkDirty();
+                        SlotsValidation.MarkDirty();
+                    }
                 }
             }
 
             [HarmonyPatch(typeof(TombStone), nameof(TombStone.EasyFitInInventory))]
             internal static class TombStone_EasyFitInInventory_ValidateItemPositions
             {
-                static void Postfix(Player player)
+                private static void Postfix(Player player)
                 {
                     if (IsValidPlayer(player))
+                    {
                         MarkDirty();
+                        SlotsValidation.MarkDirty();
+                    }
                 }
             }
 
@@ -254,21 +359,38 @@ namespace ExtraSlots
                 private static void Prefix(Humanoid __instance)
                 {
                     if (IsValidPlayer(__instance))
+                    {
                         MarkDirty();
+                        SlotsValidation.MarkDirty();
+                    }
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(Player), nameof(Player.Load))]
+        private static class Player_Load_DeferValidationUntilAllPostfixesFinish
+        {
+            [HarmonyPriority(Priority.First)]
+            private static void Prefix() => playerLoadDepth++;
+
+            [HarmonyFinalizer]
+            [HarmonyPriority(Priority.Last)]
+            private static Exception Finalizer(Exception __exception)
+            {
+                playerLoadDepth = Math.Max(0, playerLoadDepth - 1);
+                return __exception;
             }
         }
 
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]
         public static class InventoryGui_Show_ValidateItems
         {
-            static void Postfix()
+            private static void Postfix()
             {
                 if (Player.m_localPlayer == null)
                     return;
 
                 ValidateSlots();
-
                 ValidateItems();
             }
         }

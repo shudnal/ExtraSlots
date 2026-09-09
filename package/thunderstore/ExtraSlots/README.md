@@ -170,7 +170,7 @@ Default progression is designed to gradually get slots the moment you obtain ite
 * Ammo slots are obtained when you get your first ammo or fishing bait
 * Misc slots are obtained alongside with quick, ammo and food slots
 * Every vanilla equipment slots are obtained when you touch corresponding item
-* Utility slot are obtained when you get your first utility item
+* Utility slot are obtained after acquiring first utility item
 * First extra utility slot are obtained after Bonemass kill (or touching Wishbone)
 * Second extra utility slot are obtained after Yagluth kill (or touching Wisplight)
 
@@ -218,12 +218,23 @@ Mod is incompatible with other mods altering inventory in similar way or allowin
 * [Equip Multiple Utility Items (aedenthorn)](https://www.nexusmods.com/valheim/mods/1348)
 * [EquipMultipleUtilityItems (toombe)](https://thunderstore.io/c/valheim/p/JackFrostCC/ToombeEquipMultipleUtilityItemsUnofficialUpdate/)
 
+## Panel placement and empty hotbar slots
+
+Dragging is available only for the equipment panel. Configure `Always allow dragging`, `Drag key`, `Sticky`, and `Sticky distance` under `Panels - Equipment slots`.
+Quick, Ammo, and Food hotbars do not support mouse dragging; use `Offset`, `Offset Anchor`, and `Scale` in each panel's section to position them.
+
+Each of `Panels - Quick slots`, `Panels - Ammo slots`, and `Panels - Food slots` has its own `Always show empty slots` option, disabled by default.
+It keeps currently available slots visible without changing inventory capacity or slot progression. Empty cells between occupied logical positions are retained even when the option is disabled.
+The former shared `Panels - Hotbars / Always show empty slots` setting and `Panels - Dragging` section are no longer used.
+
 ## Localization
 
 The mod is localized on every official and unofficial language you can choose in the game. Some translations are hand made, other made with LLM and cross check on terms and cultural consistency.
 
-To add your own localization create a file with the name **Extra Slots.LanguageName.yml** or **Extra Slots.LanguageName.json** anywhere inside of the Bepinex folder.
-For example, to add a French translation you could create a **Extra Slots.French.yml** file inside of the config folder and add French translations there.
+To add or override localization, create a file named **Extra Slots.LanguageName.yml** or **Extra Slots.LanguageName.json** anywhere under `BepInEx/config` (subfolders are supported).
+For example, to add a French translation you could create **BepInEx/config/Extra Slots.French.yml** and add French translations there.
+
+External localization overrides are intentionally loaded only from `BepInEx/config`. The `BepInEx/plugins` directory is not scanned for overrides, so localization/reference files installed beside plugin DLLs by mod managers or modpacks cannot unexpectedly override a user's explicit config translation.
 
 Localization file will be loaded on the next game launch or on the next language change.
 
@@ -231,7 +242,7 @@ You can send me a file with your localization at [Discord](https://discord.gg/e3
 
 [Language list](https://valheim-modding.github.io/Jotunn/data/localization/language-list.html).
 
-English localization example is located in `Extra Slots.English.json` file next to plugin dll.
+The `Extra Slots.English.json` file shipped next to the plugin DLL is a reference copy. Runtime bundled localizations are embedded in the plugin; put user overrides under `BepInEx/config`.
 
 ## Installation (manual)
 extract ExtraSlots.dll into your BepInEx\Plugins\ folder

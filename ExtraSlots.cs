@@ -40,7 +40,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.1.21";
+        public const string pluginVersion = "1.2.0";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -71,6 +71,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> slotsTombstoneAutoEquipWeaponShield;
         public static ConfigEntry<bool> slotsTombstoneAutoEquipEnabled;
         public static ConfigEntry<bool> slotsTombstoneAutoEquipCarryWeightItemsEnabled;
+        public static ConfigEntry<bool> slotsTombstoneAutoEquipManualTakeAll;
         
         public static ConfigEntry<string> slotsTombstoneAutoEquipWhiteList;
         public static ConfigEntry<string> slotsTombstoneAutoEquipBlackList;
@@ -81,6 +82,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> keepOnDeathFoodSlots;
         public static ConfigEntry<bool> keepOnDeathAmmoSlots;
         public static ConfigEntry<bool> keepOnDeathMiscSlots;
+        public static ConfigEntry<bool> keepOnDeathEquippedState;
 
         public static ConfigEntry<string> keepOnDeathItemList;
         public static ConfigEntry<string> keepOnDeathWhiteList;
@@ -103,7 +105,16 @@ namespace ExtraSlots
         public static ConfigEntry<string> vanillaSlotsOrder;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
         public static ConfigEntry<Vector2> equipmentPanelOffset;
+        public static ConfigEntry<bool> equipmentPanelSticky;
+        public static ConfigEntry<float> equipmentPanelStickyDistance;
         public static ConfigEntry<Vector2> equipmentPanelTooltipOffset;
+
+        public static ConfigEntry<bool> panelsDraggable;
+        public static ConfigEntry<KeyboardShortcut> panelsDragKey;
+        public static ConfigEntry<bool> queuedEquipFade;
+        public static ConfigEntry<bool> quickSlotsAlwaysShowEmpty;
+        public static ConfigEntry<bool> ammoSlotsAlwaysShowEmpty;
+        public static ConfigEntry<bool> foodSlotsAlwaysShowEmpty;
         public static ConfigEntry<bool> quickSlotsAlignmentCenter;
         public static ConfigEntry<bool> equipmentSlotsShowTooltip;
         public static ConfigEntry<bool> equipmentSlotsPreventStackAll;
@@ -391,22 +402,20 @@ namespace ExtraSlots
             extraRows.SettingChanged += (s, e) => API.UpdateSlots();
             rowsProgressionEnabled.SettingChanged += (s, e) => API.UpdateSlots();
             
-            extraUtilitySlotsAmount.SettingChanged += (s, e) =>
-            {
-                EquipmentPanel.UpdatePanel();
-                Compatibility.EpicLootCompat.InvalidatePlayerEffectCache(Player.m_localPlayer);
-            };
-            quickSlotsAmount.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            foodSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            miscSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            ammoSlotsEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            slotsProgressionEnabled.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            extraUtilitySlotsAmount.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            quickSlotsAmount.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            foodSlotsEnabled.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            miscSlotsEnabled.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            ammoSlotsEnabled.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            slotsProgressionEnabled.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            customSlotItemsCanUseRegularEquipmentSlots.SettingChanged += (s, e) => API.UpdateSlotActivation();
             preventUniqueUtilityItemsEquip.SettingChanged += (s, e) => ExtraUtilitySlots.UpdateUniqueEquipped();
             showExtraUtilityItems.SettingChanged += (s,e) => Player.m_localPlayer?.SetupEquipment();
 
             slotsTombstoneAutoEquipEnabled = serverConfig("Extra slots - Auto equip on tombstone pickup", "Equip all equipment slots", defaultValue: false, "Auto equip items in equipment slots if tombstone was successfully taken as whole. [Synced with Server]");
             slotsTombstoneAutoEquipCarryWeightItemsEnabled = serverConfig("Extra slots - Auto equip on tombstone pickup", "Equip items increasing carry weight", defaultValue: true, "Auto equip items in equipment slots that increase max carry weight (like Megingjord) if tombstone was successfully taken as whole. [Synced with Server]" +
                 "\nThese items are unaffected by black and white lists");
+            slotsTombstoneAutoEquipManualTakeAll = serverConfig("Extra slots - Auto equip on tombstone pickup", "Apply after manual Take All", defaultValue: false, "Apply tombstone auto-equip settings after using the Take All button on an opened tombstone. [Synced with Server]");
             slotsTombstoneAutoEquipWeaponShield = serverConfig("Extra slots - Auto equip on tombstone pickup", "Equip previous weapon and shield", defaultValue: false, "Auto equip weapon and shield that was equipped on death. [Synced with Server]" +
                 "\nThese items are unaffected by black and white lists");
             slotsTombstoneAutoEquipWhiteList = serverConfig("Extra slots - Auto equip on tombstone pickup", "Items white list", defaultValue: "", "If this list is filled - only these items will be auto equipped. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
@@ -422,6 +431,7 @@ namespace ExtraSlots
             keepOnDeathFoodSlots = serverConfig("Extra slots - Death tweaks", "Keep items at food slots", defaultValue: false, "Keep items in food slots after death. [Synced with Server]");
             keepOnDeathAmmoSlots = serverConfig("Extra slots - Death tweaks", "Keep items at ammo slots", defaultValue: false, "Keep items in ammo slots after death. [Synced with Server]");
             keepOnDeathMiscSlots = serverConfig("Extra slots - Death tweaks", "Keep items at misc slots", defaultValue: false, "Keep items in misc slots after death. [Synced with Server]");
+            keepOnDeathEquippedState = serverConfig("Extra slots - Death tweaks", "Keep equipped state", defaultValue: false, "Items that are kept on death and were equipped will be equipped again after respawn. [Synced with Server]");
             keepOnDeathItemList = serverConfig("Extra slots - Death tweaks", "Keep items fixed list", defaultValue: "", "Items from this list will always be kept on death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
             keepOnDeathWhiteList = serverConfig("Extra slots - Death tweaks", "Keep items white list", defaultValue: "", "If this list is filled - only these items will be kept after death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
             keepOnDeathBlackList = serverConfig("Extra slots - Death tweaks", "Keep items black list", defaultValue: "", "Items from this list will not be kept after death. Works with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]");
@@ -503,14 +513,23 @@ namespace ExtraSlots
 
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalLeft, "Equipment slots alignment");
             equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
+            equipmentPanelSticky = config("Panels - Equipment slots", "Sticky", defaultValue: true, "Snap the equipment panel to its default attachment or nearby inventory UI panels while dragging");
+            equipmentPanelStickyDistance = config("Panels - Equipment slots", "Sticky distance", defaultValue: 20f, new ConfigDescription("Maximum distance at which the equipment panel snaps to a nearby compatible UI edge", new AcceptableValueRange<float>(0f, 100f)));
             quickSlotsAlignmentCenter = config("Panels - Equipment slots", "Quick slots alignment middle", defaultValue: false, "Place quickslots in the middle under equipment slots");
             equipmentSlotsShowTooltip = config("Panels - Equipment slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
             equipmentPanelTooltipOffset = config("Panels - Equipment slots", "Gamepad Tooltip Offset", Vector2.zero, "Offset relative to original position of tooltip at upper right corner of the inventory (side elements included)");
             equipmentSlotsPreventStackAll = config("Panels - Equipment slots", "Prevent Stack All", defaultValue: true, "Prevent items from equipment slots to be placed into container when Stack All feature is used.");
 
+            panelsDraggable = config("Panels - Equipment slots", "Always allow dragging", defaultValue: false, "Allow dragging the equipment panel without holding the drag key");
+            panelsDragKey = config("Panels - Equipment slots", "Drag key", new KeyboardShortcut(KeyCode.LeftAlt), "Hold this key while dragging the equipment panel");
+            queuedEquipFade = config("Panels - Item indicators", "Fade queued equip indicator", defaultValue: true, "Fade the yellow queued indicator from opaque to transparent while an item is being equipped");
+            queuedEquipFade.SettingChanged += (s, e) => QueuedEquipIndicator.OnSettingChanged();
+
             vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
             equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            equipmentPanelSticky.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
+            equipmentPanelStickyDistance.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
             equipmentPanelTooltipOffset.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
 
             miscSlotsShowLabel = config("Panels - Misc slots", "Show label", defaultValue: false, "Show slot label");
@@ -525,13 +544,22 @@ namespace ExtraSlots
                     GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as misc items" +
                                             "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"));
 
-            miscSlotsItemList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
-            miscSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateMiscSlotCustomItemList();
+            miscSlotsItemList.SettingChanged += (s, e) =>
+            {
+                Slots.UpdateMiscSlotCustomItemList();
+                API.UpdateSlotActivation();
+            };
+            miscSlotsItemBlackList.SettingChanged += (s, e) =>
+            {
+                Slots.UpdateMiscSlotCustomItemList();
+                API.UpdateSlotActivation();
+            };
 
             quickSlotsHotBarEnabled = serverConfig("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots [Synced with Server]");
             quickSlotsHotBarOffset = config("Panels - Quick slots", "Offset", defaultValue: new Vector2(230f, 156f), "On screen position of quick slots hotbar panel");
             quickSlotsHotBarAnchor = config("Panels - Quick slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for quick slots hotbar panel");
             quickSlotsHotBarScale = config("Panels - Quick slots", "Scale", defaultValue: 1f, "Relative size");
+            quickSlotsAlwaysShowEmpty = config("Panels - Quick slots", "Always show empty slots", defaultValue: false, "Keep all currently available quick hotbar slots visible even when they are empty");
             quickSlotsShowLabel = config("Panels - Quick slots", "Show label", defaultValue: false, "Show slot label");
             quickSlotsShowHintImage = config("Panels - Quick slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             quickSlotsShowTooltip = config("Panels - Quick slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
@@ -543,6 +571,8 @@ namespace ExtraSlots
             quickSlotsStackColor = config("Panels - Quick slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             quickSlotsPreventStackAll = config("Panels - Quick slots", "Prevent Stack All", defaultValue: true, "Prevent items from quick slots to be placed into container when Stack All feature is used.");
 
+            quickSlotsAlwaysShowEmpty.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
+            quickSlotsHideStackSize.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             quickSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
@@ -552,6 +582,7 @@ namespace ExtraSlots
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 228f), "On screen position of ammo slots hotbar panel");
             ammoSlotsHotBarAnchor = config("Panels - Ammo slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for ammo slots hotbar panel");
             ammoSlotsHotBarScale = config("Panels - Ammo slots", "Scale", defaultValue: 1f, "Relative size");
+            ammoSlotsAlwaysShowEmpty = config("Panels - Ammo slots", "Always show empty slots", defaultValue: false, "Keep all currently available ammo hotbar slots visible even when they are empty");
             ammoSlotsShowLabel = config("Panels - Ammo slots", "Show label", defaultValue: false, "Show slot label");
             ammoSlotsShowHintImage = config("Panels - Ammo slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             ammoSlotsShowTooltip = config("Panels - Ammo slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
@@ -570,9 +601,19 @@ namespace ExtraSlots
                     GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as ammo items to fit in ammo slots" +
                                             "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"));
 
-            ammoSlotsItemList.SettingChanged += (s, e) => Slots.UpdateAmmoSlotCustomItemList();
-            ammoSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateAmmoSlotCustomItemList();
+            ammoSlotsItemList.SettingChanged += (s, e) =>
+            {
+                Slots.UpdateAmmoSlotCustomItemList();
+                API.UpdateSlotActivation();
+            };
+            ammoSlotsItemBlackList.SettingChanged += (s, e) =>
+            {
+                Slots.UpdateAmmoSlotCustomItemList();
+                API.UpdateSlotActivation();
+            };
 
+            ammoSlotsAlwaysShowEmpty.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
+            ammoSlotsHideStackSize.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
             ammoSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
             ammoSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
@@ -582,6 +623,7 @@ namespace ExtraSlots
             foodSlotsHotBarOffset = config("Panels - Food slots", "Offset", defaultValue: new Vector2(230f, 84f), "On screen position of Food slots hotbar panel");
             foodSlotsHotBarAnchor = config("Panels - Food slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for Food slots hotbar panel");
             foodSlotsHotBarScale = config("Panels - Food slots", "Scale", defaultValue: 1f, "Relative size");
+            foodSlotsAlwaysShowEmpty = config("Panels - Food slots", "Always show empty slots", defaultValue: false, "Keep all currently available food hotbar slots visible even when they are empty");
             foodSlotsShowLabel = config("Panels - Food slots", "Show label", defaultValue: false, "Show slot label");
             foodSlotsShowHintImage = config("Panels - Food slots", "Show hint image", defaultValue: true, "Show slot background hint image");
             foodSlotsShowTooltip = config("Panels - Food slots", "Show help tooltip", defaultValue: true, "Show tooltip with slot info");
@@ -599,9 +641,19 @@ namespace ExtraSlots
                     GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as ammo items to fit in food slots" +
                                             "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"));
 
-            foodSlotsItemList.SettingChanged += (s, e) => Slots.UpdateFoodSlotCustomItemList();
-            foodSlotsItemBlackList.SettingChanged += (s, e) => Slots.UpdateFoodSlotCustomItemList();
+            foodSlotsItemList.SettingChanged += (s, e) =>
+            {
+                Slots.UpdateFoodSlotCustomItemList();
+                API.UpdateSlotActivation();
+            };
+            foodSlotsItemBlackList.SettingChanged += (s, e) =>
+            {
+                Slots.UpdateFoodSlotCustomItemList();
+                API.UpdateSlotActivation();
+            };
 
+            foodSlotsAlwaysShowEmpty.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
+            foodSlotsHideStackSize.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             foodSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
             foodSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
             foodSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
@@ -664,36 +716,36 @@ namespace ExtraSlots
             foodSlotsAvailableAfterDiscovery = serverConfig("Progression - Discovery", "Food slots", true, "Food slots will be active after acquiring first food item [Synced with Server]");
             equipmentSlotsAvailableAfterDiscovery = serverConfig("Progression - Discovery", "Equipment slots", true, "Corresponding equipment slot will be active after acquiring first item [Synced with Server]");
 
-            quickSlotGlobalKey1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            quickSlotGlobalKey2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            quickSlotGlobalKey3.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            quickSlotGlobalKey4.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            quickSlotGlobalKey5.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            quickSlotGlobalKey6.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotGlobalKey1.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            quickSlotGlobalKey2.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            quickSlotGlobalKey3.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            quickSlotGlobalKey4.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            quickSlotGlobalKey5.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            quickSlotGlobalKey6.SettingChanged += (s, e) => API.UpdateSlotActivation();
 
-            ammoSlotsGlobalKey.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            foodSlotsGlobalKey.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            miscSlotsGlobalKey.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            ammoSlotsGlobalKey.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            foodSlotsGlobalKey.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            miscSlotsGlobalKey.SettingChanged += (s, e) => API.UpdateSlotActivation();
 
-            utilitySlotGlobalKey1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            utilitySlotGlobalKey2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            utilitySlotGlobalKey3.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            utilitySlotGlobalKey4.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            utilitySlotGlobalKey1.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            utilitySlotGlobalKey2.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            utilitySlotGlobalKey3.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            utilitySlotGlobalKey4.SettingChanged += (s, e) => API.UpdateSlotActivation();
 
-            ammoSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            utilitySlotAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            foodSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            equipmentSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            ammoSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            utilitySlotAvailableAfterDiscovery.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            foodSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            equipmentSlotsAvailableAfterDiscovery.SettingChanged += (s, e) => API.UpdateSlotActivation();
 
             utilitySlotItemDiscovered1 = serverConfig("Progression - Items", "Extra utility slot 1", "Wishbone", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
             utilitySlotItemDiscovered2 = serverConfig("Progression - Items", "Extra utility slot 2", "Demister,GoldRubyRing,SilverRing", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
             utilitySlotItemDiscovered3 = serverConfig("Progression - Items", "Extra utility slot 3", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
             utilitySlotItemDiscovered4 = serverConfig("Progression - Items", "Extra utility slot 4", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
 
-            utilitySlotItemDiscovered1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            utilitySlotItemDiscovered2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            utilitySlotItemDiscovered3.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            utilitySlotItemDiscovered4.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            utilitySlotItemDiscovered1.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            utilitySlotItemDiscovered2.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            utilitySlotItemDiscovered3.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            utilitySlotItemDiscovered4.SettingChanged += (s, e) => API.UpdateSlotActivation();
 
             quickSlotItemDiscovered1 = serverConfig("Progression - Items", "Quickslot 1", "CryptKey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
             quickSlotItemDiscovered2 = serverConfig("Progression - Items", "Quickslot 2", "CryptKey", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
@@ -702,12 +754,12 @@ namespace ExtraSlots
             quickSlotItemDiscovered5 = serverConfig("Progression - Items", "Quickslot 5", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
             quickSlotItemDiscovered6 = serverConfig("Progression - Items", "Quickslot 6", "", "Comma-separated list of items. Slot will be active only if any item is discovered or list is not set. [Synced with Server]");
 
-            quickSlotItemDiscovered1.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            quickSlotItemDiscovered2.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            quickSlotItemDiscovered3.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            quickSlotItemDiscovered4.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            quickSlotItemDiscovered5.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
-            quickSlotItemDiscovered6.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            quickSlotItemDiscovered1.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            quickSlotItemDiscovered2.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            quickSlotItemDiscovered3.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            quickSlotItemDiscovered4.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            quickSlotItemDiscovered5.SettingChanged += (s, e) => API.UpdateSlotActivation();
+            quickSlotItemDiscovered6.SettingChanged += (s, e) => API.UpdateSlotActivation();
 
             extraRowPlayerKey1 = serverConfig("Progression - Inventory - Player keys", "Extra row 1", "GP_Bonemass", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]");
             extraRowPlayerKey2 = serverConfig("Progression - Inventory - Player keys", "Extra row 2", "GP_Moder", "Comma-separated list of Player unique keys. Extra inventory row will be active only if any key is enabled or list is not set. [Synced with Server]");
