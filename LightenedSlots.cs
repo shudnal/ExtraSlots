@@ -32,7 +32,7 @@ namespace ExtraSlots
 
             for (int i = 0; i < InventoryHeightPlayer; i++)
             {
-                if (lightenedSlotsOnlyExtraRows.Value && i < 4)
+                if (lightenedSlotsOnlyExtraRows.Value && i < NativeInventoryHeight)
                     continue;
                 
                 if (lightenedSlotsStartIndex.Value < 0 && i >= lightenedSlotsStartIndex.Value + InventoryHeightPlayer)

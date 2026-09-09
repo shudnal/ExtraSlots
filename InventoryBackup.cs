@@ -176,8 +176,10 @@ namespace ExtraSlots
                     continue;
 
                 string key = DeferredInventory.GetMigrationKey(backupItem);
+                string storedKey = DeferredInventory.GetMigrationKey(InventorySerialization.GetSavedRepresentation(backupItem));
                 int representedIndex = represented.FindIndex(existing =>
-                    string.Equals(DeferredInventory.GetMigrationKey(existing), key, StringComparison.Ordinal)
+                    (string.Equals(DeferredInventory.GetMigrationKey(existing), key, StringComparison.Ordinal)
+                        || string.Equals(DeferredInventory.GetMigrationKey(existing), storedKey, StringComparison.Ordinal))
                     && SlotBackedRepresentationMatchesSource(backupItem, existing, null));
                 if (representedIndex >= 0)
                 {
@@ -258,7 +260,7 @@ namespace ExtraSlots
             try
             {
                 Inventory backup = new Inventory(customKeyBackupID, null, extraSlotsBackup.width, extraSlotsBackup.height);
-                backup.Load(new ZPackage(extraSlotsBackup.inventoryBase64).ReadCompressedPackage());
+                InventorySerialization.Load(backup, new ZPackage(extraSlotsBackup.inventoryBase64).ReadCompressedPackage());
 
                 var backupItems = backup.GetAllItemsInGridOrder().Where(item => item != null).ToList();
 

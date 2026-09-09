@@ -332,6 +332,26 @@ public static class QuickBars
         return slot?.IsActive == true ? slot.Item : null;
     }
 
+    [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.ElementClicked))]
+    private static class HotkeyBar_ElementClicked_UseExtraSlot
+    {
+        private static bool Prefix(HotkeyBar __instance, Player player, int i)
+        {
+            if (__instance.name == vanillaBarName || !IsBarToControl(__instance))
+                return true;
+
+            if (player == CurrentPlayer && ZInput.IsTouchPressedDown() && ZInput.HasDoubleTapped()
+                && i >= 0 && i < __instance.m_elements.Count)
+            {
+                __instance.m_selected = i;
+                ItemDrop.ItemData item = GetItemForElement(__instance, i);
+                if (item != null)
+                    player.UseItem(null, item);
+            }
+            return false;
+        }
+    }
+
     private static void UpdateQueuedIndicators(HotkeyBar bar, Player player)
     {
         if (!bar || player == null || player.m_actionQueue.Count == 0)

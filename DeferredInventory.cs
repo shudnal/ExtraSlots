@@ -27,13 +27,14 @@ namespace ExtraSlots
         public const string CustomDataKey = "ExtraSlotsDeferredInventory";
         public const int EnvelopeVersion = 1;
 
-        private sealed class DeferredEntry
+        internal sealed class DeferredEntry
         {
             internal string PrefabName;
             internal string PreferredSlotId;
             internal bool RestoreEquipped;
             internal int OriginalStack;
             internal string ItemPackageBase64;
+            internal bool PendingFinalization;
         }
 
         private static readonly List<DeferredEntry> entries = new List<DeferredEntry>();
@@ -232,7 +233,7 @@ namespace ExtraSlots
                 ZPackage compressedItemPackage = new ZPackage(entry.ItemPackageBase64);
                 ZPackage itemPackage = compressedItemPackage.ReadCompressedPackage();
                 Inventory singleItemInventory = new Inventory(CustomDataKey, null, 1, 1);
-                singleItemInventory.Load(itemPackage);
+                InventorySerialization.Load(singleItemInventory, itemPackage);
                 item = singleItemInventory.m_inventory.FirstOrDefault();
                 if (singleItemInventory.m_inventory.Count != 1 || item == null
                     || !string.Equals(item.m_dropPrefab?.name, entry.PrefabName, StringComparison.Ordinal))
@@ -357,8 +358,13 @@ namespace ExtraSlots
             return true;
         }
 
-        internal static bool EnqueueDetached(Player player, ItemDrop.ItemData item, string preferredSlotId = null, bool restoreEquipped = false, string reason = null)
+        internal static bool EnqueueDetached(Player player, ItemDrop.ItemData item, string preferredSlotId = null, bool restoreEquipped = false, string reason = null) =>
+            EnqueueDetached(player, item, out _, preferredSlotId, restoreEquipped, reason);
+
+        internal static bool EnqueueDetached(Player player, ItemDrop.ItemData item, out DeferredEntry handle,
+            string preferredSlotId = null, bool restoreEquipped = false, string reason = null, bool pendingFinalization = false)
         {
+            handle = null;
             if (player == null || item == null || !EnsureLoaded(player))
                 return false;
 
@@ -369,6 +375,7 @@ namespace ExtraSlots
             if (!TryCreateEntry(storedItem, preferredSlotId, restoreEquipped || item.m_equipped, out DeferredEntry entry))
                 return false;
 
+            entry.PendingFinalization = pendingFinalization;
             entries.Add(entry);
             revision++;
             if (!Flush(player))
@@ -378,8 +385,50 @@ namespace ExtraSlots
                 return false;
             }
 
+            handle = entry;
             LogWarning($"Item {item.m_shared?.m_name ?? entry.PrefabName} was added to deferred inventory{(string.IsNullOrEmpty(reason) ? "." : $" ({reason}).")}");
             return true;
+        }
+
+        internal static bool FinalizeDetachedReplacement(Player player, DeferredEntry handle, ItemDrop.ItemData item)
+        {
+            if (handle != null)
+            {
+                handle.PendingFinalization = false;
+                InvalidateRestorationOpportunity();
+            }
+            if (handle == null || item == null || !EnsureLoaded(player))
+                return false;
+
+            int index = entries.IndexOf(handle);
+            if (index < 0)
+                return false;
+
+            bool nowResident = player.GetInventory().ContainsItem(item);
+            DeferredEntry updated = null;
+            if (!nowResident)
+            {
+                ItemDrop.ItemData stored = item.Clone();
+                stored.m_equipped = false;
+                ApplyPreferredSlotMetadata(player, stored, handle.PreferredSlotId);
+                if (!TryCreateEntry(stored, handle.PreferredSlotId, handle.RestoreEquipped, out updated))
+                    return false;
+            }
+
+            if (nowResident)
+                entries.RemoveAt(index);
+            else
+                entries[index] = updated;
+            revision++;
+            if (Flush(player))
+                return true;
+
+            if (nowResident)
+                entries.Insert(index, handle);
+            else
+                entries[index] = handle;
+            revision++;
+            return false;
         }
 
         internal static string GetMigrationKey(ItemDrop.ItemData item)
@@ -401,6 +450,7 @@ namespace ExtraSlots
             Append(item.m_crafterName ?? "");
             Append(item.m_worldLevel.ToString(CultureInfo.InvariantCulture));
             Append(item.m_pickedUp ? "1" : "0");
+            Append(item.m_cheated ? "1" : "0");
 
             if (item.m_customData != null)
             {
@@ -498,7 +548,7 @@ namespace ExtraSlots
                     for (int i = 0; i < entries.Count;)
                     {
                         DeferredEntry entry = entries[i];
-                        if (!TryMaterialize(entry, out ItemDrop.ItemData item))
+                        if (entry.PendingFinalization || !TryMaterialize(entry, out ItemDrop.ItemData item))
                         {
                             i++;
                             continue;
@@ -588,7 +638,7 @@ namespace ExtraSlots
                 item.m_equipped = false;
 
                 Vector2i target = FindTombstoneAppendPosition(graveInventory, appendStartHeight);
-                if (target.x < 0)
+                if (target.x < 0 && graveInventory.m_height <= byte.MaxValue)
                 {
                     graveInventory.m_height++;
                     target = FindTombstoneAppendPosition(graveInventory, appendStartHeight);
@@ -599,7 +649,8 @@ namespace ExtraSlots
                 // cannot partially merge a deferred entry and then leave its authoritative payload
                 // behind. Containers are allowed to grow; player inventory geometry never is.
                 int amount = item.m_stack;
-                if (target.x < 0 || !graveInventory.AddItem(item, amount, target.x, target.y))
+                if (target.x < 0 || target.x > byte.MaxValue || target.y > byte.MaxValue
+                    || !graveInventory.AddItem(item, amount, target.x, target.y))
                 {
                     LogWarning($"Unable to place deferred item {entry.PrefabName} into expanded tombstone inventory. Item remains deferred.");
                     i++;

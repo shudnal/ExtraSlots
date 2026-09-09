@@ -56,11 +56,10 @@ internal static class ComfyQuickSlotsCompat
             // independently so the source is consumed only after every entry was materialized and
             // represented by either the live inventory or ExtraSlots deferred storage.
             ZPackage header = new ZPackage(data);
-            _ = header.ReadInt();
-            int expectedItems = header.ReadInt();
+            int expectedItems = InventorySerialization.ReadItemCount(header);
 
             Inventory snapshot = new Inventory(SnapshotKey, null, Width, Height);
-            snapshot.Load(new ZPackage(data));
+            InventorySerialization.Load(snapshot, new ZPackage(data));
             List<ItemDrop.ItemData> items = snapshot.GetAllItemsInGridOrder().Where(item => item != null).ToList();
 
             int imported = InventoryMigration.ImportMissingItemsToDeferred(

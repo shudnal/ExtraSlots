@@ -70,15 +70,31 @@ namespace ExtraSlots
                 }
 
                 batchDepth.Remove(inventory);
-                if (!pendingChanged.Remove(inventory))
+                if (!pendingChanged.TryGetValue(inventory, out PendingChange change))
                     return;
 
-                inventory.Changed();
+                pendingChanged.Remove(inventory);
+                inventory.Changed(change.Success, change.SuccessfulCheatChange);
             }
         }
 
         private static readonly Dictionary<Inventory, int> batchDepth = new Dictionary<Inventory, int>();
-        private static readonly HashSet<Inventory> pendingChanged = new HashSet<Inventory>();
+        private struct PendingChange
+        {
+            internal bool Success;
+            internal bool SuccessfulCheatChange;
+        }
+
+        private static readonly Dictionary<Inventory, PendingChange> pendingChanged = new Dictionary<Inventory, PendingChange>();
+
+        private static void QueueChanged(Inventory inventory, bool success, bool cheatedStateChanged)
+        {
+            pendingChanged.TryGetValue(inventory, out PendingChange change);
+            change.Success |= success;
+            // A failed cheated insertion and an unrelated success must not generate a cheated-item toast.
+            change.SuccessfulCheatChange |= success && cheatedStateChanged;
+            pendingChanged[inventory] = change;
+        }
 
         internal static IDisposable Batch(Inventory inventory = null) => new ChangeBatch(inventory ?? PlayerInventory);
         private sealed class NoopChangeBatch : IDisposable
@@ -336,7 +352,7 @@ namespace ExtraSlots
             item.m_gridPos = target;
             inventory.m_inventory.Add(item);
             ClearCachedItems();
-            MarkChanged(inventory);
+            MarkItemAdded(inventory, item);
             return true;
         }
 
@@ -351,7 +367,7 @@ namespace ExtraSlots
             item.m_gridPos = temporaryPosition;
             inventory.m_inventory.Add(item);
             ClearCachedItems();
-            MarkChanged(inventory);
+            MarkItemAdded(inventory, item);
             ItemsSlotsValidation.ValidateItems();
             ItemsSlotsValidation.ValidateSlots();
             return true;
@@ -550,7 +566,7 @@ namespace ExtraSlots
             {
                 int originalStack = item.m_stack;
                 ItemDrop.ItemData representative = null;
-                List<(ItemDrop.ItemData Item, int Stack)> stackSnapshots = new List<(ItemDrop.ItemData, int)>();
+                List<(ItemDrop.ItemData Item, int Stack, bool Cheated)> stackSnapshots = new List<(ItemDrop.ItemData, int, bool)>();
 
                 while (item.m_stack > 0)
                 {
@@ -562,7 +578,9 @@ namespace ExtraSlots
                     if (capacity <= 0)
                         break;
 
-                    stackSnapshots.Add((stackItem, stackItem.m_stack));
+                    stackSnapshots.Add((stackItem, stackItem.m_stack, stackItem.m_cheated));
+                    if (item.m_cheated && !PlayerProfile.s_bypassCheatChecks)
+                        stackItem.m_cheated = true;
                     int amount = Math.Min(capacity, item.m_stack);
                     stackItem.m_stack += amount;
                     item.m_stack -= amount;
@@ -573,7 +591,7 @@ namespace ExtraSlots
                 if (item.m_stack <= 0)
                 {
                     placedItem = representative;
-                    MarkChanged(inventory);
+                    MarkItemAdded(inventory, item);
                     fullyInserted = true;
                     madeProgress = true;
                     return true;
@@ -582,8 +600,11 @@ namespace ExtraSlots
                 // Another patch may reject stacks that satisfy vanilla's coarse name/quality/world
                 // capacity check (for example because custom data differs). Roll back the tentative
                 // merge and then try a genuinely empty destination before keeping the item deferred.
-                foreach ((ItemDrop.ItemData stackItem, int previousStack) in stackSnapshots)
+                foreach ((ItemDrop.ItemData stackItem, int previousStack, bool previousCheated) in stackSnapshots)
+                {
                     stackItem.m_stack = previousStack;
+                    stackItem.m_cheated = previousCheated;
+                }
                 item.m_stack = originalStack;
 
                 target = FindDirectEmptyDestination(item);
@@ -1316,18 +1337,25 @@ namespace ExtraSlots
                 && slot.ItemFits(item);
         }
 
-        internal static void MarkChanged(Inventory inventory)
+        private static void MarkItemAdded(Inventory inventory, ItemDrop.ItemData item)
+        {
+            bool cheatedStateChanged = Player.m_localPlayerExists && inventory == Player.m_localPlayer.GetInventory()
+                && item.m_cheated && !Achievements.IsCheatedAtAll();
+            MarkChanged(inventory, success: true, cheatedStateChanged);
+        }
+
+        internal static void MarkChanged(Inventory inventory, bool success = false, bool cheatedStateChanged = false)
         {
             if (inventory == null)
                 return;
 
             if (batchDepth.ContainsKey(inventory))
             {
-                pendingChanged.Add(inventory);
+                QueueChanged(inventory, success, cheatedStateChanged);
                 return;
             }
 
-            inventory.Changed();
+            inventory.Changed(success, cheatedStateChanged);
         }
 
         private static Vector2i FindDirectEmptyDestination(ItemDrop.ItemData item)
@@ -1459,15 +1487,15 @@ namespace ExtraSlots
         private static class Inventory_Changed_DebounceMutationBatch
         {
             [HarmonyPriority(Priority.First)]
-            private static bool Prefix(Inventory __instance)
+            private static bool Prefix(Inventory __instance, bool success, bool cheatedStateChanged)
             {
-                if (__instance == null || !batchDepth.ContainsKey(__instance))
+                if (__instance == null || __instance.m_temoraryInventory || !batchDepth.ContainsKey(__instance))
                     return true;
 
                 // Keep the synchronous state part current while only the observer notification is
                 // delayed. Code inside the transaction may legitimately inspect current weight.
                 __instance.UpdateTotalWeight();
-                pendingChanged.Add(__instance);
+                QueueChanged(__instance, success, cheatedStateChanged);
                 return false;
             }
         }

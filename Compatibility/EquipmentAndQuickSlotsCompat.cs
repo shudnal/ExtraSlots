@@ -121,9 +121,8 @@ internal class EquipmentAndQuickSlotsCompat
             // Read that count independently so an unavailable prefab can never make us delete a
             // legacy payload that still contains an item Inventory.Load could not materialize.
             ZPackage header = new ZPackage(data);
-            _ = header.ReadInt();
-            expectedItems = header.ReadInt();
-            legacyInventory.Load(new ZPackage(data));
+            expectedItems = InventorySerialization.ReadItemCount(header);
+            InventorySerialization.Load(legacyInventory, new ZPackage(data));
         }
         catch (Exception ex)
         {
@@ -283,7 +282,7 @@ internal class EquipmentAndQuickSlotsCompat
             ZPackage inventoryPackage = envelope.ReadCompressedPackage();
 
             Inventory backup = new Inventory(EaQSBackupKey, null, width, height);
-            backup.Load(inventoryPackage);
+            InventorySerialization.Load(backup, inventoryPackage);
             List<ItemDrop.ItemData> backupItems = backup.GetAllItemsInGridOrder().Where(item => item != null).ToList();
             foreach (ItemDrop.ItemData item in backupItems)
                 ApplyCurrentSlotMetadata(player, item);

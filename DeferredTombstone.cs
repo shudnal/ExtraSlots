@@ -78,16 +78,16 @@ namespace ExtraSlots
             if (tombstone?.m_nview?.IsValid() != true || !tombstone.m_nview.IsOwner())
                 return 0;
 
-            string payload = GetPayload(tombstone);
-            if (string.IsNullOrEmpty(payload))
-                return 0;
-
-            if (!TryReadPayload(payload, out List<Entry> graveEntries))
-                return 0;
-
             Container container = tombstone.m_container != null ? tombstone.m_container : tombstone.GetComponent<Container>();
             Inventory inventory = container?.GetInventory();
-            if (inventory == null)
+            if (inventory == null || container.m_loading)
+                return 0;
+
+            // Load the current byte-array payload before appending after an ownership handover.
+            // In-use containers already hold the authoritative editable inventory; native Load skips them.
+            container.Load();
+            string payload = GetPayload(tombstone);
+            if (string.IsNullOrEmpty(payload) || !TryReadPayload(payload, out List<Entry> graveEntries))
                 return 0;
 
             int appendStartHeight = inventory.m_height;
@@ -110,25 +110,71 @@ namespace ExtraSlots
                 }
                 item.m_equipped = false;
 
+                int previousHeight = inventory.m_height;
                 Vector2i target = FindAppendPosition(inventory, appendStartHeight);
-                if (target.x < 0)
+                if (target.x < 0 && inventory.m_height <= byte.MaxValue)
                 {
                     inventory.m_height++;
                     target = FindAppendPosition(inventory, appendStartHeight);
                 }
 
-                int amount = item.m_stack;
-                if (target.x < 0 || !inventory.AddItem(item, amount, target.x, target.y))
+                // Format 109 stores coordinates as bytes. Keep excess entries opaque instead of
+                // wrapping a newly appended row on save. An existing grave can retain opaque entries.
+                if (target.x < 0 || target.x > byte.MaxValue || target.y > byte.MaxValue)
                 {
-                    LogWarning($"Unable to materialize tombstone-owned deferred item {entry.PrefabName} into grave inventory. Opaque entry remains attached to the grave.");
+                    inventory.m_height = previousHeight;
                     i++;
                     continue;
                 }
 
-                graveEntries.RemoveAt(i);
-                materialized++;
-                PersistPayload(tombstone, graveEntries);
-                LogMessage($"Tombstone-owned deferred item {entry.PrefabName} materialized into grave inventory.");
+                List<ItemDrop.ItemData> previousItems = new List<ItemDrop.ItemData>(inventory.m_inventory);
+                ZDO zdo = container.m_nview.GetZDO();
+                byte[] previousData = zdo.GetByteArray(ZDOVars.s_items);
+                if (previousData == null)
+                {
+                    ZPackage previousPackage = new ZPackage();
+                    inventory.Save(previousPackage);
+                    previousData = previousPackage.GetArray();
+                }
+                string previousPayload = GetPayload(tombstone);
+                int previousContainerHeight = container.m_height;
+                bool previousLoading = container.m_loading;
+                try
+                {
+                    container.m_loading = true;
+                    int amount = item.m_stack;
+                    if (!inventory.AddItem(item, amount, target.x, target.y))
+                        throw new InvalidOperationException($"Unable to insert tombstone-owned item {entry.PrefabName}.");
+
+                    container.m_height = Math.Max(container.m_height, inventory.m_height);
+                    // New positional AddItem does not notify on a dedicated server without a local
+                    // player. Persist the actual items explicitly before relinquishing opaque ownership.
+                    container.Save();
+                    graveEntries.RemoveAt(i);
+                    PersistPayload(tombstone, graveEntries);
+                    container.m_lastRevision = zdo.DataRevision;
+                    materialized++;
+                }
+                catch (Exception ex)
+                {
+                    inventory.m_inventory.Clear();
+                    inventory.m_inventory.AddRange(previousItems);
+                    inventory.m_height = previousHeight;
+                    inventory.UpdateTotalWeight();
+                    container.m_height = previousContainerHeight;
+                    if (!graveEntries.Contains(entry))
+                        graveEntries.Insert(i, entry);
+                    zdo.Set(ZDOVars.s_items, previousData);
+                    zdo.Set(payloadHash, previousPayload);
+                    PersistDimensions(container);
+                    container.m_lastRevision = zdo.DataRevision;
+                    LogWarning($"Tombstone materialization rolled back; opaque item {entry.PrefabName} was retained:\n{ex}");
+                    i++;
+                }
+                finally
+                {
+                    container.m_loading = previousLoading;
+                }
             }
 
             if (materialized > 0)
@@ -205,7 +251,7 @@ namespace ExtraSlots
             {
                 ZPackage compressedItemPackage = new ZPackage(entry.ItemPackageBase64);
                 Inventory singleItemInventory = new Inventory(PayloadKey, null, 1, 1);
-                singleItemInventory.Load(compressedItemPackage.ReadCompressedPackage());
+                InventorySerialization.Load(singleItemInventory, compressedItemPackage.ReadCompressedPackage());
                 item = singleItemInventory.m_inventory.Count == 1 ? singleItemInventory.m_inventory[0] : null;
                 if (item == null || item.m_stack != entry.OriginalStack
                     || !string.Equals(item.m_dropPrefab?.name, entry.PrefabName, StringComparison.Ordinal))
@@ -302,7 +348,7 @@ namespace ExtraSlots
                     return true;
 
                 // An opaque-only grave cannot pass vanilla's initial NrOfItems check. Request the
-                // container normally so ownership is transferred; RPC_OpenRespons will materialize
+                // container normally so ownership is transferred; RPC_OpenResponse will materialize
                 // any entries whose prefabs are available before InventoryGui.Show runs.
                 __instance.m_localOpened = true;
                 __result = __instance.m_container != null && __instance.m_container.Interact(character, hold: false, alt);
@@ -335,13 +381,20 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(Container), nameof(Container.RPC_OpenRespons))]
-        private static class Container_RPC_OpenRespons_MaterializeOpaqueDeferred
+        [HarmonyPatch]
+        private static class Container_RPC_Response_MaterializeOpaqueDeferred
         {
+            private static IEnumerable<System.Reflection.MethodBase> TargetMethods()
+            {
+                yield return AccessTools.Method(typeof(Container), nameof(Container.RPC_OpenResponse));
+                yield return AccessTools.Method(typeof(Container), nameof(Container.RPC_TakeAllResponse));
+            }
+
             [HarmonyPriority(Priority.First)]
             private static void Prefix(Container __instance, bool granted)
             {
-                if (!granted || __instance == null || __instance.GetComponentInParent<TombStone>() is not TombStone tombstone || !HasPayload(tombstone))
+                if (!granted || !Player.m_localPlayer || __instance == null
+                    || __instance.GetComponentInParent<TombStone>() is not TombStone tombstone || !HasPayload(tombstone))
                     return;
 
                 __instance.m_nview?.ClaimOwnership();

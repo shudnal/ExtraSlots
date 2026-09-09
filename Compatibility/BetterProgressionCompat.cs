@@ -44,7 +44,7 @@ public static class BetterProgressionCompat
 
             // Unpatch redundant methods that validate inventory
             assembly.RemoveHarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Update), "BetterProgression.InventoryUpdate+InventoryGui_Update_Patch", "Postfix", "prevent inventory mess");
-            assembly.RemoveHarmonyPatch(typeof(Container), nameof(Container.RPC_TakeAllRespons), "BetterProgression.InventoryUpdate+ContainerRPCRequestTakeAllPatch", "Postfix", "prevent inventory mess");
+            assembly.RemoveHarmonyPatch(typeof(Container), nameof(Container.RPC_TakeAllResponse), "BetterProgression.InventoryUpdate+ContainerRPCRequestTakeAllPatch", "Postfix", "prevent inventory mess");
             assembly.RemoveHarmonyPatch(typeof(Inventory), nameof(Inventory.MoveAll), "BetterProgression.InventoryUpdate+MoveAllToPatch", "Postfix", "prevent inventory mess");
         }
     }

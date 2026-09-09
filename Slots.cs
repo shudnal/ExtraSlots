@@ -339,7 +339,10 @@ namespace ExtraSlots
         public static Inventory PlayerInventory => CurrentPlayer?.GetInventory();
         public static int ExtraRowsPlayer => GetExtraRows();
         public static int InventoryWidth => PlayerInventory != null ? PlayerInventory.GetWidth() : VanillaInventoryWidth;
-        public static int InventoryHeightPlayer => VanillaInventoryHeight + ExtraRowsPlayer;
+        public static int NativeInventoryHeight => CurrentPlayer != null
+            && CurrentPlayer.TryGetUniqueKeyValue(Player.InventoryRowsKey, out string value)
+            && int.TryParse(value, out int rows) ? Mathf.Clamp(rows, 0, 9) : VanillaInventoryHeight;
+        public static int InventoryHeightPlayer => Math.Max(1, NativeInventoryHeight + ExtraRowsPlayer);
         public static int InventoryHeightFull => InventoryHeightPlayer + GetTargetInventoryHeight(slots.Length, InventoryWidth);
         public static int InventorySizeVanilla => VanillaInventoryHeight * InventoryWidth;
         public static int InventorySizePlayer => InventoryHeightPlayer * InventoryWidth;

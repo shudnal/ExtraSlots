@@ -356,20 +356,21 @@ namespace ExtraSlots
         {
             private static void Postfix(Player __instance)
             {
+                Player previousLoadedPlayer = loadedPlayer;
                 loadedPlayer = __instance;
                 try
                 {
                     using (PlayerInventoryOperations.Batch(__instance.GetInventory()))
                     {
-                        if (IsRowProgressionActive())
-                            UpdateSlotsGridPosition(moveResidents: false);
+                        // Native invrows also changes the topology when progression is disabled.
+                        UpdateSlotsGridPosition(moveResidents: false);
 
                         PlayerInventoryOperations.ReconcileLoadedTopology();
                     }
                 }
                 finally
                 {
-                    loadedPlayer = null;
+                    loadedPlayer = previousLoadedPlayer;
                 }
             }
         }

@@ -2,6 +2,12 @@
 
 More inventory slots dedicated for equipment, food, ammo and misc items. Extra utility slots. Quick slots. Custom slots API. Player inventory resize. Gamepad friendly. Slot obtaining progression.
 
+## Game compatibility
+
+ExtraSlots 1.2.1 targets Valheim 1.0.7. The visible inventory uses the character's native row count plus the configured ExtraSlots row adjustment, with at least one regular row. Equipment and quick-slot storage is additional to those visible rows.
+
+Inventory recovery accepts both the older 106/107 saves and compact 108/109 saves. Items that cannot be placed in the current topology remain deferred rather than being dropped by the game's inventory-size update.
+
 ## Conditional Config Sync
 * Config values marked with `[Synced with Server]` are synchronized from the server by default. Core slot counts, slot availability, progression, item eligibility, weight factors, death rules and other gameplay-affecting settings use this default.
 * UI layout, panel positions, hotkeys, labels, colors, tooltips, logging and compatibility presentation settings remain client-controlled by default.

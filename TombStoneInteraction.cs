@@ -370,6 +370,81 @@ namespace ExtraSlots
             return true;
         }
 
+        [HarmonyPatch(typeof(Container), nameof(Container.UpdateRows))]
+        private static class Container_UpdateRows_PreserveTombstoneDimensions
+        {
+            private static void Prefix(Container __instance)
+            {
+                if (__instance.m_inventory == null || !__instance.GetComponentInParent<TombStone>())
+                    return;
+
+                __instance.m_width = Math.Max(__instance.m_width, __instance.m_inventory.m_width);
+                __instance.m_height = Math.Max(__instance.m_height, __instance.m_inventory.m_height);
+            }
+        }
+
+        [HarmonyPatch(typeof(Container), nameof(Container.Save))]
+        private static class Container_Save_PersistTombstoneDimensions
+        {
+            private static void Prefix(Container __instance)
+            {
+                if (__instance.m_inventory != null)
+                    PersistTombstoneDimensions(__instance, __instance.m_inventory.m_width, __instance.m_inventory.m_height);
+            }
+        }
+
+        [HarmonyPatch(typeof(Container), nameof(Container.Load))]
+        private static class Container_Load_PreserveTombstoneState
+        {
+            private sealed class LoadState
+            {
+                internal bool Loading;
+                internal uint Revision;
+                internal int Width;
+                internal int Height;
+                internal List<ItemDrop.ItemData> Items;
+            }
+
+            private static void Prefix(Container __instance, out LoadState __state)
+            {
+                __state = null;
+                if (__instance.m_inventory == null || __instance.m_inUse || __instance.m_nview?.IsValid() != true
+                    || !__instance.GetComponentInParent<TombStone>()
+                    || __instance.m_lastRevision == __instance.m_nview.GetZDO().DataRevision)
+                    return;
+
+                __state = new LoadState
+                {
+                    Loading = __instance.m_loading,
+                    Revision = __instance.m_lastRevision,
+                    Width = __instance.m_inventory.m_width,
+                    Height = __instance.m_inventory.m_height,
+                    Items = new List<ItemDrop.ItemData>(__instance.m_inventory.m_inventory)
+                };
+            }
+
+            [HarmonyPriority(Priority.Last)]
+            private static Exception Finalizer(Container __instance, LoadState __state, Exception __exception)
+            {
+                if (__state == null)
+                    return __exception;
+
+                __instance.m_loading = __state.Loading;
+                if (__exception != null)
+                {
+                    // Native Load advances its revision before parsing. Restore the previous live
+                    // inventory and revision so a failed load cannot be mistaken for synchronized data.
+                    __instance.m_inventory.m_inventory.Clear();
+                    __instance.m_inventory.m_inventory.AddRange(__state.Items);
+                    __instance.m_inventory.m_width = __state.Width;
+                    __instance.m_inventory.m_height = __state.Height;
+                    __instance.m_lastRevision = __state.Revision;
+                    __instance.m_inventory.UpdateTotalWeight();
+                }
+                return __exception;
+            }
+        }
+
         [HarmonyPatch(typeof(Container), nameof(Container.Awake))]
         private static class Container_Awake_TombstoneContainerHeightAdjustment
         {
@@ -429,13 +504,10 @@ namespace ExtraSlots
                     __instance.m_container.m_inventory?.m_height ?? 0);
                 if (targetHeight > __instance.m_container.m_height)
                 {
-                    LogDebug($"TombStone Interact height {__instance.m_container.m_height} -> {targetHeight}. Inventory reloaded.");
+                    LogDebug($"TombStone Interact height {__instance.m_container.m_height} -> {targetHeight}. Existing items retained.");
                     __instance.m_container.m_height = targetHeight;
                     __instance.m_container.m_inventory.m_height = targetHeight;
 
-                    __instance.m_container.m_lastRevision = 0;
-                    __instance.m_container.m_lastDataString = "";
-                    __instance.m_container.Load();
                 }
 
                 PersistTombstoneDimensions(__instance.m_container, __instance.m_container.m_inventory?.m_width ?? __instance.m_container.m_width, __instance.m_container.m_inventory?.m_height ?? __instance.m_container.m_height);

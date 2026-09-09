@@ -20,7 +20,7 @@ internal static class ValheimPlusCompat
             // Unpatch redundant methods that change inventory gui
             assembly.RemoveHarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show), "ValheimPlus.GameClasses.InventoryGui_Show_Patch", "Postfix", "prevent inventory GUI mess");
             assembly.RemoveHarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui), "ValheimPlus.GameClasses.InventoryGrid_UpdateGui_Patch", "Prefix", "prevent inventory GUI mess");
-            assembly.RemoveHarmonyPatch(AccessTools.Constructor(typeof(Inventory)), "ValheimPlus.GameClasses.Inventory_Constructor_Patch", "Prefix", "prevent inventory GUI mess");
+            assembly.RemoveHarmonyPatch(AccessTools.Constructor(typeof(Inventory), new[] { typeof(string), typeof(UnityEngine.Sprite), typeof(int), typeof(int) }), "ValheimPlus.GameClasses.Inventory_Constructor_Patch", "Prefix", "prevent inventory GUI mess");
         }
     }
 
