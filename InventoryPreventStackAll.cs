@@ -24,17 +24,25 @@ namespace ExtraSlots
 
             internal void RemoveProtectedItems()
             {
+                Player player = Player.m_localPlayer;
                 for (int i = inventory.m_inventory.Count - 1; i >= 0; i--)
                 {
                     ItemDrop.ItemData item = inventory.m_inventory[i];
                     if (item == null || AllowStackAll(item))
                         continue;
 
+                    // Vanilla Inventory.StackAll already skips runtime-equipped items through
+                    // Player.IsItemEquiped. Keep those items physically present for the whole call:
+                    // temporarily removing them can make custom equipment providers discard their
+                    // runtime equip state even though ItemData.m_equipped remains true.
+                    if (player?.IsItemEquiped(item) == true)
+                        continue;
+
                     removedItems.Add((i, item));
                     inventory.m_inventory.RemoveAt(i);
                 }
 
-                LogDebug($"Removed {removedItems.Count} items from player inventory before StackAll");
+                LogDebug($"Removed {removedItems.Count} unequipped protected items from player inventory before StackAll");
             }
 
             internal void Restore()
@@ -51,7 +59,7 @@ namespace ExtraSlots
 
                 restored = true;
                 ClearCachedItems();
-                LogDebug($"Returned {removedItems.Count} items to player inventory after StackAll");
+                LogDebug($"Returned {removedItems.Count} unequipped protected items to player inventory after StackAll");
                 removedItems.Clear();
             }
 
@@ -101,8 +109,9 @@ namespace ExtraSlots
                 if (fromInventory == null || fromInventory != PlayerInventory || Compatibility.ZenBeehiveCompat.IsHoneyOpen)
                     return;
 
-                // Every nested call owns only its own removed items. Notification batching keeps
-                // ordinary observers from seeing the temporarily incomplete player inventory.
+                // Every nested call owns only its own removed unequipped items. Runtime-equipped
+                // items stay represented and vanilla excludes them itself; batching keeps observers
+                // from seeing only the intentionally hidden unequipped protected items.
                 __state = new StackAllState(fromInventory);
                 __state.RemoveProtectedItems();
             }
