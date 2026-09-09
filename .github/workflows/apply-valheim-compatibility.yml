@@ -20,15 +20,11 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - name: Export source snapshots without building or running the mod
+      - name: Export mod sources without building or running the mod
         run: |
           mkdir -p "$RUNNER_TEMP/source-export"
           git archive HEAD --prefix=mod/ -o "$RUNNER_TEMP/source-export/mod.tar"
-          git clone --depth=1 --branch master https://github.com/shudnal/assemblies_combined.git "$RUNNER_TEMP/game-source"
-          test "$(git -C "$RUNNER_TEMP/game-source" rev-parse HEAD)" = 02f009229ca3d045153d8e9b3a516af6cf68c158
-          git -C "$RUNNER_TEMP/game-source" archive HEAD --prefix=game/ -o "$RUNNER_TEMP/source-export/game.tar"
           git rev-parse HEAD > "$RUNNER_TEMP/source-export/mod-head.txt"
-          git -C "$RUNNER_TEMP/game-source" rev-parse HEAD > "$RUNNER_TEMP/source-export/game-head.txt"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: compatibility-source-snapshots
