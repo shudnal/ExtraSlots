@@ -1,0 +1,32 @@
+name: Apply reviewed Valheim compatibility edits
+
+on:
+  push:
+    branches: [fix/valheim-1.0.7-compatibility]
+    paths: [.github/scripts/apply_valheim_compatibility.py]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-valheim-compatibility
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: fix/valheim-1.0.7-compatibility
+          fetch-depth: 0
+      - name: Apply exact source edits without building or running the mod
+        run: |
+          python3 .github/scripts/apply_valheim_compatibility.py
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git commit -m "adapt inventory persistence, crafting and UI to Valheim 1.0.7"
+          git push origin HEAD:fix/valheim-1.0.7-compatibility
