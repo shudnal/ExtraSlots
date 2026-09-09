@@ -51,6 +51,15 @@ namespace ExtraSlots
                     return;
 
                 batchDepth.TryGetValue(inventory, out int depth);
+                if (depth == 0)
+                {
+                    // Capture resident state before any nested insertion can modify it. The native
+                    // achievement query is frame-cached and cannot verify a partial mutation later.
+                    pendingChanged[inventory] = new PendingChange
+                    {
+                        HadCheatedItemAtStart = IsLocalPlayerInventory(inventory) && HasCheatedResident(inventory)
+                    };
+                }
                 batchDepth[inventory] = depth + 1;
             }
 
@@ -74,13 +83,16 @@ namespace ExtraSlots
                     return;
 
                 pendingChanged.Remove(inventory);
-                inventory.Changed(change.Success, change.SuccessfulCheatChange);
+                if (change.HasChanges)
+                    inventory.Changed(change.Success, change.SuccessfulCheatChange);
             }
         }
 
         private static readonly Dictionary<Inventory, int> batchDepth = new Dictionary<Inventory, int>();
         private struct PendingChange
         {
+            internal bool HasChanges;
+            internal bool HadCheatedItemAtStart;
             internal bool Success;
             internal bool SuccessfulCheatChange;
         }
@@ -90,9 +102,14 @@ namespace ExtraSlots
         private static void QueueChanged(Inventory inventory, bool success, bool cheatedStateChanged)
         {
             pendingChanged.TryGetValue(inventory, out PendingChange change);
-            change.Success |= success;
-            // A failed cheated insertion and an unrelated success must not generate a cheated-item toast.
-            change.SuccessfulCheatChange |= success && cheatedStateChanged;
+            // AddItem can return false after contaminating a resident stack and failing to place
+            // the remainder. Verify that transition from live items, not the cached achievement
+            // query. A wholly rejected insertion must not borrow an unrelated success's flag.
+            bool partialCheatChange = !success && cheatedStateChanged && !change.HadCheatedItemAtStart
+                && IsLocalPlayerInventory(inventory) && HasCheatedResident(inventory);
+            change.HasChanges = true;
+            change.Success |= success || partialCheatChange;
+            change.SuccessfulCheatChange |= (success && cheatedStateChanged) || partialCheatChange;
             pendingChanged[inventory] = change;
         }
 
@@ -349,10 +366,11 @@ namespace ExtraSlots
                 || inventory.GetItemAt(target.x, target.y) != null)
                 return false;
 
+            bool cheatedStateChanged = WouldChangeCheatedState(inventory, item);
             item.m_gridPos = target;
             inventory.m_inventory.Add(item);
             ClearCachedItems();
-            MarkItemAdded(inventory, item);
+            MarkChanged(inventory, success: true, cheatedStateChanged);
             return true;
         }
 
@@ -364,10 +382,11 @@ namespace ExtraSlots
             if (inventory == null || item == null || inventory.ContainsItem(item))
                 return false;
 
+            bool cheatedStateChanged = WouldChangeCheatedState(inventory, item);
             item.m_gridPos = temporaryPosition;
             inventory.m_inventory.Add(item);
             ClearCachedItems();
-            MarkItemAdded(inventory, item);
+            MarkChanged(inventory, success: true, cheatedStateChanged);
             ItemsSlotsValidation.ValidateItems();
             ItemsSlotsValidation.ValidateSlots();
             return true;
@@ -564,6 +583,7 @@ namespace ExtraSlots
 
             if (item.m_shared.m_maxStackSize > 1 && stackCapacity >= item.m_stack)
             {
+                bool cheatedStateChanged = !PlayerProfile.s_bypassCheatChecks && WouldChangeCheatedState(inventory, item);
                 int originalStack = item.m_stack;
                 ItemDrop.ItemData representative = null;
                 List<(ItemDrop.ItemData Item, int Stack, bool Cheated)> stackSnapshots = new List<(ItemDrop.ItemData, int, bool)>();
@@ -591,7 +611,7 @@ namespace ExtraSlots
                 if (item.m_stack <= 0)
                 {
                     placedItem = representative;
-                    MarkItemAdded(inventory, item);
+                    MarkChanged(inventory, success: true, cheatedStateChanged);
                     fullyInserted = true;
                     madeProgress = true;
                     return true;
@@ -1337,12 +1357,22 @@ namespace ExtraSlots
                 && slot.ItemFits(item);
         }
 
-        private static void MarkItemAdded(Inventory inventory, ItemDrop.ItemData item)
+        private static bool IsLocalPlayerInventory(Inventory inventory) => Player.m_localPlayerExists
+            && Player.m_localPlayer != null && ReferenceEquals(inventory, Player.m_localPlayer.GetInventory());
+
+        private static bool HasCheatedResident(Inventory inventory)
         {
-            bool cheatedStateChanged = Player.m_localPlayerExists && inventory == Player.m_localPlayer.GetInventory()
-                && item.m_cheated && !Achievements.IsCheatedAtAll();
-            MarkChanged(inventory, success: true, cheatedStateChanged);
+            foreach (ItemDrop.ItemData item in inventory.m_inventory)
+                if (item != null && item.m_cheated)
+                    return true;
+
+            return false;
         }
+
+        // Evaluate before insertion or stack contamination, then publish only after the mutation
+        // commits. In particular, a rolled-back tentative merge must not emit this notification.
+        private static bool WouldChangeCheatedState(Inventory inventory, ItemDrop.ItemData item) =>
+            IsLocalPlayerInventory(inventory) && item.m_cheated && !Achievements.IsCheatedAtAll();
 
         internal static void MarkChanged(Inventory inventory, bool success = false, bool cheatedStateChanged = false)
         {
