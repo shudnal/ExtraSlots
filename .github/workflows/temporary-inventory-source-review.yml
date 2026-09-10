@@ -1,0 +1,31 @@
+name: Temporary inventory source review
+
+on:
+  push:
+    branches: [fix/valheim-1.0.7-compatibility]
+    paths: [.github/workflows/temporary-inventory-source-review.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    if: github.repository == 'shudnal/ExtraSlots'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Export reviewed sources without building or executing the mod
+        run: |
+          mkdir -p "$RUNNER_TEMP/source-review"
+          git archive HEAD --prefix=ExtraSlots/ -o "$RUNNER_TEMP/source-review/sources.tar"
+          git rev-parse HEAD > "$RUNNER_TEMP/source-review/head.txt"
+          git ls-tree -r HEAD > "$RUNNER_TEMP/source-review/tree.txt"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: inventory-review-source
+          path: ${{ runner.temp }}/source-review
+          retention-days: 1
+          if-no-files-found: error
