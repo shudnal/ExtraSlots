@@ -1,4 +1,8 @@
 # 1.2.1
+* fixed loading older worlds containing items saved in extra slots
+* prevented duplicated recovered stacks after an interrupted recovery merge
+* extra utility items now respect normal equip restrictions, including broken durability
+* improved quiver arrow lookup when no ammunition is equipped and after changing characters
 * updated for Valheim 1.0.7
 * extra slots and items are preserved when the game changes the character's inventory size; additional rows now follow the native inventory size
 * improved recovery of old and new character, backup, and migrated inventory saves
