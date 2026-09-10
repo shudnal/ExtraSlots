@@ -4,8 +4,8 @@
     "website_url":  "https://github.com/shudnal/ExtraSlots",
     "description":  "More inventory slots dedicated for equipment, food, ammo and misc items. Extra utility slots. Quick slots. Custom slots API. Player inventory resize. Gamepad friendly. Slot obtaining progression.",
     "dependencies":  [
-                         "denikson-BepInExPack_Valheim-5.4.2333",
+                         "denikson-BepInExPack_Valheim-5.4.2350",
                          "ValheimModding-YamlDotNet-16.3.1",
-                         "shudnal-ConditionalConfigSync-1.0.4"
+                         "shudnal-ConditionalConfigSync-1.0.5"
                      ]
 }
