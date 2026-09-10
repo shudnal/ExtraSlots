@@ -312,13 +312,13 @@ namespace ExtraSlots
 
             bool regularInventoryUnfitsForDragItem = InventoryGui.instance.m_dragItem != null && CurrentPlayer.IsItemEquiped(InventoryGui.instance.m_dragItem) && IsItemInEquipmentSlot(InventoryGui.instance.m_dragItem);
             for (int i = 0; i < Math.Min(InventoryGui.instance.m_playerGrid.m_elements.Count, startIndex); i++)
-                SetSlotColor(InventoryGui.instance.m_playerGrid.m_elements[i]?.m_go?.GetComponent<Button>(), regularInventoryUnfitsForDragItem);
+                SetSlotColor(InventoryGui.instance.m_playerGrid.m_elements[i]?.gameObject?.GetComponent<Button>(), regularInventoryUnfitsForDragItem);
 
             for (int i = 0; i < Math.Min(slots.Length, InventoryGui.instance.m_playerGrid.m_elements.Count - startIndex); ++i)
                 SetSlotElement(InventoryGui.instance.m_playerGrid.m_elements[startIndex + i], slots[i], regularInventoryUnfitsForDragItem);
 
             for (int i = startIndex + slots.Length; i < InventoryGui.instance.m_playerGrid.m_elements.Count; i++)
-                InventoryGui.instance.m_playerGrid.m_elements[i]?.m_go?.SetActive(false);
+                InventoryGui.instance.m_playerGrid.m_elements[i]?.gameObject?.SetActive(false);
 
             if (originalTooltipPosition == Vector2.zero)
                 originalTooltipPosition = InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition;
@@ -346,9 +346,9 @@ namespace ExtraSlots
             }
         }
 
-        internal static void SetSlotElement(InventoryGrid.Element element, Slot slot, bool regularInventoryUnfitsForDragItem)
+        internal static void SetSlotElement(InventoryElement element, Slot slot, bool regularInventoryUnfitsForDragItem)
         {
-            GameObject currentChild = element?.m_go;
+            GameObject currentChild = element?.gameObject;
             if (!currentChild)
                 return;
 
@@ -413,9 +413,15 @@ namespace ExtraSlots
             buttonColors.normalColor = useUnfitColor ? normalColorUnfit : normalColor;
             buttonColors.highlightedColor = useUnfitColor ? highlightedColorUnfit : highlightedColor;
             button.colors = buttonColors;
+            if (button.TryGetComponent(out InventoryElement element))
+            {
+                // Native input-layout changes restore this value, not Button.colors.
+                element.HighlightOriginalColor = buttonColors.highlightedColor;
+                element.UpdateHighlightColor();
+            }
         }
 
-        private static void SetInventorySlotBackgroundImage(InventoryGrid.Element element, bool weightReduction)
+        private static void SetInventorySlotBackgroundImage(InventoryElement element, bool weightReduction)
         {
             if (iconMaterial == null && element.m_icon.material != null)
                 iconMaterial = element.m_icon.material;
@@ -439,7 +445,7 @@ namespace ExtraSlots
                 element.m_tooltip.Set("$exsl_slot_lightened", Localization.instance.Localize("$exsl_slot_lightened_desc", $"{1f - LightenedSlots.WeightFactor:P0}"), InventoryGui.instance.m_playerGrid.m_tooltipAnchor);
         }
 
-        private static void SetSlotBackgroundImage(InventoryGrid.Element element, Slot slot)
+        private static void SetSlotBackgroundImage(InventoryElement element, Slot slot)
         {
             if (iconMaterial == null && element.m_icon.material != null)
                 iconMaterial = element.m_icon.material;
@@ -457,7 +463,7 @@ namespace ExtraSlots
                 element.m_icon.transform.localScale = originalScale == Vector3.zero ? Vector3.one: originalScale;
                 element.m_icon.material = iconMaterial;
 
-                if (slot.IsEquipmentSlot && Compatibility.EpicLootCompat.isEnabled && epicLootMagicItemUnequippedAlpha.Value != 1f && !item.m_equipped && element.m_go.transform.Find("magicItem") is Transform magicItem && magicItem.GetComponent<Image>() is Image magicItemImage)
+                if (slot.IsEquipmentSlot && Compatibility.EpicLootCompat.isEnabled && epicLootMagicItemUnequippedAlpha.Value != 1f && !item.m_equipped && element.gameObject.transform.Find("magicItem") is Transform magicItem && magicItem.GetComponent<Image>() is Image magicItemImage)
                     magicItemImage.color = new Color(magicItemImage.color.r, magicItemImage.color.g, magicItemImage.color.b, epicLootMagicItemUnequippedAlpha.Value);
                 return;
             }
@@ -679,7 +685,7 @@ namespace ExtraSlots
                     equipmentBackgroundImage.overrideSprite = background;
                 }
             }
-            int currentExtraRows = ExtraRowsPlayer;
+            int currentExtraRows = InventoryHeightPlayer - VanillaInventoryHeight;
             if (inventoryBackground)
             {
                 inventoryBackground.anchorMin = new Vector2(0.0f, -1f * ((float)currentExtraRows / VanillaInventoryHeight - 0.01f * Math.Max(currentExtraRows - 1, 0)));
@@ -1030,7 +1036,8 @@ namespace ExtraSlots
 
             private static bool Prefix(InventoryGrid __instance)
             {
-                if (__instance != InventoryGui.instance.m_playerGrid || !__instance.m_uiGroup.IsActive || Console.IsVisible())
+                if (__instance != InventoryGui.instance.m_playerGrid || !__instance.m_uiGroup.IsActive || Console.IsVisible()
+                    || ZInput.IsTouchActive() || !ZInput.IsExclusiveGamepadActive())
                     return true;
 
                 /* Extra slots inventory grid looks like this
@@ -1338,13 +1345,20 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.SetSelection))]
+        [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.SetGamepadSelection))]
         public static class InventoryGrid_SetSelection_GamepadSupport
         {
-            private static void Postfix(Vector2i pos)
+            private static void Prefix(InventoryGrid __instance, ref Vector2i pos)
             {
-                pos.y = Math.Min(pos.y, InventoryHeightPlayer - 1);
-                LogDebug($"SetSelection {pos}");
+                if (!InventoryGui.instance || __instance != InventoryGui.instance.m_playerGrid)
+                    return;
+
+                Slot slot = GetSlotInGrid(pos);
+                if (slot != null && !slot.IsEmptySlot && slot.IsActive)
+                    return;
+
+                pos.x = Mathf.Clamp(pos.x, 0, InventoryWidth - 1);
+                pos.y = Mathf.Clamp(pos.y, 0, InventoryHeightPlayer - 1);
             }
         }
 
@@ -1357,11 +1371,15 @@ namespace ExtraSlots
                     return;
 
                 for (int i = 0; i < Math.Min(slots.Length, InventoryGui.instance.m_playerGrid.m_elements.Count - InventorySizePlayer); ++i)
-                    if (RectTransformUtility.RectangleContainsScreenPoint(InventoryGui.instance.m_playerGrid.m_elements[InventorySizePlayer + i].m_go.transform as RectTransform, screenPoint))
+                {
+                    InventoryElement element = InventoryGui.instance.m_playerGrid.m_elements[InventorySizePlayer + i];
+                    if (element && element.gameObject.activeInHierarchy
+                        && RectTransformUtility.RectangleContainsScreenPoint(element.GetElementRectTransform(), screenPoint))
                     {
                         __result = true;
                         return;
                     }
+                }
             }
         }
     }

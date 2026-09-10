@@ -112,12 +112,12 @@ namespace ExtraSlots
                     return;
 
                 bool fadeEnabled = IsFadeEnabled();
-                foreach (InventoryGrid.Element element in __instance.m_elements)
+                foreach (InventoryElement element in __instance.m_elements)
                 {
-                    if (element?.m_queued == null || element.m_equiped == null || !element.m_used || !element.m_queued.enabled)
+                    if (element == null || element.m_queued == null || element.m_equiped == null || !element.m_used || !element.m_queued.enabled)
                         continue;
 
-                    ItemDrop.ItemData item = __instance.m_inventory.GetItemAt(element.m_pos.x, element.m_pos.y);
+                    ItemDrop.ItemData item = __instance.m_inventory.GetItemAt(element.Position.x, element.Position.y);
                     if (item == null || !TryGetQueuedAction(player, item, out Player.MinorActionData action, out int actionIndex))
                         continue;
 
@@ -162,7 +162,7 @@ namespace ExtraSlots
                     if (item == null || !TryGetQueuedAction(player, item, out Player.MinorActionData action, out _))
                         continue;
 
-                    // HotkeyBar.ElementData.m_equiped is a GameObject, unlike InventoryGrid's Image.
+                    // HotkeyBar.ElementData.m_equiped is a GameObject, unlike InventoryElement's Image.
                     // Its queued state must remain correct even when indicator fading is disabled.
                     element.m_equiped.SetActive(action.m_type == Player.MinorActionData.ActionType.Equip);
                 }

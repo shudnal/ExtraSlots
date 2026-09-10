@@ -1,3 +1,16 @@
+# 1.2.1
+* fixed loading older worlds containing items saved in extra slots
+* prevented duplicated recovered stacks after an interrupted recovery merge
+* extra utility items now respect normal equip restrictions, including broken durability
+* improved quiver arrow lookup when no ammunition is equipped and after changing characters
+* updated for Valheim 1.0.7
+* extra slots and items are preserved when the game changes the character's inventory size; additional rows now follow the native inventory size
+* improved recovery of old and new character, backup, and migrated inventory saves
+* upgrading slotted equipment now handles successful upgrades, quality reductions, and intentional destruction correctly
+* crafted items and returned materials dropped from a full inventory retain their stack size, quality, variant, and custom data
+* improved tombstone item persistence and recovery when container ownership changes in multiplayer
+* updated inventory selection, equipment indicators, and touch interaction with extra hotbars
+
 # 1.2.0
 * significantly strengthened item-loss prevention when inventory rows, slot availability, or mod setup changes; items that cannot be placed safely are preserved and restored when a valid destination becomes available
 * deferred items survive character saves, temporarily missing item prefabs, and running the character without ExtraSlots before returning to the mod

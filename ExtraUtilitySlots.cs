@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 using static ExtraSlots.Slots;
@@ -46,7 +48,9 @@ namespace ExtraSlots
 
         public static ItemDrop.ItemData SetExtraUtility(this Humanoid humanoid, int index, ItemDrop.ItemData item)
         {
-            if (humanoid == null)
+            // Equipped-item consumers require runtime SharedData. Transport records must be
+            // materialized by their owner before they can be adopted into an equipment slot.
+            if (humanoid == null || (item != null && item.m_shared == null))
                 return null;
 
             if (index < 0 || index > 3)
@@ -261,15 +265,18 @@ namespace ExtraSlots
 
         public static int GetSlotForItem(ItemDrop.ItemData item)
         {
+            if (item?.m_shared == null || !Player.m_localPlayer)
+                return -1;
+
             foreach (HashSet<string> uniqueItems in uniqueEquipped)
             {
                 if (uniqueItems.Contains(item.m_shared.m_name))
                 {
-                    if (Player.m_localPlayer.m_utilityItem != null && uniqueItems.Contains(Player.m_localPlayer.m_utilityItem.m_shared.m_name))
+                    if (Player.m_localPlayer.m_utilityItem?.m_shared != null && uniqueItems.Contains(Player.m_localPlayer.m_utilityItem.m_shared.m_name))
                         return -1;
 
                     for (int i = 0; i < ActiveSlots; i++)
-                        if (GetItem(i) is ItemDrop.ItemData utilityItem && uniqueItems.Contains(utilityItem.m_shared.m_name))
+                        if (GetItem(i) is ItemDrop.ItemData utilityItem && utilityItem.m_shared != null && uniqueItems.Contains(utilityItem.m_shared.m_name))
                             return i;
                 }
             }
@@ -418,47 +425,84 @@ namespace ExtraSlots
             [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.EquipItem))]
             private static class Humanoid_EquipItem_ExtraUtility
             {
-                private static readonly ItemDrop.ItemData.ItemType tempType = (ItemDrop.ItemData.ItemType)727;
-
-                private static void Prefix(Humanoid __instance, ItemDrop.ItemData item, ref int __state)
+                private sealed class EquipState
                 {
-                    if (!IsValidPlayer(__instance))
+                    internal EquipState Previous;
+                    internal Humanoid Humanoid;
+                    internal ItemDrop.ItemData Item;
+                    internal int Slot = -1;
+                }
+
+                private static EquipState current;
+
+                [HarmonyPriority(Priority.First)]
+                private static void Prefix(Humanoid __instance, ItemDrop.ItemData item, out EquipState __state)
+                {
+                    __state = new EquipState { Previous = current };
+                    current = __state;
+                    if (!IsValidPlayer(__instance) || item?.m_shared == null
+                        || !IsUtilitySlotItem(item) || IsCustomSlotItem(item)
+                        || __instance.m_utilityItem == null || IsItemEquipped(item))
                         return;
 
-                    if (item == null)
-                        return;
+                    __state.Humanoid = __instance;
+                    __state.Item = item;
+                    __state.Slot = GetSlotForItem(item);
+                }
 
-                    if (IsUtilitySlotItem(item) && !IsCustomSlotItem(item) && __instance.m_utilityItem != null && !IsItemEquipped(item) && (__state = GetSlotForItem(item)) != -1)
+                private static bool Matches(Humanoid humanoid, ItemDrop.ItemData item) => current?.Slot >= 0
+                    && ReferenceEquals(current.Humanoid, humanoid) && ReferenceEquals(current.Item, item);
+
+                private static ItemDrop.ItemData GetUtilityForEquip(Humanoid humanoid, ItemDrop.ItemData item) =>
+                    Matches(humanoid, item) ? humanoid.GetExtraUtility(current.Slot) : humanoid.m_utilityItem;
+
+                private static void SetUtilityForEquip(Humanoid humanoid, ItemDrop.ItemData item)
+                {
+                    if (Matches(humanoid, item))
+                        humanoid.SetExtraUtility(current.Slot, item);
+                    else
+                        humanoid.m_utilityItem = item;
+                }
+
+                private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+                {
+                    List<CodeInstruction> code = instructions.ToList();
+                    FieldInfo utility = AccessTools.Field(typeof(Humanoid), nameof(Humanoid.m_utilityItem));
+                    if (code.Count(instruction => instruction.LoadsField(utility)) != 1
+                        || code.Count(instruction => instruction.StoresField(utility)) != 1)
+                        throw new InvalidOperationException("Unsupported Humanoid.EquipItem utility assignment layout.");
+
+                    MethodInfo get = AccessTools.Method(typeof(Humanoid_EquipItem_ExtraUtility), nameof(GetUtilityForEquip));
+                    MethodInfo set = AccessTools.Method(typeof(Humanoid_EquipItem_ExtraUtility), nameof(SetUtilityForEquip));
+                    foreach (CodeInstruction instruction in code)
                     {
-                        item.m_shared.m_itemType = tempType;
-                        if (__instance.m_visEquipment && __instance.m_visEquipment.m_isPlayer)
-                            item.m_shared.m_equipEffect.Create(__instance.transform.position + Vector3.up, __instance.transform.rotation);
+                        if (instruction.LoadsField(utility))
+                        {
+                            // Redirect only the actual utility assignment. Keep the real item type
+                            // and every native eligibility check, refusal, effect and result intact.
+                            CodeInstruction argument = new CodeInstruction(OpCodes.Ldarg_1);
+                            argument.labels.AddRange(instruction.labels);
+                            argument.blocks.AddRange(instruction.blocks);
+                            yield return argument;
+                            yield return new CodeInstruction(OpCodes.Call, get);
+                        }
+                        else if (instruction.StoresField(utility))
+                        {
+                            instruction.opcode = OpCodes.Call;
+                            instruction.operand = set;
+                            yield return instruction;
+                        }
+                        else
+                            yield return instruction;
                     }
                 }
 
-                [HarmonyPriority(Priority.First)]
-                private static void Postfix(Humanoid __instance, ItemDrop.ItemData item, bool triggerEquipEffects, int __state, ref bool __result)
+                [HarmonyPriority(Priority.Last)]
+                private static Exception Finalizer(EquipState __state, Exception __exception)
                 {
-                    if (!IsValidPlayer(__instance))
-                        return;
-
-                    if (item == null || item.m_shared.m_itemType != tempType || __state == -1)
-                        return;
-
-                    item.m_shared.m_itemType = ItemDrop.ItemData.ItemType.Utility;
-
-                    if (__instance.GetExtraUtility(__state) is ItemDrop.ItemData utilityItem)
-                        __instance.UnequipItem(utilityItem, triggerEquipEffects);
-
-                    __instance.SetExtraUtility(__state, item);
-
-                    if (__instance.IsItemEquiped(item))
-                    {
-                        item.m_equipped = true;
-                        __result = true;
-                    }
-
-                    __instance.SetupEquipment();
+                    if (__state != null)
+                        current = __state.Previous;
+                    return __exception;
                 }
             }
 

@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using System.Linq;
 using static ExtraSlots.ExtraSlots;
 using static ExtraSlots.Slots;
 
@@ -10,12 +11,35 @@ namespace ExtraSlots
 
         internal static void LogItem(ItemDrop.ItemData item)
         {
-            LogDebug($"{item.m_shared.m_name} {item.m_gridPos} " + (Slots.GetItemSlot(item) is Slots.Slot slot ? $"slot: {slot} {slot.GridPosition}" : ""));
+            if (!IsDebugEnabled)
+                return;
+
+            if (item == null)
+            {
+                LogDebug("<null item>");
+                return;
+            }
+
+            string name = item.m_shared?.m_name ?? item.m_dropPrefab?.name ?? "<unmaterialized item>";
+            string slotInfo = item.m_shared != null && Slots.GetItemSlot(item) is Slots.Slot slot
+                ? $"slot: {slot} {slot.GridPosition}" : "";
+            LogDebug($"{name} {item.m_gridPos} stack:{item.m_stack} {slotInfo}");
         }
 
-        internal static string GetInventoryState(Inventory inventory) => $"name:{inventory.m_name} isPlayer:{Player.m_localPlayer?.GetInventory() == inventory} size:{inventory.m_width}x{inventory.m_height} weight:{inventory.m_totalWeight} items:{inventory.m_inventory.Count}";
+        internal static string GetInventoryState(Inventory inventory) => inventory == null ? "<null inventory>"
+            : $"name:{inventory.m_name} temporary:{inventory.m_temoraryInventory} isPlayer:{Player.m_localPlayer?.GetInventory() == inventory} size:{inventory.m_width}x{inventory.m_height} weight:{inventory.m_totalWeight} items:{inventory.m_inventory?.Count ?? 0}";
 
-        internal static void LogInventory(this Inventory inventory) => inventory.GetAllItemsInGridOrder().Do(LogItem);
+        internal static void LogInventory(this Inventory inventory)
+        {
+            if (!IsDebugEnabled || inventory?.m_inventory == null)
+                return;
+
+            // Sort transport fields only; do not invoke inventory queries that depend on m_shared.
+            foreach (ItemDrop.ItemData item in inventory.m_inventory
+                .OrderBy(item => item?.m_gridPos.y ?? int.MaxValue)
+                .ThenBy(item => item?.m_gridPos.x ?? int.MaxValue))
+                LogItem(item);
+        }
 
         [HarmonyPatch(typeof(Player), nameof(Player.CreateTombStone))]
         internal static class Player_CreateTombstone_LoggingItems

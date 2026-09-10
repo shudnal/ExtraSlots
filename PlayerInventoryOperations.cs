@@ -46,11 +46,22 @@ namespace ExtraSlots
 
             internal ChangeBatch(Inventory inventory)
             {
-                this.inventory = inventory;
-                if (inventory == null)
+                // Transport-only inventories must keep native Changed as a no-op and must not
+                // participate in runtime weight/observer batching, even through an explicit caller.
+                this.inventory = inventory != null && !inventory.m_temoraryInventory ? inventory : null;
+                if (this.inventory == null)
                     return;
 
                 batchDepth.TryGetValue(inventory, out int depth);
+                if (depth == 0)
+                {
+                    // Capture resident state before any nested insertion can modify it. The native
+                    // achievement query is frame-cached and cannot verify a partial mutation later.
+                    pendingChanged[inventory] = new PendingChange
+                    {
+                        HadCheatedItemAtStart = IsLocalPlayerInventory(inventory) && HasCheatedResident(inventory)
+                    };
+                }
                 batchDepth[inventory] = depth + 1;
             }
 
@@ -70,15 +81,39 @@ namespace ExtraSlots
                 }
 
                 batchDepth.Remove(inventory);
-                if (!pendingChanged.Remove(inventory))
+                if (!pendingChanged.TryGetValue(inventory, out PendingChange change))
                     return;
 
-                inventory.Changed();
+                pendingChanged.Remove(inventory);
+                if (change.HasChanges)
+                    inventory.Changed(change.Success, change.SuccessfulCheatChange);
             }
         }
 
         private static readonly Dictionary<Inventory, int> batchDepth = new Dictionary<Inventory, int>();
-        private static readonly HashSet<Inventory> pendingChanged = new HashSet<Inventory>();
+        private struct PendingChange
+        {
+            internal bool HasChanges;
+            internal bool HadCheatedItemAtStart;
+            internal bool Success;
+            internal bool SuccessfulCheatChange;
+        }
+
+        private static readonly Dictionary<Inventory, PendingChange> pendingChanged = new Dictionary<Inventory, PendingChange>();
+
+        private static void QueueChanged(Inventory inventory, bool success, bool cheatedStateChanged)
+        {
+            pendingChanged.TryGetValue(inventory, out PendingChange change);
+            // AddItem can return false after contaminating a resident stack and failing to place
+            // the remainder. Verify that transition from live items, not the cached achievement
+            // query. A wholly rejected insertion must not borrow an unrelated success's flag.
+            bool partialCheatChange = !success && cheatedStateChanged && !change.HadCheatedItemAtStart
+                && IsLocalPlayerInventory(inventory) && HasCheatedResident(inventory);
+            change.HasChanges = true;
+            change.Success |= success || partialCheatChange;
+            change.SuccessfulCheatChange |= (success && cheatedStateChanged) || partialCheatChange;
+            pendingChanged[inventory] = change;
+        }
 
         internal static IDisposable Batch(Inventory inventory = null) => new ChangeBatch(inventory ?? PlayerInventory);
         private sealed class NoopChangeBatch : IDisposable
@@ -329,14 +364,15 @@ namespace ExtraSlots
         internal static bool InsertExisting(ItemDrop.ItemData item, Vector2i target)
         {
             Inventory inventory = PlayerInventory;
-            if (inventory == null || item == null || inventory.ContainsItem(item) || !CanOccupySemantically(item, target)
+            if (inventory == null || inventory.m_temoraryInventory || item?.m_shared == null || inventory.ContainsItem(item) || !CanOccupySemantically(item, target)
                 || inventory.GetItemAt(target.x, target.y) != null)
                 return false;
 
+            bool cheatedStateChanged = WouldChangeCheatedState(inventory, item);
             item.m_gridPos = target;
             inventory.m_inventory.Add(item);
             ClearCachedItems();
-            MarkChanged(inventory);
+            MarkChanged(inventory, success: true, cheatedStateChanged);
             return true;
         }
 
@@ -345,13 +381,14 @@ namespace ExtraSlots
         internal static bool InsertForReconciliation(ItemDrop.ItemData item, Vector2i temporaryPosition)
         {
             Inventory inventory = PlayerInventory;
-            if (inventory == null || item == null || inventory.ContainsItem(item))
+            if (inventory == null || inventory.m_temoraryInventory || item?.m_shared == null || inventory.ContainsItem(item))
                 return false;
 
+            bool cheatedStateChanged = WouldChangeCheatedState(inventory, item);
             item.m_gridPos = temporaryPosition;
             inventory.m_inventory.Add(item);
             ClearCachedItems();
-            MarkChanged(inventory);
+            MarkChanged(inventory, success: true, cheatedStateChanged);
             ItemsSlotsValidation.ValidateItems();
             ItemsSlotsValidation.ValidateSlots();
             return true;
@@ -485,7 +522,7 @@ namespace ExtraSlots
             madeProgress = false;
 
             Inventory inventory = PlayerInventory;
-            if (inventory == null || item == null || inventory.ContainsItem(item) || item.m_stack < 1)
+            if (inventory == null || inventory.m_temoraryInventory || item?.m_shared == null || inventory.ContainsItem(item) || item.m_stack < 1)
                 return false;
 
             ClearCachedItems();
@@ -519,7 +556,7 @@ namespace ExtraSlots
             {
                 foreach (ItemDrop.ItemData stackItem in inventory.m_inventory)
                 {
-                    if (stackItem == null
+                    if (stackItem?.m_shared == null
                         || stackItem.m_shared.m_name != item.m_shared.m_name
                         || stackItem.m_quality != item.m_quality
                         || stackItem.m_worldLevel != item.m_worldLevel)
@@ -548,44 +585,65 @@ namespace ExtraSlots
 
             if (item.m_shared.m_maxStackSize > 1 && stackCapacity >= item.m_stack)
             {
+                bool cheatedStateChanged = !PlayerProfile.s_bypassCheatChecks && WouldChangeCheatedState(inventory, item);
                 int originalStack = item.m_stack;
                 ItemDrop.ItemData representative = null;
-                List<(ItemDrop.ItemData Item, int Stack)> stackSnapshots = new List<(ItemDrop.ItemData, int)>();
+                List<(ItemDrop.ItemData Item, int Stack, bool Cheated)> stackSnapshots = new List<(ItemDrop.ItemData, int, bool)>();
 
-                while (item.m_stack > 0)
+                bool mergeCommitted = false;
+                try
                 {
-                    ItemDrop.ItemData stackItem = inventory.FindFreeStackItem(item.m_shared.m_name, item.m_quality, item.m_worldLevel);
-                    if (stackItem == null || ReferenceEquals(stackItem, item))
-                        break;
+                    while (item.m_stack > 0)
+                    {
+                        ItemDrop.ItemData stackItem = inventory.FindFreeStackItem(item.m_shared.m_name, item.m_quality, item.m_worldLevel);
+                        if (stackItem?.m_shared == null || ReferenceEquals(stackItem, item)
+                            || !inventory.ContainsItem(stackItem)
+                            || stackItem.m_shared.m_name != item.m_shared.m_name
+                            || stackItem.m_quality != item.m_quality || stackItem.m_worldLevel != item.m_worldLevel)
+                            break;
 
-                    int capacity = stackItem.m_shared.m_maxStackSize - stackItem.m_stack;
-                    if (capacity <= 0)
-                        break;
+                        int capacity = stackItem.m_shared.m_maxStackSize - stackItem.m_stack;
+                        if (capacity <= 0)
+                            break;
 
-                    stackSnapshots.Add((stackItem, stackItem.m_stack));
-                    int amount = Math.Min(capacity, item.m_stack);
-                    stackItem.m_stack += amount;
-                    item.m_stack -= amount;
-                    if (representative == null || CurrentPlayer?.IsItemEquiped(stackItem) == true)
-                        representative = stackItem;
+                        stackSnapshots.Add((stackItem, stackItem.m_stack, stackItem.m_cheated));
+                        if (item.m_cheated && !PlayerProfile.s_bypassCheatChecks)
+                            stackItem.m_cheated = true;
+                        int amount = Math.Min(capacity, item.m_stack);
+                        stackItem.m_stack += amount;
+                        item.m_stack -= amount;
+                        if (representative == null || CurrentPlayer?.IsItemEquiped(stackItem) == true)
+                            representative = stackItem;
+                    }
+
+                    mergeCommitted = item.m_stack <= 0;
+                }
+                finally
+                {
+                    if (!mergeCommitted)
+                    {
+                        // A stack-provider exception after an earlier merge must not leave both
+                        // the transferred portion and the original full deferred package owned.
+                        foreach ((ItemDrop.ItemData stackItem, int previousStack, bool previousCheated) in stackSnapshots)
+                        {
+                            stackItem.m_stack = previousStack;
+                            stackItem.m_cheated = previousCheated;
+                        }
+                        item.m_stack = originalStack;
+                    }
                 }
 
-                if (item.m_stack <= 0)
+                if (mergeCommitted)
                 {
                     placedItem = representative;
-                    MarkChanged(inventory);
+                    MarkChanged(inventory, success: true, cheatedStateChanged);
                     fullyInserted = true;
                     madeProgress = true;
                     return true;
                 }
 
-                // Another patch may reject stacks that satisfy vanilla's coarse name/quality/world
-                // capacity check (for example because custom data differs). Roll back the tentative
-                // merge and then try a genuinely empty destination before keeping the item deferred.
-                foreach ((ItemDrop.ItemData stackItem, int previousStack) in stackSnapshots)
-                    stackItem.m_stack = previousStack;
-                item.m_stack = originalStack;
-
+                // A provider can reject vanilla's coarse stack match. After rollback, prefer
+                // a genuinely empty destination; otherwise the complete item stays deferred.
                 target = FindDirectEmptyDestination(item);
                 if (target.x < 0)
                     return false;
@@ -740,14 +798,15 @@ namespace ExtraSlots
             equipmentPlacements = new List<SimulatedEquipmentPlacement>();
 
             Inventory inventory = PlayerInventory;
-            if (inventory == null || incomingItems == null)
+            if (inventory == null || inventory.m_temoraryInventory || incomingItems == null
+                || inventory.m_inventory.Any(item => item?.m_shared == null))
                 return false;
 
             if (!IsInventoryPlacementValid(out _, out _))
                 return false;
 
             List<ItemDrop.ItemData> incoming = incomingItems.ToList();
-            if (incoming.Any(item => item == null || item.m_stack < 1))
+            if (incoming.Any(item => item?.m_shared == null || item.m_stack < 1))
                 return false;
             if (incoming.Count == 0)
                 return true;
@@ -1316,18 +1375,35 @@ namespace ExtraSlots
                 && slot.ItemFits(item);
         }
 
-        internal static void MarkChanged(Inventory inventory)
+        private static bool IsLocalPlayerInventory(Inventory inventory) => Player.m_localPlayerExists
+            && Player.m_localPlayer != null && ReferenceEquals(inventory, Player.m_localPlayer.GetInventory());
+
+        private static bool HasCheatedResident(Inventory inventory)
+        {
+            foreach (ItemDrop.ItemData item in inventory.m_inventory)
+                if (item != null && item.m_cheated)
+                    return true;
+
+            return false;
+        }
+
+        // Evaluate before insertion or stack contamination, then publish only after the mutation
+        // commits. In particular, a rolled-back tentative merge must not emit this notification.
+        private static bool WouldChangeCheatedState(Inventory inventory, ItemDrop.ItemData item) =>
+            IsLocalPlayerInventory(inventory) && item.m_cheated && !Achievements.IsCheatedAtAll();
+
+        internal static void MarkChanged(Inventory inventory, bool success = false, bool cheatedStateChanged = false)
         {
             if (inventory == null)
                 return;
 
             if (batchDepth.ContainsKey(inventory))
             {
-                pendingChanged.Add(inventory);
+                QueueChanged(inventory, success, cheatedStateChanged);
                 return;
             }
 
-            inventory.Changed();
+            inventory.Changed(success, cheatedStateChanged);
         }
 
         private static Vector2i FindDirectEmptyDestination(ItemDrop.ItemData item)
@@ -1376,7 +1452,7 @@ namespace ExtraSlots
 
         private static bool CanOccupySemantically(ItemDrop.ItemData item, Vector2i target)
         {
-            if (item == null || !IsInsideFullInventory(target))
+            if (item?.m_shared == null || !IsInsideFullInventory(target))
                 return false;
 
             if (target.y < InventoryHeightPlayer)
@@ -1459,15 +1535,15 @@ namespace ExtraSlots
         private static class Inventory_Changed_DebounceMutationBatch
         {
             [HarmonyPriority(Priority.First)]
-            private static bool Prefix(Inventory __instance)
+            private static bool Prefix(Inventory __instance, bool success, bool cheatedStateChanged)
             {
-                if (__instance == null || !batchDepth.ContainsKey(__instance))
+                if (__instance == null || __instance.m_temoraryInventory || !batchDepth.ContainsKey(__instance))
                     return true;
 
                 // Keep the synchronous state part current while only the observer notification is
                 // delayed. Code inside the transaction may legitimately inspect current weight.
                 __instance.UpdateTotalWeight();
-                pendingChanged.Add(__instance);
+                QueueChanged(__instance, success, cheatedStateChanged);
                 return false;
             }
         }

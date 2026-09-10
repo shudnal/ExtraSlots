@@ -95,8 +95,10 @@ internal static class InventoryMigration
             foreach (ItemDrop.ItemData item in sourceItems.Where(item => item != null))
             {
                 string key = DeferredInventory.GetMigrationKey(item);
+                string storedKey = DeferredInventory.GetMigrationKey(InventorySerialization.GetSavedRepresentation(item));
                 int representedIndex = available.FindIndex(candidate =>
-                    string.Equals(candidate.Key, key, StringComparison.Ordinal)
+                    (string.Equals(candidate.Key, key, StringComparison.Ordinal)
+                        || string.Equals(candidate.Key, storedKey, StringComparison.Ordinal))
                     && (representationMatchesSource == null
                         || representationMatchesSource(item, candidate.PlayerItem, candidate.DeferredPreferredSlotId)));
 
@@ -171,7 +173,7 @@ internal static class InventoryMigration
                 {
                     ZPackage compressedItemPackage = new ZPackage(itemPackageBase64);
                     Inventory singleItemInventory = new Inventory(DeferredInventory.CustomDataKey, null, 1, 1);
-                    singleItemInventory.Load(compressedItemPackage.ReadCompressedPackage());
+                    InventorySerialization.Load(singleItemInventory, compressedItemPackage.ReadCompressedPackage());
                     ItemDrop.ItemData item = singleItemInventory.m_inventory.Count == 1 ? singleItemInventory.m_inventory[0] : null;
                     if (item == null || item.m_stack != originalStack
                         || !string.Equals(item.m_dropPrefab?.name, prefabName, StringComparison.Ordinal))
@@ -205,7 +207,7 @@ internal static class InventoryMigration
         try
         {
             inventory = new Inventory(name, null, width, height);
-            inventory.Load(new ZPackage(base64).ReadCompressedPackage());
+            InventorySerialization.Load(inventory, new ZPackage(base64).ReadCompressedPackage());
             return true;
         }
         catch (Exception ex)
