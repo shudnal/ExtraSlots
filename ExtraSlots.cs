@@ -463,7 +463,7 @@ namespace ExtraSlots
                 "\nValue > 0: index of the first affected row (inclusive)", new AcceptableValueRange<int>(-9, 9)));
             lightenedSlotsWeightFactor = serverConfig("Extra slots - Lightened slots", "Weight factor. Item weight will be multiplied by this value.", defaultValue: 0.5f, 
                     new ConfigDescription("Weight factor for items in lightened slots. [Synced with Server]", new AcceptableValueRange<float>(0f, 1f)));
-            lightenedSlotsOnlyExtraRows = serverConfig("Extra slots - Lightened slots", "Only extra rows", defaultValue: true, "Set if only rows added by ExtraSlots after the native inventory rows should be affected. [Synced with Server]");
+            lightenedSlotsOnlyExtraRows = serverConfig("Extra slots - Lightened slots", "Only extra rows", defaultValue: false, "Set if only rows added by ExtraSlots after the native inventory rows should be affected. [Synced with Server]");
             lightenedSlotsPlayerKey = serverConfig("Extra slots - Lightened slots", "Progression - Player key", defaultValue: "GP_Yagluth", "Comma-separated list of Player unique keys. [Synced with Server]" +
                 "\nLightened slots will be active only if any key is enabled or list is not set");
             lightenedSlotsItemDiscovered = serverConfig("Extra slots - Lightened slots", "Progression - Item", defaultValue: "YagluthDrop", "Comma-separated list of items. [Synced with Server]" +

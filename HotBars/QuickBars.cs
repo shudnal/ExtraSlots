@@ -346,7 +346,7 @@ public static class QuickBars
                 __instance.m_selected = i;
                 ItemDrop.ItemData item = GetItemForElement(__instance, i);
                 if (item != null)
-                    player.UseItem(null, item);
+                    player.UseItem(null, item, false);
             }
             return false;
         }
