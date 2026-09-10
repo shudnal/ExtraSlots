@@ -339,7 +339,7 @@ namespace ExtraSlots
 
         private void LateUpdate()
         {
-            if (InventoryGui.instance && !IsAwaitingForSlotsUpdate())
+            if (InventoryGui.instance && !IsAwaitingForSlotsUpdate() && ItemsSlotsValidation.HasPendingValidation)
                 ItemsSlotsValidation.Validate();
         }
 

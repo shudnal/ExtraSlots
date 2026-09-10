@@ -200,6 +200,27 @@ namespace ExtraSlots
             }
         }
 
+        private static int GetPlayerEmptySlots(Inventory inventory)
+        {
+            if (inventory == null || inventory.m_temoraryInventory || inventory != PlayerInventory)
+                return 0;
+
+            int regularItems = 0;
+            foreach (ItemDrop.ItemData item in inventory.m_inventory)
+                if (!IsItemInSlot(item))
+                    regularItems++;
+
+            int emptySlots = InventoryHeightPlayer * inventory.m_width - regularItems;
+            if (!Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem)
+            {
+                foreach (Slot slot in slots)
+                    if (slot.IsQuickSlot && slot.IsActive && slot.Item == null)
+                        emptySlots++;
+            }
+
+            return Math.Max(emptySlots, 0);
+        }
+
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.GetEmptySlots))]
         private static class Inventory_GetEmptySlots_CheckRegularInventoryAndQuickSlots
         {
@@ -209,8 +230,9 @@ namespace ExtraSlots
                 if (__instance.m_temoraryInventory || __instance != PlayerInventory)
                     return;
 
-                __result = InventoryHeightPlayer * __instance.m_width - __instance.m_inventory.Count(item => !API.IsItemInSlot(item)) + (Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem ? 0 :GetEmptyQuickSlots());
-                LogDebug($"Inventory.GetEmptySlots: {__result}, PreventAutoPickupInQuickSlots: {Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem}");
+                __result = GetPlayerEmptySlots(__instance);
+                if (loggingDebugEnabled.Value)
+                    LogDebug($"Inventory.GetEmptySlots: {__result}, PreventAutoPickupInQuickSlots: {Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem}");
             }
         }
 
@@ -544,7 +566,11 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.First)]
             private static void Postfix(Inventory __instance, ref bool __result)
             {
-                __result = __instance.GetEmptySlots() > 0;
+                if (__instance.m_temoraryInventory || __instance != PlayerInventory)
+                    return;
+
+                // Avoid re-entering the patched GetEmptySlots path for the same capacity question.
+                __result = GetPlayerEmptySlots(__instance) > 0;
             }
         }
 

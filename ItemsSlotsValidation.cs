@@ -14,6 +14,8 @@ namespace ExtraSlots
         private static int playerLoadDepth;
         private static bool validationInProgress;
 
+        internal static bool HasPendingValidation => ItemsValidation.IsDirty || SlotsValidation.IsDirty;
+
         public static void ValidateSlots() => SlotsValidation.MarkDirty();
         public static void ValidateItems() => ItemsValidation.MarkDirty();
 
@@ -382,17 +384,5 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show))]
-        public static class InventoryGui_Show_ValidateItems
-        {
-            private static void Postfix()
-            {
-                if (Player.m_localPlayer == null)
-                    return;
-
-                ValidateSlots();
-                ValidateItems();
-            }
-        }
     }
 }
