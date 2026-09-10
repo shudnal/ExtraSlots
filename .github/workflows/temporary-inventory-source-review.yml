@@ -3,29 +3,47 @@ name: Temporary inventory source review
 on:
   push:
     branches: [fix/valheim-1.0.7-compatibility]
-    paths: [.github/workflows/temporary-inventory-source-review.yml]
+    paths: [.github/workflows/temporary-inventory-source-review.yml, .github/scripts/temporary_inventory_review.py]
 
 permissions:
   contents: read
 
+concurrency:
+  group: temporary-inventory-source-review
+  cancel-in-progress: false
+
 jobs:
-  snapshot:
+  apply:
     if: github.repository == 'shudnal/ExtraSlots'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      BRANCH: fix/valheim-1.0.7-compatibility
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-      - name: Export reviewed sources without building or executing the mod
+      - name: Guard the existing branch and fetch the reviewed baseline
         run: |
-          mkdir -p "$RUNNER_TEMP/source-review"
-          git archive HEAD --prefix=ExtraSlots/ -o "$RUNNER_TEMP/source-review/sources.tar"
-          git rev-parse HEAD > "$RUNNER_TEMP/source-review/head.txt"
-          git ls-tree -r HEAD > "$RUNNER_TEMP/source-review/tree.txt"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: inventory-review-source
-          path: ${{ runner.temp }}/source-review
-          retention-days: 1
-          if-no-files-found: error
+          test "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" = "$GITHUB_SHA"
+          test -f .github/scripts/temporary_inventory_review.py
+          git fetch --no-tags --depth=1 origin 1af1d4bd02de54939c861e335caff20f32c1b827
+      - name: Install prebuilt syntax parser only
+        run: |
+          python -m venv "$RUNNER_TEMP/source-tools"
+          "$RUNNER_TEMP/source-tools/bin/pip" install --only-binary=:all: --disable-pip-version-check tree-sitter==0.25.2 tree-sitter-c-sharp==0.23.1
+      - name: Apply sources and inspect syntax without building or executing the mod
+        run: "$RUNNER_TEMP/source-tools/bin/python .github/scripts/temporary_inventory_review.py"
+      - name: Commit reviewed changes to the same branch without force-pushing
+        run: |
+          test "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" = "$GITHUB_SHA"
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- Compatibility/BBHCompat.cs DebugLogging.cs DeferredInventory.cs DeferredTombstone.cs InventoryInteraction.cs InventorySerialization.cs PlayerInventoryOperations.cs Slots.cs TombStoneInteraction.cs .github/scripts/temporary_inventory_review.py
+          git commit -m 'Guard transport inventories and make recovery merges exception-safe'
+          git add -- ExtraUtilitySlots.cs docs/VALHEIM_1_0_7_INVENTORY_CONTRACTS.md package/thunderstore/ExtraSlots/CHANGELOG.md
+          git commit -m 'Preserve native eligibility checks when equipping extra utilities'
+          test -z "$(git status --porcelain)"
+          git push origin "HEAD:refs/heads/$BRANCH"
+          git log -2 --stat --oneline
