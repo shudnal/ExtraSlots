@@ -21,6 +21,7 @@ public static class BBHCompat
     private static bool quiverInventoryCached;
     private static int quiverInventoryCachedSecond;
     private static Inventory quiverInventoryFromCache;
+    private static Player quiverInventoryPlayer;
 
     public static Inventory GetQuiverBarInventory(Player player)
     {
@@ -28,15 +29,30 @@ public static class BBHCompat
             return null;
 
         if (!ZNet.instance)
-            return _getQuiverBarInventory != null ? _getQuiverBarInventory(player) : null;
+        {
+            Inventory inventory = _getQuiverBarInventory?.Invoke(player);
+            return inventory != null && !inventory.m_temoraryInventory ? inventory : null;
+        }
 
-        if (quiverInventoryCachedSecond != (quiverInventoryCachedSecond = (int)ZNet.instance.GetTimeSeconds()) && quiverInventoryCachedSecond % 5 == 0)
+        int second = (int)ZNet.instance.GetTimeSeconds();
+        // Queries need not occur on a five-second boundary, and a cache must never outlive
+        // the character that owns it. Also expire if world time moves backwards.
+        if (!ReferenceEquals(quiverInventoryPlayer, player) || second < quiverInventoryCachedSecond
+            || (long)second - quiverInventoryCachedSecond >= 5)
             quiverInventoryCached = false;
 
         if (!quiverInventoryCached)
         {
+            quiverInventoryPlayer = player;
+            quiverInventoryCachedSecond = second;
+            quiverInventoryFromCache = _getQuiverBarInventory?.Invoke(player);
+            if (quiverInventoryFromCache?.m_temoraryInventory == true)
+            {
+                // A transient transport inventory must not poison the gameplay cache.
+                quiverInventoryFromCache = null;
+                return null;
+            }
             quiverInventoryCached = true;
-            quiverInventoryFromCache = _getQuiverBarInventory != null ? _getQuiverBarInventory(player) : null;
         }
 
         return quiverInventoryFromCache;
@@ -44,6 +60,9 @@ public static class BBHCompat
 
     public static void CheckForCompatibility()
     {
+        quiverInventoryCached = false;
+        quiverInventoryFromCache = null;
+        quiverInventoryPlayer = null;
         if (isEnabled = (bbhArrowsFindingAndCounting.Value && Chainloader.PluginInfos.TryGetValue(GUID, out BBHPlugin)))
         {
             assembly ??= Assembly.GetAssembly(BBHPlugin.Instance.GetType());
@@ -75,11 +94,11 @@ public static class BBHCompat
             if (__instance != Player.m_localPlayer?.GetInventory())
                 return;
 
-            if (__result == Player.m_localPlayer.GetAmmoItem())
+            if (__result != null && __result == Player.m_localPlayer.GetAmmoItem())
                 return;
 
             Inventory quiverBarInventory = GetQuiverBarInventory(Player.m_localPlayer);
-            if (quiverBarInventory == null || quiverBarInventory.m_inventory == null)
+            if (quiverBarInventory == null || quiverBarInventory.m_temoraryInventory || quiverBarInventory.m_inventory == null)
                 return;
 
             ItemDrop.ItemData firstMatch = null;
@@ -98,7 +117,7 @@ public static class BBHCompat
                 __result = firstMatch;
         }
 
-        private static bool IsItemFitsFilter(ItemDrop.ItemData item, string ammoName, string matchPrefabName = null) => (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.AmmoNonEquipable || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable) && item.m_shared.m_ammoType == ammoName && (matchPrefabName == null || item.m_dropPrefab?.name == matchPrefabName);
+        private static bool IsItemFitsFilter(ItemDrop.ItemData item, string ammoName, string matchPrefabName = null) => item?.m_shared != null && (item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.AmmoNonEquipable || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable) && item.m_shared.m_ammoType == ammoName && (matchPrefabName == null || item.m_dropPrefab?.name == matchPrefabName);
     }
 
     [HarmonyPatch(typeof(Inventory), nameof(Inventory.CountItems))]
@@ -113,13 +132,13 @@ public static class BBHCompat
                 return;
 
             Inventory quiverBarInventory = GetQuiverBarInventory(Player.m_localPlayer);
-            if (quiverBarInventory == null || quiverBarInventory.m_inventory == null)
+            if (quiverBarInventory == null || quiverBarInventory.m_temoraryInventory || quiverBarInventory.m_inventory == null)
                 return;
 
             __result += quiverBarInventory.m_inventory.Where(itemData => IsItemFitsFilter(itemData, name, quality, matchWorldLevel)).Sum(itemData => itemData.m_stack);
         }
 
-        private static bool IsItemFitsFilter(ItemDrop.ItemData item, string name, int quality = -1, bool matchWorldLevel = true) => (name == null || item.m_shared.m_name == name) && (quality < 0 || quality == item.m_quality) && (!matchWorldLevel || item.m_worldLevel >= Game.m_worldLevel);
+        private static bool IsItemFitsFilter(ItemDrop.ItemData item, string name, int quality = -1, bool matchWorldLevel = true) => item?.m_shared != null && (name == null || item.m_shared.m_name == name) && (quality < 0 || quality == item.m_quality) && (!matchWorldLevel || item.m_worldLevel >= Game.m_worldLevel);
     }
 
     [HarmonyPatch(typeof(Humanoid), nameof(Humanoid.UnequipItem))]

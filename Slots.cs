@@ -147,7 +147,9 @@ namespace ExtraSlots
 
             public bool IsFree => Item == null;
 
-            public bool ItemFits(ItemDrop.ItemData item) => item != null && IsActive && (_itemIsValid == null || _itemIsValid(item));
+            // Transport records from Inventory(bool) are not gameplay items. Reject them before
+            // invoking custom providers, whose validators legitimately require SharedData.
+            public bool ItemFits(ItemDrop.ItemData item) => item?.m_shared != null && IsActive && (_itemIsValid == null || _itemIsValid(item));
 
             public bool IsFreeQuickSlot() => IsQuickSlot && IsActive && IsFree;
 
@@ -368,7 +370,7 @@ namespace ExtraSlots
         {
             slot = null;
 
-            if (item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == CurrentPlayerProfile?.GetPlayerID().ToString())
+            if (item?.m_customData != null && item.m_customData.TryGetValue(customKeyPlayerID, out string playerID) && item.m_customData.TryGetValue(customKeySlotID, out string slotID) && playerID == CurrentPlayerProfile?.GetPlayerID().ToString())
                 if ((slot = API.FindSlot(slotID)) != null)
                     return true;
 
@@ -379,7 +381,7 @@ namespace ExtraSlots
         {
             slot = null;
 
-            if (item == null)
+            if (item?.m_shared == null)
                 return false;
 
             if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
@@ -417,7 +419,7 @@ namespace ExtraSlots
         {
             slot = null;
 
-            if (item == null)
+            if (item?.m_shared == null)
                 return false;
 
             if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
@@ -434,7 +436,7 @@ namespace ExtraSlots
         {
             slot = null;
 
-            if (item == null)
+            if (item?.m_shared == null)
                 return false;
 
             if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.Item != null && !CurrentPlayer.IsItemEquiped(prevSlot.Item) || item == prevSlot.Item))
@@ -728,12 +730,12 @@ namespace ExtraSlots
 
         public static bool IsEquipmentSlotItem(ItemDrop.ItemData item)
         {
-            return slots.Any(slot => slot.IsEquipmentSlot && slot.IsActive && slot.ItemFits(item));
+            return item?.m_shared != null && slots.Any(slot => slot.IsEquipmentSlot && slot.IsActive && slot.ItemFits(item));
         }
 
         public static bool IsAmmoSlotItem(ItemDrop.ItemData item)
         {
-            return item != null && !ammoItemsBlackList.Contains(item.m_shared.m_name) &&
+            return item?.m_shared != null && !ammoItemsBlackList.Contains(item.m_shared.m_name) &&
                    (
                        item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Ammo ||
                        ammoItemsList.Contains(item.m_shared.m_name) ||
@@ -747,7 +749,7 @@ namespace ExtraSlots
 
         public static bool IsMiscSlotItem(ItemDrop.ItemData item)
         {
-            return item != null && !miscItemsBlackList.Contains(item.m_shared.m_name) &&
+            return item?.m_shared != null && !miscItemsBlackList.Contains(item.m_shared.m_name) &&
                    (
                        item.m_shared.m_questItem ||
                        item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trophy ||
@@ -759,7 +761,7 @@ namespace ExtraSlots
 
         public static bool IsFoodSlotItem(ItemDrop.ItemData item)
         {
-            return item != null && !foodItemsBlackList.Contains(item.m_shared.m_name) &&
+            return item?.m_shared != null && !foodItemsBlackList.Contains(item.m_shared.m_name) &&
                    (
                        item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable &&
                        (
@@ -778,43 +780,43 @@ namespace ExtraSlots
 
         public static bool IsHelmetSlotItem(ItemDrop.ItemData item)
         {
-            return item != null &&
+            return item?.m_shared != null &&
                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Helmet;
         }
 
         public static bool IsChestSlotItem(ItemDrop.ItemData item)
         {
-            return item != null &&
+            return item?.m_shared != null &&
                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Chest;
         }
 
         public static bool IsLegsSlotItem(ItemDrop.ItemData item)
         {
-            return item != null &&
+            return item?.m_shared != null &&
                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Legs;
         }
 
         public static bool IsShoulderSlotItem(ItemDrop.ItemData item)
         {
-            return item != null &&
+            return item?.m_shared != null &&
                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Shoulder;
         }
 
         public static bool IsUtilitySlotItem(ItemDrop.ItemData item)
         {
-            return item != null &&
+            return item?.m_shared != null &&
                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Utility;
         }
 
         public static bool IsCustomSlotItem(ItemDrop.ItemData item)
         {
-            return item != null &&
+            return item?.m_shared != null &&
                    GetCustomSlots().Any(slot => slot.ItemFits(item));
         }
 
         public static bool IsTrinketSlotItem(ItemDrop.ItemData item)
         {
-            return item != null &&
+            return item?.m_shared != null &&
                    item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Trinket;
         }
 

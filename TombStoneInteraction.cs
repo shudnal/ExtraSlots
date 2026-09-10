@@ -49,8 +49,8 @@ namespace ExtraSlots
 
         internal static bool ItemFitLists(ItemDrop.ItemData item, List<string> itemList, List<string> whiteList, List<string> blackList)
         {
-            if (item == null)
-                return true;
+            if (item?.m_shared == null)
+                return false;
 
             if (itemList.Contains(item.m_shared.m_name.ToLower()))
                 return true;
@@ -161,12 +161,12 @@ namespace ExtraSlots
             return ItemFitLists(item, autoEquipItemList, autoEquipWhiteList, autoEquipBlackList);
         }
 
-        private static bool IsWeaponShieldToEquip(ItemDrop.ItemData item) => slotsTombstoneAutoEquipWeaponShield.Value &&
+        private static bool IsWeaponShieldToEquip(ItemDrop.ItemData item) => item?.m_shared != null && slotsTombstoneAutoEquipWeaponShield.Value &&
                 item.m_customData.TryGetValue(customKeyWeaponShield, out string value) && value == Game.instance.GetPlayerProfile().GetPlayerID().ToString();
 
         private static void TryEquipItem(ItemDrop.ItemData item)
         {
-            if (item != null && !CurrentPlayer.IsItemEquiped(item))
+            if (item?.m_shared != null && CurrentPlayer != null && !CurrentPlayer.IsItemEquiped(item))
                 if (CurrentPlayer.EquipItem(item))
                     LogDebug($"Item {item.m_shared.m_name} was equipped on tombstone interaction");
         }

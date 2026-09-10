@@ -620,7 +620,7 @@ namespace ExtraSlots
         internal static bool MoveAllToTombstone(Inventory graveInventory)
         {
             Player player = CurrentPlayer;
-            if (player == null || graveInventory == null || !EnsureLoaded(player) || entries.Count == 0)
+            if (player == null || graveInventory == null || graveInventory.m_temoraryInventory || !EnsureLoaded(player) || entries.Count == 0)
                 return false;
 
             int appendStartHeight = graveInventory.m_height;

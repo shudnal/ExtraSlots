@@ -166,18 +166,23 @@ namespace ExtraSlots
             public static bool preventAddItem = false;
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Player __instance, out bool __state)
+            private static void Prefix(Player __instance, out bool? __state)
             {
                 __state = preventAddItem;
                 preventAddItem = preventAutoPickup.Value && __instance == CurrentPlayer;
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Postfix(bool __state) => preventAddItem = __state;
-
-            private static Exception Finalizer(bool __state, Exception __exception)
+            private static void Postfix(bool? __state)
             {
-                preventAddItem = __state;
+                if (__state.HasValue)
+                    preventAddItem = __state.Value;
+            }
+
+            private static Exception Finalizer(bool? __state, Exception __exception)
+            {
+                if (__state.HasValue)
+                    preventAddItem = __state.Value;
                 return __exception;
             }
         }
@@ -187,7 +192,7 @@ namespace ExtraSlots
         {
             private static void Postfix(Inventory __instance, ref float __result)
             {
-                if (__instance != PlayerInventory)
+                if (__instance.m_temoraryInventory || __instance != PlayerInventory)
                     return;
 
                 __result = (float)__instance.m_inventory.Count / InventorySizeActive * 100f;
@@ -201,7 +206,7 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.First)]
             private static void Postfix(Inventory __instance, ref int __result)
             {
-                if (__instance != PlayerInventory)
+                if (__instance.m_temoraryInventory || __instance != PlayerInventory)
                     return;
 
                 __result = InventoryHeightPlayer * __instance.m_width - __instance.m_inventory.Count(item => !API.IsItemInSlot(item)) + (Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem ? 0 :GetEmptyQuickSlots());
@@ -215,7 +220,7 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.First)]
             private static void Prefix(Inventory __instance)
             {
-                if (__instance != PlayerInventory)
+                if (__instance.m_temoraryInventory || __instance != PlayerInventory)
                     return;
 
                 __instance.m_height = InventoryHeightPlayer;
@@ -224,7 +229,7 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.First)]
             private static void Postfix(Inventory __instance, ref Vector2i __result)
             {
-                if (__instance != PlayerInventory)
+                if (__instance.m_temoraryInventory || __instance != PlayerInventory)
                     return;
 
                 __instance.m_height = InventoryHeightFull;
@@ -501,6 +506,9 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.Last)]
             private static Exception Finalizer(UpgradeState __state, Exception __exception)
             {
+                if (__state == null)
+                    return __exception;
+
                 // Detach before calling providers, but do not expose an outer craft to these callbacks.
                 Current = null;
                 try
@@ -542,6 +550,10 @@ namespace ExtraSlots
 
         private static bool PassDropItem(string source, InventoryGrid grid, Inventory fromInventory, ItemDrop.ItemData item, Vector2i pos)
         {
+            if (fromInventory == null || fromInventory.m_temoraryInventory
+                || grid?.m_inventory == null || grid.m_inventory.m_temoraryInventory || item?.m_shared == null)
+                return true;
+
             if (item.m_gridPos == pos)
                 return true;
 
@@ -582,7 +594,7 @@ namespace ExtraSlots
             ItemDrop.ItemData itemAt = grid.m_inventory.GetItemAt(pos.x, pos.y);
 
             // If dropped item is in slot and interchanged item is unfit for dragged item slot
-            if (itemAt != null && fromInventory == PlayerInventory && GetSlotInGrid(item.m_gridPos) is Slot slot1 && !slot1.ItemFits(itemAt))
+            if (itemAt?.m_shared != null && fromInventory == PlayerInventory && GetSlotInGrid(item.m_gridPos) is Slot slot1 && !slot1.ItemFits(itemAt))
             {
                 LogDebug($"{source} Prevented swapping {item.m_shared.m_name} {slot1} with unfit item {itemAt.m_shared.m_name} {pos}");
                 return false;
@@ -615,14 +627,16 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.Last)]
             private static void Prefix(Inventory __instance, ItemDrop.ItemData item, ref int x, ref int y)
             {
-                if (item == null)
+                // AddTempItem carries serialized fields only; it intentionally leaves m_shared null.
+                // Do not resize, classify, log, or reroute records used by world conversion.
+                if (__instance.m_temoraryInventory || item?.m_shared == null)
                     return;
 
                 if (__instance != PlayerInventory)
                 {
                     // There is some nasty behaviour when a tombstone inventory is created with dimensions smaller than its saved item positions.
                     // Slot metadata identifies items that came from the player slot region, so keep the loading inventory large enough to preserve them.
-                    if (Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall
+                    if (Inventory_AddItem_OnLoad_FindAppropriateSlot.IsLoading(__instance)
                         && item.m_customData.ContainsKey(customKeySlotID)
                         && item.m_customData.ContainsKey(customKeyPlayerID)
                         && (x >= __instance.m_width || y >= __instance.m_height))
@@ -637,16 +651,13 @@ namespace ExtraSlots
                 }
 
                 // Known materials and player keys are not yet loaded, custom components are not initialized, skip validation
-                if (Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall && CurrentPlayer.m_isLoading)
-                    return;
-
-                if (item == null)
+                if (Inventory_AddItem_OnLoad_FindAppropriateSlot.IsLoading(__instance) && CurrentPlayer.m_isLoading)
                     return;
 
                 // If another item is at grid - let stack logic go
                 if (__instance.GetItemAt(x, y) is ItemDrop.ItemData gridTakenItem)
                 {
-                    LogDebug($"Inventory.AddItem X Y item {item.m_shared.m_name} adding at {x},{y} position is taken {gridTakenItem.m_shared.m_name}");
+                    LogDebug($"Inventory.AddItem X Y item {item.m_shared.m_name} adding at {x},{y} position is taken {gridTakenItem.m_shared?.m_name ?? gridTakenItem.m_dropPrefab?.name ?? "<unmaterialized item>"}");
                     return;
                 }
 
@@ -675,7 +686,10 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.Last)]
             private static void Postfix(Inventory __instance, ItemDrop.ItemData item, int x, int y, int amount, ref bool __result)
             {
-                if (__instance == PlayerInventory && Inventory_AddItem_OnLoad_FindAppropriateSlot.inCall && !__result)
+                if (__instance.m_temoraryInventory || item?.m_shared == null)
+                    return;
+
+                if (__instance == PlayerInventory && Inventory_AddItem_OnLoad_FindAppropriateSlot.IsLoading(__instance) && !__result)
                 {
                     amount = Mathf.Min(amount, item.m_stack);
 
@@ -788,10 +802,10 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory __instance, out CapacityQueryState __state)
+            private static void Prefix(Inventory __instance, ItemDrop.ItemData item, out CapacityQueryState __state)
             {
                 __state = null;
-                if (__instance != PlayerInventory)
+                if (__instance.m_temoraryInventory || item?.m_shared == null || __instance != PlayerInventory)
                     return;
 
                 __state = statePool.Count > 0 ? statePool.Pop() : new CapacityQueryState();
@@ -836,7 +850,7 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.First)]
             private static void Postfix(Inventory __instance, ItemDrop.ItemData item, bool __runOriginal, ref bool __result)
             {
-                if (__instance != PlayerInventory)
+                if (__instance.m_temoraryInventory || item?.m_shared == null || __instance != PlayerInventory)
                     return;
 
                 if (!__result && __runOriginal && !Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem
@@ -858,10 +872,10 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.First)]
             private static bool Prefix(Inventory __instance, ItemDrop.ItemData item, ref Vector2i pos, ref bool __result)
             {
-                if (__instance != PlayerInventory)
+                if (__instance.m_temoraryInventory || __instance != PlayerInventory)
                     return true;
 
-                if (item == null)
+                if (item?.m_shared == null)
                     return true;
 
                 bool inBounds = pos.x >= 0 && pos.x < InventoryWidth && pos.y >= 0 && pos.y < InventoryHeightFull;
@@ -877,7 +891,7 @@ namespace ExtraSlots
                 if (item.m_shared.m_maxStackSize > 1)
                 {
                     int freeStacks = __instance.GetAllItems()
-                        .Where(itemInv => item.m_shared.m_name == itemInv.m_shared.m_name && item.m_quality == itemInv.m_quality && item.m_worldLevel == itemInv.m_worldLevel)
+                        .Where(itemInv => itemInv?.m_shared != null && item.m_shared.m_name == itemInv.m_shared.m_name && item.m_quality == itemInv.m_quality && item.m_worldLevel == itemInv.m_worldLevel)
                         .Sum(itemInv => itemInv.m_shared.m_maxStackSize - itemInv.m_stack);
 
                     if (freeStacks >= item.m_stack)
@@ -909,7 +923,7 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.Last)]
             private static void Postfix(Inventory __instance, ItemDrop.ItemData item, bool __runOriginal, ref bool __result)
             {
-                if (__instance == PlayerInventory)
+                if (!__instance.m_temoraryInventory && item?.m_shared != null && __instance == PlayerInventory)
                     InventoryGui_DoCrafting_UpgradeInSlot.HandleReplacementAddResult(item, __runOriginal, ref __result);
             }
         }
@@ -947,7 +961,7 @@ namespace ExtraSlots
                 __state = new CallState { Previous = current, Inventory = __instance };
                 current = __state;
                 itemToFindSlot = null;
-                if (__instance != PlayerInventory)
+                if (__instance.m_temoraryInventory || __instance != PlayerInventory)
                     return;
 
                 if (InventoryGui_DoCrafting_UpgradeInSlot.IsReplacementRequest(name, quality, variant, position))
@@ -960,7 +974,7 @@ namespace ExtraSlots
                 }
 
                 ItemDrop component = ObjectDB.instance?.GetItemPrefab(name)?.GetComponent<ItemDrop>();
-                if (component == null || component.m_itemData.m_shared.m_maxStackSize > 1)
+                if (component?.m_itemData?.m_shared == null || component.m_itemData.m_shared.m_maxStackSize > 1)
                     return;
 
                 __state.Candidate = component.m_itemData.Clone();
@@ -972,7 +986,7 @@ namespace ExtraSlots
 
             internal static void ObserveAddResult(Inventory inventory, ItemDrop.ItemData item, bool result)
             {
-                if (current != null && current.Inventory == inventory)
+                if (current != null && current.Inventory == inventory && !inventory.m_temoraryInventory && item?.m_shared != null)
                     current.PendingDrop = result ? null : item;
             }
 
@@ -1006,6 +1020,9 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.Last)]
             private static Exception Finalizer(ItemDrop.ItemData __result, CallState __state, Exception __exception)
             {
+                if (__state == null)
+                    return __exception;
+
                 try
                 {
                     if (IsReplacementCall)
@@ -1041,6 +1058,16 @@ namespace ExtraSlots
         public static class Inventory_AddItem_OnLoad_FindAppropriateSlot
         {
             public static bool inCall = false;
+            private static Inventory loadingInventory;
+
+            private struct LoadState
+            {
+                internal bool Entered;
+                internal bool InCall;
+                internal Inventory Inventory;
+            }
+
+            internal static bool IsLoading(Inventory inventory) => inCall && ReferenceEquals(loadingInventory, inventory);
 
             private static IEnumerable<MethodBase> TargetMethods()
             {
@@ -1052,16 +1079,21 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(out bool __state)
+            private static void Prefix(Inventory __instance, out LoadState __state)
             {
-                __state = inCall;
-                inCall = true;
+                __state = new LoadState { Entered = true, InCall = inCall, Inventory = loadingInventory };
+                inCall = !__instance.m_temoraryInventory;
+                loadingInventory = inCall ? __instance : null;
             }
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(bool __state, Exception __exception)
+            private static Exception Finalizer(LoadState __state, Exception __exception)
             {
-                inCall = __state;
+                if (!__state.Entered)
+                    return __exception;
+
+                inCall = __state.InCall;
+                loadingInventory = __state.Inventory;
                 return __exception;
             }
         }
@@ -1071,7 +1103,7 @@ namespace ExtraSlots
         {
             private static void Prefix(Inventory original)
             {
-                if (original != PlayerInventory)
+                if (original == null || original.m_temoraryInventory || original != PlayerInventory)
                     return;
 
                 original.m_height = InventoryHeightFull;
@@ -1085,17 +1117,22 @@ namespace ExtraSlots
         {
             public static bool inCall = false;
 
-            private static void Prefix(Inventory __instance, out bool __state)
+            private static void Prefix(Inventory __instance, out bool? __state)
             {
                 __state = inCall;
-                inCall = __instance == PlayerInventory;
+                inCall = !__instance.m_temoraryInventory && __instance == PlayerInventory;
             }
 
-            private static void Postfix(bool __state) => inCall = __state;
-
-            private static Exception Finalizer(bool __state, Exception __exception)
+            private static void Postfix(bool? __state)
             {
-                inCall = __state;
+                if (__state.HasValue)
+                    inCall = __state.Value;
+            }
+
+            private static Exception Finalizer(bool? __state, Exception __exception)
+            {
+                if (__state.HasValue)
+                    inCall = __state.Value;
                 return __exception;
             }
         }

@@ -80,7 +80,7 @@ namespace ExtraSlots
 
             Container container = tombstone.m_container != null ? tombstone.m_container : tombstone.GetComponent<Container>();
             Inventory inventory = container?.GetInventory();
-            if (inventory == null || container.m_loading)
+            if (inventory == null || inventory.m_temoraryInventory || container.m_loading)
                 return 0;
 
             // Load the current byte-array payload before appending after an ownership handover.
