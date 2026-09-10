@@ -23,11 +23,19 @@ jobs:
       BRANCH: fix/valheim-1.0.7-compatibility
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Guard the existing branch and fetch the reviewed baseline
+      - name: Guard the existing branch and retain the reviewed concurrent changes
         run: |
           test "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" = "$GITHUB_SHA"
           test -f .github/scripts/temporary_inventory_review.py
-          git fetch --no-tags --depth=1 origin 1af1d4bd02de54939c861e335caff20f32c1b827
+          git fetch --no-tags --depth=1 origin d4dcd749c8916fb713e8f3b297a84948591ef884
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.github/scripts/temporary_inventory_review.py')
+          content = path.read_text()
+          old = 'BASE = "1af1d4bd02de54939c861e335caff20f32c1b827"'
+          assert content.count(old) == 1
+          path.write_text(content.replace(old, 'BASE = "d4dcd749c8916fb713e8f3b297a84948591ef884"'))
+          PY
       - name: Install prebuilt syntax parser only
         run: |
           python -m venv "$RUNNER_TEMP/source-tools"
