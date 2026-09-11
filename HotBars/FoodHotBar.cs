@@ -16,6 +16,8 @@ public static class FoodSlotsHotBar
     private static RectTransform hotBarRect = null;
     private static Slot[] hotBarSlots = Array.Empty<Slot>();
 
+    internal static Slot[] RegisteredSlots => hotBarSlots;
+
     internal static void UpdateSlots() => hotBarSlots = GetFoodSlots();
     public static void GetItems(List<ItemDrop.ItemData> bound)
     {

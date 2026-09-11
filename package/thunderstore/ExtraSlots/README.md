@@ -238,7 +238,7 @@ External localization overrides are intentionally loaded only from `BepInEx/conf
 
 Localization file will be loaded on the next game launch or on the next language change.
 
-You can send me a file with your localization at [Discord](https://discord.gg/e3UtQB8GFK), [GitHub](https://github.com/shudnal/ExtraSlots/issues) or [Nexus](https://www.nexusmods.com/valheim/mods/2901?tab=posts) so I can add it to mod's bundle.
+You can send me a file with your localization at [Discord](https://discord.gg/e3UtQB8GFK) or [GitHub](https://github.com/shudnal/ExtraSlots/issues) so I can add it to mod's bundle.
 
 [Language list](https://valheim-modding.github.io/Jotunn/data/localization/language-list.html).
 
@@ -251,9 +251,6 @@ extract ExtraSlots.dll into your BepInEx\Plugins\ folder
 The best way to handle configs is [Configuration Manager](https://thunderstore.io/c/valheim/p/shudnal/ConfigurationManager/).
 
 Or [Official BepInEx Configuration Manager](https://valheim.thunderstore.io/package/Azumatt/Official_BepInEx_ConfigurationManager/).
-
-## Mirrors
-[Nexus](https://www.nexusmods.com/valheim/mods/2901)
 
 ## Donation
 [Buy Me a Coffee](https://buymeacoffee.com/shudnal)

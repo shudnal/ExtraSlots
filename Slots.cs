@@ -112,10 +112,12 @@ namespace ExtraSlots
 
             public bool IsVanillaEquipment() => IsVanillaSlotID(_id);
 
-            public bool IsShortcutDown() => IsActive && _getShortcut != null && Player.m_localPlayer?.TakeInput() == true && IsShortcutDown(_getShortcut());
-            public bool IsShortcutDownWithItem() => Item != null && IsShortcutDown();
-            public bool IsShortcutPressed() => IsActive && _getShortcut != null && Player.m_localPlayer?.TakeInput() == true && IsShortcutPressed(_getShortcut());
-            public bool IsShortcutPressedWithItem() => Item != null && IsShortcutPressed();
+            // Read the key before inventory, progression and UI checks. Idle frames must not
+            // resolve every slot or repeatedly traverse Player.TakeInput's patched UI checks.
+            public bool IsShortcutDown() => _getShortcut != null && IsShortcutDown(_getShortcut()) && IsActive && Player.m_localPlayer?.TakeInput() == true;
+            public bool IsShortcutDownWithItem() => IsShortcutDown() && Item != null;
+            public bool IsShortcutPressed() => _getShortcut != null && IsShortcutPressed(_getShortcut()) && IsActive && Player.m_localPlayer?.TakeInput() == true;
+            public bool IsShortcutPressedWithItem() => IsShortcutPressed() && Item != null;
 
             public KeyboardShortcut GetShortcut() => _getShortcut == null ? KeyboardShortcut.Empty : _getShortcut();
             public string GetShortcutText() => _getShortcutText == null ? Name : Localization.instance.Localize(_getShortcutText());

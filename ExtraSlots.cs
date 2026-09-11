@@ -40,7 +40,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.2.1";
+        public const string pluginVersion = "1.2.2";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -358,7 +358,6 @@ namespace ExtraSlots
 
         public void ConfigInit()
         {
-            config("General", "NexusID", 2901, "Nexus mod ID for updates");
 
             configLocked = serverConfig("General", "Lock Configuration", defaultValue: true, "Configuration is locked and can be changed by server admins only. [Synced with Server]");
             loggingEnabled = config("General", "Logging enabled", defaultValue: false, "Enable logging.");

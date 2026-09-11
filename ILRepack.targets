@@ -20,23 +20,13 @@
       <ThunderstoreZipPath>$(ProjectDir)package\thunderstore\$(EffectiveModName).zip</ThunderstoreZipPath>
       <ThunderstoreManifestPath>$(ThunderstorePackageDir)manifest.json</ThunderstoreManifestPath>
 
-      <NexusPackageRootDir>$(ProjectDir)package\nexus\</NexusPackageRootDir>
-      <NexusPackageDir>$(NexusPackageRootDir)$(EffectiveModName)\</NexusPackageDir>
-      <NexusZipPath>$(NexusPackageRootDir)$(EffectiveModName).zip</NexusZipPath>
-      <NexusManifestPath>$(NexusPackageRootDir)manifest.json</NexusManifestPath>
-
       <EnglishLocalizationSource>$(ProjectDir)Translations\English.json</EnglishLocalizationSource>
       <ThunderstoreEnglishLocalizationDestination>$(ThunderstorePackageDir)$(LanguageFileName)</ThunderstoreEnglishLocalizationDestination>
-      <NexusEnglishLocalizationDestination>$(NexusPackageDir)$(LanguageFileName)</NexusEnglishLocalizationDestination>
-
-      <YamlDotNetAssemblyPath>$(TargetDir)YamlDotNet.dll</YamlDotNetAssemblyPath>
     </PropertyGroup>
 
     <Error Condition="'$(EffectiveModName)' == ''" Text="Mod name was not resolved. Set &lt;ModName&gt;ExtraSlots&lt;/ModName&gt; in ILRepack.targets." />
     <Error Condition="'$(ThunderstorePackageDir)' == ''" Text="Thunderstore package directory was not resolved." />
     <Error Condition="'$(ThunderstoreZipPath)' == ''" Text="Thunderstore ZIP path was not resolved." />
-    <Error Condition="'$(NexusPackageDir)' == ''" Text="Nexus package directory was not resolved." />
-    <Error Condition="'$(NexusZipPath)' == ''" Text="Nexus ZIP path was not resolved." />
     <Error Condition="'$(ResolvedR2ModManProfilePluginsDir)' == ''" Text="r2modman profile plugins directory was not resolved." />
   </Target>
 
@@ -80,6 +70,7 @@
     <Error Condition="!Exists('$(EnglishLocalizationSource)')" Text="English localization was not found: $(EnglishLocalizationSource)" />
 
     <MakeDir Directories="$(ThunderstorePackageDir)" />
+    <Delete Files="$(ThunderstorePackageDir)$(TargetName).pdb" />
 
     <Copy
       SourceFiles="$(TargetPath)"
@@ -133,78 +124,9 @@
   </Target>
 
   <Target
-    Name="RepackExtraSlotsForNexus"
-    DependsOnTargets="CopyExtraSlotsToR2ModMan">
-
-    <Error Condition="!Exists('$(YamlDotNetAssemblyPath)')" Text="YamlDotNet.dll was not found: $(YamlDotNetAssemblyPath)" />
-
-    <ItemGroup>
-      <_ExtraSlotsNexusInputAssemblies Include="$(TargetPath)" />
-      <_ExtraSlotsNexusInputAssemblies Include="$(YamlDotNetAssemblyPath)" />
-    </ItemGroup>
-
-    <ILRepack
-      Parallel="true"
-      DebugInfo="true"
-      Internalize="true"
-      InputAssemblies="@(_ExtraSlotsNexusInputAssemblies)"
-      OutputFile="$(TargetPath)"
-      TargetKind="SameAsPrimaryAssembly"
-      LibraryPath="$(TargetDir)" />
-
-    <Message Text="Repacked ExtraSlots.dll with YamlDotNet for Nexus." Importance="High" />
-  </Target>
-
-  <Target
-    Name="PrepareExtraSlotsNexusPackage"
-    DependsOnTargets="RepackExtraSlotsForNexus">
-
-    <Error Condition="!Exists('$(TargetPath)')" Text="Repacked mod DLL was not found: $(TargetPath)" />
-    <Error Condition="!Exists('$(EnglishLocalizationSource)')" Text="English localization was not found: $(EnglishLocalizationSource)" />
-
-    <MakeDir Directories="$(NexusPackageDir)" />
-
-    <Copy
-      SourceFiles="$(TargetPath)"
-      DestinationFolder="$(NexusPackageDir)"
-      OverwriteReadOnlyFiles="true" />
-
-    <Copy
-      SourceFiles="$(EnglishLocalizationSource)"
-      DestinationFiles="$(NexusEnglishLocalizationDestination)"
-      OverwriteReadOnlyFiles="true" />
-
-    <Message Text="Nexus package directory updated: $(NexusPackageDir)" Importance="High" />
-  </Target>
-
-  <Target
-    Name="UpdateExtraSlotsNexusManifest"
-    DependsOnTargets="PrepareExtraSlotsNexusPackage">
-
-    <Error Condition="!Exists('$(ProjectDir)UpdateNexusManifest.ps1')" Text="UpdateNexusManifest.ps1 was not found in $(ProjectDir)." />
-    <Error Condition="!Exists('$(NexusManifestPath)')" Text="Nexus manifest was not found: $(NexusManifestPath)" />
-
-    <Exec
-      WorkingDirectory="$(ProjectDir)"
-      Command="powershell -ExecutionPolicy Bypass -NoProfile -File &quot;$(ProjectDir)UpdateNexusManifest.ps1&quot; -ManifestPath &quot;$(NexusManifestPath)&quot; -Version &quot;$(PackageVersion)&quot; -Name &quot;$(EffectiveModName)&quot;" />
-  </Target>
-
-  <Target
-    Name="ZipExtraSlotsNexusPackage"
-    DependsOnTargets="UpdateExtraSlotsNexusManifest">
-
-    <ZipDirectory
-      SourceDirectory="$(NexusPackageDir)"
-      DestinationFile="$(NexusZipPath)"
-      Overwrite="true" />
-
-    <Message Text="Nexus archive created: $(NexusZipPath)" Importance="High" />
-  </Target>
-
-  <Target
-    Name="PublishExtraSlotsAfterBuild"
+    Name="PackageExtraSlotsAfterBuild"
     AfterTargets="Build"
     Condition="'$(DesignTimeBuild)' != 'true'"
-    DependsOnTargets="ZipExtraSlotsNexusPackage" />
+    DependsOnTargets="CopyExtraSlotsToR2ModMan" />
 
 </Project>

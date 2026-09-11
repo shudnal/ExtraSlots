@@ -219,11 +219,11 @@ public static class QuickBars
     private static Slot[] GetSlotsForBar(string name)
     {
         if (name == QuickSlotsHotBar.barName)
-            return GetQuickSlots();
+            return QuickSlotsHotBar.RegisteredSlots;
         if (name == AmmoSlotsHotBar.barName)
-            return GetAmmoSlots();
+            return AmmoSlotsHotBar.RegisteredSlots;
         if (name == FoodSlotsHotBar.barName)
-            return GetFoodSlots();
+            return FoodSlotsHotBar.RegisteredSlots;
         return Array.Empty<Slot>();
     }
 
@@ -322,7 +322,15 @@ public static class QuickBars
     private static ItemDrop.ItemData GetItemForElement(HotkeyBar bar, int index)
     {
         if (bar.name == vanillaBarName)
-            return bar.m_items.FirstOrDefault(item => item != null && item.m_gridPos.y == 0 && item.m_gridPos.x == index);
+        {
+            for (int i = 0; i < bar.m_items.Count; i++)
+            {
+                ItemDrop.ItemData item = bar.m_items[i];
+                if (item != null && item.m_gridPos.y == 0 && item.m_gridPos.x == index)
+                    return item;
+            }
+            return null;
+        }
 
         int slotIndex = index + GetSlotOffset(bar.name);
         if (slotIndex < 0 || slotIndex >= slots.Length)
@@ -357,6 +365,8 @@ public static class QuickBars
         if (!bar || player == null || player.m_actionQueue.Count == 0)
             return;
 
+        string name = bar.name;
+        bool updateEquippedState = name == QuickSlotsHotBar.barName || name == AmmoSlotsHotBar.barName || name == FoodSlotsHotBar.barName;
         for (int i = 0; i < bar.m_elements.Count; i++)
         {
             HotkeyBar.ElementData element = bar.m_elements[i];
@@ -364,7 +374,7 @@ public static class QuickBars
                 continue;
 
             ElementExtraData extraData = GetElementExtraData(element);
-            QueuedEquipIndicator.Update(extraData.QueuedImage, GetItemForElement(bar, i), player);
+            QueuedEquipIndicator.UpdateHotbarElement(element, extraData.QueuedImage, GetItemForElement(bar, i), player, updateEquippedState);
         }
     }
 
@@ -380,7 +390,16 @@ public static class QuickBars
             if (!projectedItemPositions.ContainsKey(item))
                 projectedItemPositions[item] = item.m_gridPos;
 
-            int localIndex = Array.FindIndex(barSlots, slot => slot != null && slot.IsActive && ReferenceEquals(slot.Item, item));
+            int localIndex = -1;
+            for (int j = 0; j < barSlots.Length; j++)
+            {
+                Slot slot = barSlots[j];
+                if (slot != null && slot.IsActive && ReferenceEquals(slot.Item, item))
+                {
+                    localIndex = j;
+                    break;
+                }
+            }
             item.m_gridPos = new Vector2i(localIndex >= 0 ? localIndex : i, item.m_gridPos.y);
         }
     }
@@ -451,9 +470,7 @@ public static class QuickBars
     // Runs every frame Player.Update
     internal static void UpdateItemUse()
     {
-        if (!Player.m_localPlayer.TakeInput())
-            return;
-
+        // Slot shortcut validation checks TakeInput only after an actual key press.
         if (!PreventSimilarHotkeys.IsAnyExtraSlotsHotkeyDown())
             return;
 
@@ -604,11 +621,8 @@ public static class QuickBars
             bool joyHotbarRight = GetJoyButtonDown("JoyHotbarRight");
             bool joyHotbarUse = GetJoyButtonDown("JoyHotbarUse");
 
-            if (!UpdateCurrentHotkeyBar(
-                    joyHotbarLeft,
-                    joyHotbarRight,
-                    joyHotbarUse)
-                && (joyHotbarLeft || joyHotbarRight || joyHotbarUse))
+            if ((joyHotbarLeft || joyHotbarRight || joyHotbarUse)
+                && !UpdateCurrentHotkeyBar(joyHotbarLeft, joyHotbarRight, joyHotbarUse))
             {
                 ChangeActiveHotkeyBar();
             }

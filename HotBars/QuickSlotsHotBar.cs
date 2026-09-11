@@ -16,6 +16,8 @@ public static class QuickSlotsHotBar
     private static RectTransform hotBarRect = null;
     private static Slot[] hotBarSlots = Array.Empty<Slot>();
 
+    internal static Slot[] RegisteredSlots => hotBarSlots;
+
     internal static void UpdateSlots() => hotBarSlots = GetQuickSlots();
 
     public static void GetItems(List<ItemDrop.ItemData> bound)

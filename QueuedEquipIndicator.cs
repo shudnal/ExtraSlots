@@ -1,7 +1,6 @@
 ﻿using HarmonyLib;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
 using static ExtraSlots.ExtraSlots;
@@ -129,44 +128,22 @@ namespace ExtraSlots
             }
         }
 
-        [HarmonyPatch]
-        private static class QuickBars_UpdateQueuedIndicators_UpdateEquippedState
+        internal static void UpdateHotbarElement(HotkeyBar.ElementData element, Image queuedImage, ItemDrop.ItemData item, Player player, bool updateEquippedState)
         {
-            private static MethodBase TargetMethod() =>
-                AccessTools.Method(typeof(HotBars.QuickBars), "UpdateQueuedIndicators");
+            bool fadeEnabled = IsFadeEnabled();
+            if ((!fadeEnabled && !updateEquippedState) || item == null || !TryGetQueuedAction(player, item, out Player.MinorActionData action, out int actionIndex))
+                return;
 
-            private static void Postfix(HotkeyBar bar, Player player)
+            // Resolve the item and queued action once for both visuals. The equipped state
+            // must still update when the optional fade is disabled.
+            if (updateEquippedState && element.m_equiped)
             {
-                if (!bar || player == null || player.m_actionQueue.Count == 0)
-                    return;
-
-                int slotOffset;
-                if (bar.name == HotBars.AmmoSlotsHotBar.barName)
-                    slotOffset = HotBars.AmmoSlotsHotBar.barSlotIndex;
-                else if (bar.name == HotBars.FoodSlotsHotBar.barName)
-                    slotOffset = HotBars.FoodSlotsHotBar.barSlotIndex;
-                else if (bar.name == HotBars.QuickSlotsHotBar.barName)
-                    slotOffset = HotBars.QuickSlotsHotBar.barSlotIndex;
-                else
-                    return;
-
-                for (int i = 0; i < bar.m_elements.Count; i++)
-                {
-                    HotkeyBar.ElementData element = bar.m_elements[i];
-                    int slotIndex = i + slotOffset;
-                    if (element?.m_equiped == null || slotIndex < 0 || slotIndex >= slots.Length)
-                        continue;
-
-                    Slot slot = slots[slotIndex];
-                    ItemDrop.ItemData item = slot?.IsActive == true ? slot.Item : null;
-                    if (item == null || !TryGetQueuedAction(player, item, out Player.MinorActionData action, out _))
-                        continue;
-
-                    // HotkeyBar.ElementData.m_equiped is a GameObject, unlike InventoryElement's Image.
-                    // Its queued state must remain correct even when indicator fading is disabled.
-                    element.m_equiped.SetActive(action.m_type == Player.MinorActionData.ActionType.Equip);
-                }
+                bool equipped = action.m_type == Player.MinorActionData.ActionType.Equip;
+                if (element.m_equiped.activeSelf != equipped)
+                    element.m_equiped.SetActive(equipped);
             }
+            if (fadeEnabled && queuedImage)
+                Update(queuedImage, action, actionIndex);
         }
 
         private static void RestoreAndClearCache()

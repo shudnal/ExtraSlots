@@ -150,4 +150,16 @@ internal static bool IsCircletKnown()
 
 This is the basic example. Real logic for CircletExtended is [there](https://github.com/shudnal/CircletExtended/blob/b5c8af365631191ddb9543b2641870ef28c9950a/CircletExtended.cs#L148).
 
-If you have questions feel free to reach me at [discord](https://discord.com/users/shudnal), Nexus or just open github issue. 
+If you have questions feel free to reach me at [discord](https://discord.com/users/shudnal) or just open a GitHub issue.
+
+## Local packaging
+
+`ILRepack.targets` updates embedded translations before compilation, then reads the built DLL version, prepares the Thunderstore package, updates its manifest, creates the ZIP and copies the DLL to the configured r2modman profile.
+`UpdateThunderstoreManifest.ps1` is self-contained and only updates the local manifest. No publishing credentials or upload scripts are used.
+The package uses the external YamlDotNet dependency from its manifest; the built DLL is not rewritten after packaging. Debug symbols are not shipped.
+
+## Donation
+[Buy Me a Coffee](https://buymeacoffee.com/shudnal)
+
+## Discord
+[Join server](https://discord.gg/e3UtQB8GFK)
