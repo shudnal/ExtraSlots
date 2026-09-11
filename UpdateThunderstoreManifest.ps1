@@ -39,7 +39,11 @@ $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $TemporaryPath = $ManifestPath + "." + [Guid]::NewGuid().ToString("N") + ".tmp"
 try {
     [System.IO.File]::WriteAllText($TemporaryPath, $Json + [Environment]::NewLine, $Utf8NoBom)
-    [System.IO.File]::Replace($TemporaryPath, $ManifestPath, $null)
+
+    # File.Replace is not supported by every filesystem used for source trees and can
+    # fail even though a normal overwrite is valid. Copy the completed temporary file
+    # over the manifest instead; the temporary file still prevents partial JSON output.
+    [System.IO.File]::Copy($TemporaryPath, $ManifestPath, $true)
 }
 finally {
     if ([System.IO.File]::Exists($TemporaryPath)) {

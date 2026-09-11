@@ -1,3 +1,6 @@
+# 1.2.3
+* patch 1.0.12
+
 # 1.2.2
 * Reduced idle hotkey processing by checking keys before slot, inventory and UI state.
 * Reused registered hotbar slot layouts and removed repeated hotbar item/action scans and redundant queued-equipment passes.
