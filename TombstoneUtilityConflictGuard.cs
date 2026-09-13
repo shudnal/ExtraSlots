@@ -19,6 +19,7 @@ namespace ExtraSlots
             if (effect == null)
                 return 0f;
 
+            effect = Compatibility.ValheimPlusCompat.ProjectCarryWeightEffect(effect);
             float value = 0f;
             effect.ModifyMaxCarryWeight(0f, ref value);
             return value;

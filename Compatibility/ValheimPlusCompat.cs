@@ -1,187 +1,160 @@
-﻿using HarmonyLib;
+﻿using BepInEx;
 using BepInEx.Bootstrap;
-using System.Reflection;
-using BepInEx;
+using BepInEx.Configuration;
+using HarmonyLib;
 using System;
+using System.Linq;
+using System.Reflection;
 
 namespace ExtraSlots.Compatibility;
 
 internal static class ValheimPlusCompat
 {
     public const string GUID = "org.bepinex.plugins.valheim_plus";
-    public static Assembly assembly;
+
+    private const string VPlusHarmonyID = "mod.valheim_plus";
+    private static readonly System.Version MinimumSupportedVersion = new System.Version(0, 10, 1, 1);
+
+    private static PluginInfo plugin;
+    private static Assembly assembly;
+    private static ConfigEntry<bool> playerEnabled;
+    private static ConfigEntry<float> baseMegingjordBuff;
+
+    internal static bool IsActive => plugin != null && IsSupportedVersion(plugin.Metadata.Version);
 
     internal static void CheckForCompatibility()
     {
-        if (Chainloader.PluginInfos.TryGetValue(GUID, out PluginInfo vplusPlugin))
-        {
-            assembly ??= Assembly.GetAssembly(vplusPlugin.Instance.GetType());
+        if (!Chainloader.PluginInfos.TryGetValue(GUID, out plugin))
+            return;
 
-            // Unpatch redundant methods that change inventory gui
-            assembly.RemoveHarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.Show), "ValheimPlus.GameClasses.InventoryGui_Show_Patch", "Postfix", "prevent inventory GUI mess");
-            assembly.RemoveHarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui), "ValheimPlus.GameClasses.InventoryGrid_UpdateGui_Patch", "Prefix", "prevent inventory GUI mess");
-            assembly.RemoveHarmonyPatch(AccessTools.Constructor(typeof(Inventory), new[] { typeof(string), typeof(UnityEngine.Sprite), typeof(int), typeof(int) }), "ValheimPlus.GameClasses.Inventory_Constructor_Patch", "Prefix", "prevent inventory GUI mess");
+        if (!IsSupportedVersion(plugin.Metadata.Version))
+        {
+            ExtraSlots.LogWarning($"ValheimPlus compatibility requires {MinimumSupportedVersion} or newer. Found {plugin.Metadata.Version}; no compatibility patches were applied.");
+            plugin = null;
+            return;
         }
+
+        assembly = plugin.Instance.GetType().Assembly;
+
+        plugin.Instance.Config.TryGetEntry("Player", "enabled", out playerEnabled);
+        plugin.Instance.Config.TryGetEntry("Player", "baseMegingjordBuff", out baseMegingjordBuff);
+
+        ApplyCompatibilityPatches();
     }
 
-    internal static void OverridePlayerInventoryRows(object configuration)
+
+    private static bool IsSupportedVersion(System.Version version) =>
+        version != null && version.CompareTo(MinimumSupportedVersion) >= 0;
+
+    private static void ApplyCompatibilityPatches()
     {
-        PropertyInfo inventoryProp = configuration.GetType().GetProperty("Inventory", BindingFlags.Public | BindingFlags.Instance);
-        if (inventoryProp == null)
-        {
-            ExtraSlots.LogInfo("Property Inventory is not found in V+ Configuration");
+        if (!IsActive)
             return;
-        }
 
-        object inventoryObj = inventoryProp.GetValue(configuration);
-        if (inventoryObj == null)
-        {
-            ExtraSlots.LogInfo("Property Inventory is not set in V+ Configuration");
+        // ExtraSlots owns player inventory topology. V+ container sizing and container UI patches
+        // remain intact; only V+ patches that resize the player inventory are removed.
+        assembly.RemoveHarmonyPatch(
+            typeof(Player), nameof(Player.SetInventorySize),
+            "ValheimPlus.GameClasses.Player_SetInventorySize_Patch", "Transpiler",
+            "let ExtraSlots own player inventory topology");
+        assembly.RemoveHarmonyPatch(
+            typeof(Player), nameof(Player.Load),
+            "ValheimPlus.GameClasses.Player_Load_InventorySize_Patch", "Prefix",
+            "let ExtraSlots own player inventory topology");
+        assembly.RemoveHarmonyPatch(
+            typeof(Player), nameof(Player.OnSpawned),
+            "ValheimPlus.GameClasses.Player_OnSpawned_InventorySize_Patch", "Postfix",
+            "let ExtraSlots own player inventory topology");
+
+        OrderAutoStackAroundExtraSlots();
+    }
+
+    private static void OrderAutoStackAroundExtraSlots()
+    {
+        MethodBase target = AccessTools.Method(typeof(Inventory), nameof(Inventory.StackAll), new[] { typeof(Inventory), typeof(bool) });
+        Type patchType = assembly?.GetType("ValheimPlus.GameClasses.Inventory_StackAll_Patch", throwOnError: false);
+        if (target == null || patchType == null)
             return;
-        }
 
-        PropertyInfo rowsProp = inventoryObj.GetType().GetProperty("playerInventoryRows", BindingFlags.Public | BindingFlags.Instance);
-        if (rowsProp == null)
-        {
-            ExtraSlots.LogInfo("Property Inventory.playerInventoryRows is not found in V+ Configuration");
+        MethodInfo prefix = AccessTools.Method(patchType, "Prefix");
+        MethodInfo postfix = AccessTools.Method(patchType, "Postfix");
+        if (prefix == null || postfix == null)
             return;
-        }
 
-        int value = Slots.InventoryHeightFull;
-        if (!rowsProp.CanWrite)
-        {
-            MethodInfo setMethod = rowsProp.GetSetMethod(true);
-            if (setMethod == null)
+        Patches info = Harmony.GetPatchInfo(target);
+        Patch currentPrefix = info?.Prefixes.FirstOrDefault(entry => entry.owner == VPlusHarmonyID && entry.PatchMethod == prefix);
+        Patch currentPostfix = info?.Postfixes.FirstOrDefault(entry => entry.owner == VPlusHarmonyID && entry.PatchMethod == postfix);
+        if (currentPrefix == null || currentPostfix == null)
+            return;
+
+        bool prefixOrdered = currentPrefix.before?.Contains(ExtraSlots.pluginID) == true;
+        bool postfixOrdered = currentPostfix.after?.Contains(ExtraSlots.pluginID) == true;
+        if (prefixOrdered && postfixOrdered)
+            return;
+
+        assembly.RemoveHarmonyPatch(
+            target,
+            "ValheimPlus.GameClasses.Inventory_StackAll_Patch", "Prefix",
+            "reorder Auto Stack before ExtraSlots protected-item handling");
+        assembly.RemoveHarmonyPatch(
+            target,
+            "ValheimPlus.GameClasses.Inventory_StackAll_Patch", "Postfix",
+            "reorder Auto Stack after ExtraSlots protected-item handling");
+
+        string[] prefixBefore = (currentPrefix.before ?? Array.Empty<string>())
+            .Append(ExtraSlots.pluginID).Distinct().ToArray();
+        string[] postfixAfter = (currentPostfix.after ?? Array.Empty<string>())
+            .Append(ExtraSlots.pluginID).Distinct().ToArray();
+
+        Harmony vplusHarmony = new Harmony(VPlusHarmonyID);
+        vplusHarmony.Patch(
+            target,
+            prefix: new HarmonyMethod(prefix)
             {
-                ExtraSlots.LogInfo("Set method for Inventory.playerInventoryRows is not found in V+ Configuration");
-                return;
-            }
+                priority = currentPrefix.priority,
+                before = prefixBefore,
+                after = currentPrefix.after
+            },
+            postfix: new HarmonyMethod(postfix)
+            {
+                priority = currentPostfix.priority,
+                before = currentPostfix.before,
+                after = postfixAfter
+            });
 
-            setMethod.Invoke(inventoryObj, new object[] { value });
-        }
-        else
-        {
-            rowsProp.SetValue(inventoryObj, value);
-        }
-
-        ExtraSlots.LogInfo($"ValheimPlus Configuration.Current.Inventory.playerInventoryRows set to {value}");
+        ExtraSlots.LogDebug("Ordered ValheimPlus Auto Stack outside ExtraSlots protected-item StackAll scope.");
     }
 
-    internal static void UpdatePlayerInventoryRows()
+    internal static StatusEffect ProjectCarryWeightEffect(StatusEffect effect)
     {
-        if (assembly == null)
-            return;
+        if (!IsActive || playerEnabled?.Value != true || baseMegingjordBuff == null || effect is not SE_Stats stats || stats.m_addMaxCarryWeight <= 0f)
+            return effect;
 
-        Type configurationType = assembly.GetType("ValheimPlus.Configurations.Configuration");
-        if (configurationType == null)
-            return;
-
-        PropertyInfo overrideGamepadInput = AccessTools.Property(configurationType, "Current");
-        if (overrideGamepadInput != null)
-            OverridePlayerInventoryRows(overrideGamepadInput.GetValue(overrideGamepadInput));
-    }
-
-    [HarmonyPatch]
-    public static class ValheimPlus_ValheimPlusPlugin_PatchAll_Unpatch
-    {
-        public static MethodBase target;
-
-        public static bool Prepare(MethodBase original)
-        {
-            if (!Chainloader.PluginInfos.TryGetValue(GUID, out PluginInfo vplusPlugin))
-                return false;
-
-            assembly ??= Assembly.GetAssembly(vplusPlugin.Instance.GetType());
-
-            target ??= AccessTools.Method(assembly.GetType("ValheimPlus.ValheimPlusPlugin"), "PatchAll");
-            if (target == null)
-                return false;
-
-            if (original == null)
-                ExtraSlots.LogInfo("ValheimPlus.ValheimPlusPlugin:PatchAll method is patched to unpatch inventory related patches");
-
-            return true;
-        }
-
-        public static MethodBase TargetMethod() => target;
-
-        public static void Finalizer() => CheckForCompatibility();
+        // V+ 0.10.1.1 adjusts positive SE_Stats carry bonuses in SE_Stats.Setup(). EasyFit works
+        // with the template before Setup, so project the same value on a disposable clone only.
+        SE_Stats projected = (SE_Stats)stats.Clone();
+        projected.m_addMaxCarryWeight = projected.m_addMaxCarryWeight - 150f + baseMegingjordBuff.Value;
+        return projected;
     }
 
     [HarmonyPatch]
-    public static class ValheimPlus_ValheimPlusPlugin_InventoryHeightOverride
+    private static class ValheimPlus_ValheimPlusPlugin_PatchAll_ReapplyCompatibility
     {
-        public static MethodBase target;
+        private static MethodBase target;
 
-        public static bool Prepare(MethodBase original)
+        private static bool Prepare()
         {
-            if (!Chainloader.PluginInfos.TryGetValue(GUID, out PluginInfo vplusPlugin))
+            if (!IsActive || assembly == null)
                 return false;
 
-            assembly ??= Assembly.GetAssembly(vplusPlugin.Instance.GetType());
-
-            target ??= AccessTools.PropertyGetter(assembly.GetType("ValheimPlus.Configurations.Sections.InventoryConfiguration"), "playerInventoryRows");
-            if (target == null)
-                return false;
-
-            if (original == null)
-                ExtraSlots.LogInfo("ValheimPlus.Configurations.Sections.InventoryConfiguration:playerInventoryRows property getter is patched to return current rows");
-
-            return true;
+            Type pluginType = assembly.GetType("ValheimPlus.ValheimPlusPlugin", throwOnError: false);
+            target ??= pluginType != null ? AccessTools.Method(pluginType, "PatchAll") : null;
+            return target != null;
         }
 
-        public static MethodBase TargetMethod() => target;
+        private static MethodBase TargetMethod() => target;
 
-        public static void Finalizer(ref int __result) => __result = Slots.InventoryHeightFull;
-    }
-
-    [HarmonyPatch]
-    public static class ValheimPlus_Configuration_LoadFromIni_Stream_InventoryHeightOverride
-    {
-        public static MethodBase target;
-
-        public static bool Prepare(MethodBase original)
-        {
-            if (!Chainloader.PluginInfos.TryGetValue(GUID, out PluginInfo vplusPlugin))
-                return false;
-
-            target ??= AccessTools.Method(assembly.GetType("ValheimPlus.Configurations.ConfigurationExtra"), "LoadFromIni", new[] { typeof(System.IO.Stream) });
-            if (target == null)
-                return false;
-
-            if (original == null)
-                ExtraSlots.LogInfo("ValheimPlus.Configurations.ConfigurationExtra:LoadFromIni (Stream) method is patched to override current inventory rows");
-
-            return true;
-        }
-
-        public static MethodBase TargetMethod() => target;
-
-        public static void Finalizer(object __result) => OverridePlayerInventoryRows(__result);
-    }
-
-    [HarmonyPatch]
-    public static class ValheimPlus_Configuration_LoadFromIni_File_InventoryHeightOverride
-    {
-        public static MethodBase target;
-
-        public static bool Prepare(MethodBase original)
-        {
-            if (!Chainloader.PluginInfos.TryGetValue(GUID, out PluginInfo vplusPlugin))
-                return false;
-
-            target ??= AccessTools.Method(assembly.GetType("ValheimPlus.Configurations.ConfigurationExtra"), "LoadFromIni", new[] { typeof(string), typeof(bool) });
-            if (target == null)
-                return false;
-
-            if (original == null)
-                ExtraSlots.LogInfo("ValheimPlus.Configurations.ConfigurationExtra:LoadFromIni (File) method is patched to override current inventory rows");
-
-            return true;
-        }
-
-        public static MethodBase TargetMethod() => target;
-
-        public static void Finalizer(object __result) => OverridePlayerInventoryRows(__result);
+        [HarmonyFinalizer]
+        private static void Finalizer() => ApplyCompatibilityPatches();
     }
 }
