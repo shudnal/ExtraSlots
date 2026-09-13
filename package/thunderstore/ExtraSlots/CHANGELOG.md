@@ -1,4 +1,4 @@
-﻿# 1.2.4
+# 1.2.4
 * updated compatibility with ValheimPlus 0.10.1.1 and newer
 
 # 1.2.3
