@@ -40,7 +40,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.2.4";
+        public const string pluginVersion = "1.2.5";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -299,7 +299,7 @@ namespace ExtraSlots
 
         public static string configDirectory;
 
-        public static bool HasServerCharactersActive => !ZNet.IsSinglePlayer && Chainloader.PluginInfos.ContainsKey("org.bepinex.plugins.servercharacters");
+        public static bool HasServerCharactersActive => !ZNet.IsSinglePlayer && Chainloader.PluginInfos.ContainsKey(Compatibility.ServerCharactersCompat.GUID);
 
         public static bool IsDedicated => SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null;
 

@@ -40,6 +40,7 @@
     <Compile Include="Compatibility\Compatibility.cs" />
     <Compile Include="Compatibility\Recycle_N_Reclaim.cs" />
     <Compile Include="Compatibility\SimpleSort.cs" />
+    <Compile Include="Compatibility\ServerCharactersCompat.cs" />
     <Compile Include="Compatibility\ZenBeehiveCompat.cs" />
     <Compile Include="DebugLogging.cs" />
     <Compile Include="DeferredInventory.cs" />

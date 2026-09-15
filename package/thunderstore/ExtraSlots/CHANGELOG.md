@@ -1,3 +1,6 @@
+# 1.2.5
+* fixed ServerCharacters compatibility so food, ammo, quick-slot and other ExtraSlots items keep their slot placement across reconnects
+
 # 1.2.4
 * updated compatibility with ValheimPlus 0.10.1.1 and newer
 
