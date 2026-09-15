@@ -1,3 +1,6 @@
+# 1.2.6
+* fixed compatibility with Jewelcrafting and other mods that replace crafting, so intentionally destroyed items in ExtraSlots are not restored
+
 # 1.2.5
 * fixed ServerCharacters compatibility so food, ammo, quick-slot and other ExtraSlots items keep their slot placement across reconnects
 

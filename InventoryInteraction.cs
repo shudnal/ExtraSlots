@@ -334,15 +334,16 @@ namespace ExtraSlots
                 internal IDisposable Mutation;
                 internal string PrefabName;
                 internal bool WasEquipped;
+                internal bool OriginalStarted;
                 internal bool Accepted;
                 internal UpgradeOutcome Outcome;
                 internal int Quality => Outcome == UpgradeOutcome.Downgraded ? Snapshot.m_quality - 1 : Snapshot.m_quality + 1;
             }
 
             internal static UpgradeState Current;
-            internal static Slot UpgradeSourceSlot => Current?.SourceSlot;
-            internal static ItemDrop.ItemData UpgradeSourceItem => Current?.Source;
-            internal static bool IsActive => Current?.SourceSlot != null;
+            internal static Slot UpgradeSourceSlot => IsActive ? Current.SourceSlot : null;
+            internal static ItemDrop.ItemData UpgradeSourceItem => IsActive ? Current.Source : null;
+            internal static bool IsActive => Current?.SourceSlot != null && Current.OriginalStarted;
 
             [HarmonyPriority(Priority.First)]
             private static void Prefix(InventoryGui __instance, Player player, out UpgradeState __state)
@@ -364,9 +365,18 @@ namespace ExtraSlots
                 __state.WasEquipped = item.m_equipped || player.IsItemEquiped(item);
                 __state.Outcome = player.GetCurrentCraftingStation()?.m_upgrader == true
                     ? UpgradeOutcome.Pending : UpgradeOutcome.Regular;
+            }
+
+            private static void MarkOriginalStarted()
+            {
+                if (Current?.SourceSlot == null || Current.OriginalStarted)
+                    return;
+
+                Current.OriginalStarted = true;
                 // Keep observers from restoring/consuming the escrow entry before every crafting
-                // postfix has finished enriching the replacement's custom item data.
-                __state.Mutation = PlayerInventoryOperations.Batch(__state.Inventory);
+                // postfix has finished enriching the replacement's custom item data. Do not open
+                // this transaction for foreign prefixes that replace DoCrafting completely.
+                Current.Mutation = PlayerInventoryOperations.Batch(Current.Inventory);
             }
 
             private static void MarkOutcome(UpgradeOutcome outcome)
@@ -389,6 +399,11 @@ namespace ExtraSlots
                 foreach (string token in outcomes.Keys)
                     if (code.Count(instruction => instruction.opcode == OpCodes.Ldstr && Equals(instruction.operand, token)) != 1)
                         throw new InvalidOperationException($"Unsupported DoCrafting upgrader outcome marker: {token}.");
+
+                // Prefixes from other mods may fully replace DoCrafting and deliberately remove an
+                // ExtraSlots item themselves. Recovery is valid only after the vanilla body actually
+                // starts; otherwise their intentional removal must remain authoritative.
+                yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(InventoryGui_DoCrafting_UpgradeInSlot), nameof(MarkOriginalStarted)));
 
                 MethodInfo mark = AccessTools.Method(typeof(InventoryGui_DoCrafting_UpgradeInSlot), nameof(MarkOutcome));
                 foreach (CodeInstruction instruction in code)
@@ -463,7 +478,7 @@ namespace ExtraSlots
 
             private static void Complete(UpgradeState state)
             {
-                if (state?.SourceSlot == null || state.Outcome == UpgradeOutcome.Destroyed)
+                if (state?.SourceSlot == null || !state.OriginalStarted || state.Outcome == UpgradeOutcome.Destroyed)
                     return;
 
                 Player player = state.Player;
