@@ -1,3 +1,6 @@
+# 1.2.9
+* fixed cheated items stacking with each other
+
 # 1.2.8
 * fixed stack all prevention
 
