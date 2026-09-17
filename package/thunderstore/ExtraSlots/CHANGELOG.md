@@ -1,3 +1,7 @@
+# 1.2.7
+* removed obsolete with ZenBeeHive
+* patch 1.0.14
+
 # 1.2.6
 * fixed compatibility with Jewelcrafting and other mods that replace crafting, so intentionally destroyed items in ExtraSlots are not restored
 

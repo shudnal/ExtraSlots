@@ -29,8 +29,6 @@ namespace ExtraSlots.Compatibility
 
             BetterProgressionCompat.CheckForCompatibility();
 
-            ZenBeehiveCompat.CheckForCompatibility();
-
             BBHCompat.CheckForCompatibility();
 
             Recycle_N_Reclaim.CheckForCompatibility();

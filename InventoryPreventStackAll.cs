@@ -99,32 +99,5 @@ namespace ExtraSlots
             return true;
         }
 
-        [HarmonyPatch(typeof(Inventory), nameof(Inventory.StackAll))]
-        private static class Inventory_StackAll_PreventStackingItemsFromSlots
-        {
-            [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory fromInventory, out StackAllState __state)
-            {
-                __state = null;
-                if (fromInventory == null || fromInventory != PlayerInventory || Compatibility.ZenBeehiveCompat.IsHoneyOpen)
-                    return;
-
-                // Every nested call owns only its own removed unequipped items. Runtime-equipped
-                // items stay represented and vanilla excludes them itself; batching keeps observers
-                // from seeing only the intentionally hidden unequipped protected items.
-                __state = new StackAllState(fromInventory);
-                __state.RemoveProtectedItems();
-            }
-
-            [HarmonyPriority(Priority.First)]
-            private static void Postfix(StackAllState __state) => __state?.Restore();
-
-            [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(StackAllState __state, Exception __exception)
-            {
-                __state?.Dispose();
-                return __exception;
-            }
-        }
     }
 }

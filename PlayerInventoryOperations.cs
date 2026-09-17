@@ -595,7 +595,7 @@ namespace ExtraSlots
                 {
                     while (item.m_stack > 0)
                     {
-                        ItemDrop.ItemData stackItem = inventory.FindFreeStackItem(item.m_shared.m_name, item.m_quality, item.m_worldLevel);
+                        ItemDrop.ItemData stackItem = inventory.FindFreeStackItem(item.m_shared.m_name, item.m_quality, item.m_worldLevel, item.m_cheated);
                         if (stackItem?.m_shared == null || ReferenceEquals(stackItem, item)
                             || !inventory.ContainsItem(stackItem)
                             || stackItem.m_shared.m_name != item.m_shared.m_name
