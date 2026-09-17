@@ -41,6 +41,7 @@
     <Compile Include="Compatibility\Recycle_N_Reclaim.cs" />
     <Compile Include="Compatibility\SimpleSort.cs" />
     <Compile Include="Compatibility\ServerCharactersCompat.cs" />
+    <Compile Include="Compatibility\ServerManagerCompat.cs" />
     <Compile Include="DebugLogging.cs" />
     <Compile Include="DeferredInventory.cs" />
     <Compile Include="DeferredTombstone.cs" />
@@ -176,6 +177,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
+    <None Include="docs\ServerManagerCompatibility.md" />
     <None Include="EmbeddedLocalizations.csv" />
     <None Include="ILRepack.targets" />
     <None Include="UpdateTranslations.ps1" />
