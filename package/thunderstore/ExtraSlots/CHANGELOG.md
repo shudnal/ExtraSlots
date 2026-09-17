@@ -1,3 +1,6 @@
+# 1.2.8
+* fixed stack all prevention
+
 # 1.2.7
 * removed obsolete with ZenBeeHive
 * patch 1.0.14
