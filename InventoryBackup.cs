@@ -90,7 +90,11 @@ namespace ExtraSlots
         {
             extraSlotsBackup = null;
 
-            if (HasServerCharactersActive || player == null || !player.m_customData.ContainsKey(customKeyBackupID))
+            // An authoritative manager may have replaced only the inventory since the backup
+            // was written. Never resurrect removed items from that older duplicate snapshot.
+            // ServerManager's backup-only mode still uses the ordinary local recovery policy.
+            if (HasServerCharactersActive || Compatibility.ServerManagerCompat.IsAuthoritativeProfile
+                || player == null || !player.m_customData.ContainsKey(customKeyBackupID))
                 return false;
 
             if (TryGetBackup(player, out extraSlotsBackup))

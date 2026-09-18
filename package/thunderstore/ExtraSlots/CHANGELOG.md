@@ -1,3 +1,6 @@
+# 1.2.10
+* ServerManager compatibility
+
 # 1.2.9
 * fixed cheated items stacking with each other
 

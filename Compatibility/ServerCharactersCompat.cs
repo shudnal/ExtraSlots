@@ -32,7 +32,8 @@ namespace ExtraSlots.Compatibility
             {
                 __state = null;
 
-                if (!HasServerCharactersActive || __instance != PlayerInventory || !Game.instance)
+                if (__instance == null || __instance.m_temoraryInventory || __instance != PlayerInventory || !Game.instance
+                    || (!HasServerCharactersActive && !ServerManagerCompat.IsManagedProfile))
                     return;
 
                 PlayerProfile profile = Game.instance.GetPlayerProfile();
@@ -45,10 +46,15 @@ namespace ExtraSlots.Compatibility
                 HashSet<ItemDrop.ItemData> captured = new HashSet<ItemDrop.ItemData>();
                 string currentPlayerId = profile.GetPlayerID().ToString();
 
-                foreach (Slot slot in slots)
+                // Read live residents, not slot caches: a character manager may replace the
+                // backing item list with a snapshot without notifying the cached slot view.
+                foreach (ItemDrop.ItemData item in __instance.m_inventory)
                 {
-                    ItemDrop.ItemData item = slot.Item;
-                    if (item == null || !captured.Add(item))
+                    if (item?.m_customData == null || !captured.Add(item))
+                        continue;
+
+                    Slot slot = GetSlotInGrid(item.m_gridPos);
+                    if (slot == null || slot.IsEmptySlot)
                         continue;
 
                     bool hadPlayerId = item.m_customData.TryGetValue(customKeyPlayerID, out string playerId);
@@ -62,9 +68,9 @@ namespace ExtraSlots.Compatibility
                         SlotId = slotId
                     });
 
-                    // ServerCharacters serializes the live player inventory directly after
-                    // Inventory.Changed(), bypassing Player.Save where ExtraSlots normally writes
-                    // this return address. Persist it only into the serialized snapshot.
+                    // ServerCharacters and ServerManager can serialize only the player inventory,
+                    // bypassing Player.Save where ExtraSlots normally writes this return address.
+                    // Persist it only into the serialized snapshot, without a Changed notification.
                     item.m_customData[customKeyPlayerID] = currentPlayerId;
                     item.m_customData[customKeySlotID] = slot.ID;
                 }
