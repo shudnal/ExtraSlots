@@ -559,8 +559,7 @@ namespace ExtraSlots
                     if (stackItem?.m_shared == null
                         || stackItem.m_shared.m_name != item.m_shared.m_name
                         || stackItem.m_quality != item.m_quality
-                        || stackItem.m_worldLevel != item.m_worldLevel
-                        || stackItem.m_cheated != item.m_cheated)
+                        || stackItem.m_worldLevel != item.m_worldLevel)
                     {
                         continue;
                     }
@@ -596,33 +595,23 @@ namespace ExtraSlots
                 {
                     while (item.m_stack > 0)
                     {
-                        ItemDrop.ItemData stackItem = inventory.FindFreeStackItem(
-                            item.m_shared.m_name,
-                            item.m_quality,
-                            item.m_worldLevel,
-                            item.m_cheated);
-
-                        if (stackItem?.m_shared == null
-                            || ReferenceEquals(stackItem, item)
+                        ItemDrop.ItemData stackItem = inventory.FindFreeStackItem(item.m_shared.m_name, item.m_quality, item.m_worldLevel);
+                        if (stackItem?.m_shared == null || ReferenceEquals(stackItem, item)
                             || !inventory.ContainsItem(stackItem)
                             || stackItem.m_shared.m_name != item.m_shared.m_name
-                            || stackItem.m_quality != item.m_quality
-                            || stackItem.m_worldLevel != item.m_worldLevel
-                            || stackItem.m_cheated != item.m_cheated)
-                        {
+                            || stackItem.m_quality != item.m_quality || stackItem.m_worldLevel != item.m_worldLevel)
                             break;
-                        }
 
                         int capacity = stackItem.m_shared.m_maxStackSize - stackItem.m_stack;
                         if (capacity <= 0)
                             break;
 
                         stackSnapshots.Add((stackItem, stackItem.m_stack, stackItem.m_cheated));
-
+                        if (item.m_cheated && !PlayerProfile.s_bypassCheatChecks)
+                            stackItem.m_cheated = true;
                         int amount = Math.Min(capacity, item.m_stack);
                         stackItem.m_stack += amount;
                         item.m_stack -= amount;
-
                         if (representative == null || CurrentPlayer?.IsItemEquiped(stackItem) == true)
                             representative = stackItem;
                     }
@@ -1136,8 +1125,7 @@ namespace ExtraSlots
                 && incoming != null
                 && target.m_shared.m_name == incoming.m_shared.m_name
                 && target.m_quality == incoming.m_quality
-                && target.m_worldLevel == incoming.m_worldLevel
-                && target.m_cheated == incoming.m_cheated;
+                && target.m_worldLevel == incoming.m_worldLevel;
         }
 
         private sealed class VirtualInventoryState

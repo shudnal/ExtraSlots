@@ -1,3 +1,6 @@
+# 1.2.11
+* patch 1.0.15
+
 # 1.2.10
 * ServerManager compatibility
 
