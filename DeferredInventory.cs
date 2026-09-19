@@ -533,7 +533,9 @@ namespace ExtraSlots
         internal static bool TryRestoreAvailable()
         {
             Player player = CurrentPlayer;
-            if (player == null || player.m_isLoading || PlayerInventory == null || !EnsureLoaded(player) || entries.Count == 0)
+            // A backup pass consumes source records before any imported item becomes live.
+            if (player == null || player.m_isLoading || InventoryBackup.IsRecovering(player)
+                || PlayerInventory == null || !EnsureLoaded(player) || entries.Count == 0)
                 return false;
 
             int fingerprint = ComputeRestorationFingerprint();
