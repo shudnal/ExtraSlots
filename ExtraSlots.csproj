@@ -177,7 +177,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
-    <None Include="docs\ServerManagerCompatibility.md" />
     <None Include="EmbeddedLocalizations.csv" />
     <None Include="ILRepack.targets" />
     <None Include="UpdateTranslations.ps1" />

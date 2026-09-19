@@ -70,41 +70,17 @@ internal static class InventoryMigration
         }
 
         DeferredPayloadSnapshot deferredBeforeImport = CaptureDeferredPayload(player);
-        List<AvailableRepresentation> available = new List<AvailableRepresentation>();
-        IEnumerable<ItemDrop.ItemData> playerItems = player.GetInventory()?.m_inventory ?? new List<ItemDrop.ItemData>();
-        foreach (ItemDrop.ItemData item in playerItems)
-        {
-            string key = DeferredInventory.GetMigrationKey(item);
-            if (!string.IsNullOrEmpty(key))
-                available.Add(new AvailableRepresentation { Key = key, PlayerItem = item });
-        }
-
-        foreach (DeferredRepresentation representation in GetMaterializedDeferredRepresentations(player))
-        {
-            if (!string.IsNullOrEmpty(representation.Key))
-                available.Add(new AvailableRepresentation
-                {
-                    Key = representation.Key,
-                    DeferredPreferredSlotId = representation.PreferredSlotId
-                });
-        }
+        RecoveryMatcher matcher = new RecoveryMatcher(player);
 
         int imported = 0;
         try
         {
             foreach (ItemDrop.ItemData item in sourceItems.Where(item => item != null))
             {
-                string key = DeferredInventory.GetMigrationKey(item);
-                string storedKey = DeferredInventory.GetMigrationKey(InventorySerialization.GetSavedRepresentation(item));
-                int representedIndex = available.FindIndex(candidate =>
-                    (string.Equals(candidate.Key, key, StringComparison.Ordinal)
-                        || string.Equals(candidate.Key, storedKey, StringComparison.Ordinal))
-                    && (representationMatchesSource == null
-                        || representationMatchesSource(item, candidate.PlayerItem, candidate.DeferredPreferredSlotId)));
-
+                int representedIndex = matcher.Find(item, representationMatchesSource);
                 if (representedIndex >= 0)
                 {
-                    available.RemoveAt(representedIndex);
+                    matcher.Consume(representedIndex);
                     continue;
                 }
 
@@ -133,6 +109,53 @@ internal static class InventoryMigration
             LogMessage($"Imported {imported} missing item(s) from {sourceName} into deferred inventory.");
 
         return imported;
+    }
+
+    /// <summary>
+    /// A snapshot of existing representations for one recovery pass. A physical/deferred
+    /// instance can satisfy only one source record. Newly imported items must not satisfy
+    /// another identical record from the same backup.
+    /// </summary>
+    internal sealed class RecoveryMatcher
+    {
+        private readonly List<AvailableRepresentation> available;
+
+        internal RecoveryMatcher(Player player)
+        {
+            List<AvailableRepresentation> available = new List<AvailableRepresentation>();
+            IEnumerable<ItemDrop.ItemData> playerItems = player.GetInventory()?.m_inventory ?? new List<ItemDrop.ItemData>();
+            foreach (ItemDrop.ItemData item in playerItems)
+            {
+                string key = DeferredInventory.GetMigrationKey(item);
+                if (!string.IsNullOrEmpty(key))
+                    available.Add(new AvailableRepresentation { Key = key, PlayerItem = item });
+            }
+
+            foreach (DeferredRepresentation representation in GetMaterializedDeferredRepresentations(player))
+            {
+                if (!string.IsNullOrEmpty(representation.Key))
+                    available.Add(new AvailableRepresentation
+                    {
+                        Key = representation.Key,
+                        DeferredPreferredSlotId = representation.PreferredSlotId
+                    });
+            }
+
+            this.available = available;
+        }
+
+        internal int Find(ItemDrop.ItemData item,
+            Func<ItemDrop.ItemData, ItemDrop.ItemData, string, bool> matchesSource = null)
+        {
+            string key = DeferredInventory.GetMigrationKey(item);
+            string storedKey = DeferredInventory.GetMigrationKey(InventorySerialization.GetSavedRepresentation(item));
+            return available.FindIndex(candidate =>
+                (string.Equals(candidate.Key, key, StringComparison.Ordinal)
+                    || string.Equals(candidate.Key, storedKey, StringComparison.Ordinal))
+                && (matchesSource == null || matchesSource(item, candidate.PlayerItem, candidate.DeferredPreferredSlotId)));
+        }
+
+        internal void Consume(int index) => available.RemoveAt(index);
     }
 
     private static List<DeferredRepresentation> GetMaterializedDeferredRepresentations(Player player)
@@ -391,31 +414,6 @@ internal static class InventoryMigration
         {
             if (__exception != null)
                 RollbackRecoverySource(__state, "EaQS 3.x backup");
-            return __exception;
-        }
-    }
-
-    [HarmonyPatch]
-    private static class ExtraSlotsBackup_RecoveryTransaction
-    {
-        private const string BackupKey = "ExtraSlotsInventoryBackup";
-        private static readonly FieldInfo preserveRawBackupForPlayer = AccessTools.Field(typeof(global::ExtraSlots.InventoryBackup), "preserveRawBackupForPlayer");
-
-        private static MethodBase TargetMethod() => AccessTools.Method(typeof(global::ExtraSlots.InventoryBackup), "TryRestoreBackup");
-
-        private static void Prefix(Player player, out RecoverySourceState __state) =>
-            __state = CaptureRecoverySource(player, new[] { BackupKey });
-
-        private static void Postfix(Player player, RecoverySourceState __state)
-        {
-            if (ReferenceEquals(preserveRawBackupForPlayer?.GetValue(null), player))
-                RollbackRecoverySource(__state, "ExtraSlots backup");
-        }
-
-        private static Exception Finalizer(Exception __exception, RecoverySourceState __state)
-        {
-            if (__exception != null)
-                RollbackRecoverySource(__state, "ExtraSlots backup");
             return __exception;
         }
     }
