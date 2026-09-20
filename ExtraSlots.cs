@@ -842,24 +842,56 @@ namespace ExtraSlots
 
         public static void LogDebug(object data)
         {
-            if (loggingDebugEnabled.Value)
+            if (!loggingDebugEnabled.Value)
+                return;
+
+            try
+            {
                 instance.Logger.LogInfo(data);
+            }
+            catch
+            {
+                // Never let a broken BepInEx listener affect game/mod logic.
+            }
         }
 
         public static void LogInfo(object data)
         {
-            if (loggingEnabled.Value)
+            if (!loggingEnabled.Value)
+                return;
+
+            try
+            {
                 instance.Logger.LogInfo(data);
+            }
+            catch
+            {
+                // Never let a broken BepInEx listener affect game/mod logic.
+            }
         }
 
         public static void LogMessage(object data)
         {
-           instance.Logger.LogMessage(data);
+            try
+            {
+                instance.Logger.LogMessage(data);
+            }
+            catch
+            {
+                // Never let a broken BepInEx listener affect game/mod logic.
+            }
         }
 
         public static void LogWarning(object data)
         {
-            instance.Logger.LogWarning(data);
+            try
+            {
+                instance.Logger.LogWarning(data);
+            }
+            catch
+            {
+                // Never let a broken BepInEx listener affect game/mod logic.
+            }
         }
 
         public static void LogCurrentLogLevel() => LogInfo($"Logging: Info {loggingEnabled.Value}, Debug {loggingDebugEnabled.Value}");
