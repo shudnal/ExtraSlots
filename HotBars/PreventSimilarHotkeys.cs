@@ -24,6 +24,34 @@ public static class PreventSimilarHotkeys
     private static int _skipPreventionDepth;
     private static bool SkipPrevention => _skipPreventionDepth > 0;
 
+    // BepInEx/Unity KeyCode treats Mouse3 as Back and Mouse4 as Forward, while Valheim's
+    // ZInput mapping currently assigns those two buttons in the opposite order. Resolve the
+    // ZInput key once so serialized KeyboardShortcut values keep their standard KeyCode meaning.
+    private static readonly KeyCode ZInputMouse3Key = ResolveZInputMouseKey(KeyCode.Mouse3, MouseButton.Back);
+    private static readonly KeyCode ZInputMouse4Key = ResolveZInputMouseKey(KeyCode.Mouse4, MouseButton.Forward);
+
+    private static KeyCode ResolveZInputMouseKey(KeyCode shortcutKey, MouseButton expectedButton)
+    {
+        if (ZInput.TryKeyCodeToMouseButton(shortcutKey, out MouseButton mappedButton) && mappedButton == expectedButton)
+            return shortcutKey;
+
+        KeyCode alternateKey = shortcutKey == KeyCode.Mouse3 ? KeyCode.Mouse4 : KeyCode.Mouse3;
+        return ZInput.TryKeyCodeToMouseButton(alternateKey, out mappedButton) && mappedButton == expectedButton
+            ? alternateKey
+            : shortcutKey;
+    }
+
+    internal static KeyCode ToZInputKey(KeyCode key)
+    {
+        if (key == KeyCode.Mouse3)
+            return ZInputMouse3Key;
+
+        if (key == KeyCode.Mouse4)
+            return ZInputMouse4Key;
+
+        return key;
+    }
+
     public static bool IsShortcutDown(KeyboardShortcut shortcut) => IsShortcutActive(shortcut, checkForHeld: false);
 
     public static bool IsShortcutPressed(KeyboardShortcut shortcut) => IsShortcutActive(shortcut, checkForHeld: true);
@@ -37,16 +65,17 @@ public static class PreventSimilarHotkeys
 
         try
         {
+            KeyCode mainKey = ToZInputKey(shortcut.MainKey);
             bool mainKeyActive = checkForHeld
-                ? ZInput.GetKey(shortcut.MainKey)
-                : ZInput.GetKeyDown(shortcut.MainKey);
+                ? ZInput.GetKey(mainKey)
+                : ZInput.GetKeyDown(mainKey);
 
             if (!mainKeyActive)
                 return false;
 
             foreach (KeyCode modifier in shortcut.Modifiers)
             {
-                if (!ZInput.GetKey(modifier))
+                if (!ZInput.GetKey(ToZInputKey(modifier)))
                     return false;
             }
 
@@ -117,9 +146,10 @@ public static class PreventSimilarHotkeys
             if (mainKey == KeyCode.None)
                 continue;
 
-            similarKeyCode.Add(mainKey);
+            KeyCode zInputMainKey = ToZInputKey(mainKey);
+            similarKeyCode.Add(zInputMainKey);
 
-            string keyPath = ZInput.KeyCodeToPath(mainKey);
+            string keyPath = ZInput.KeyCodeToPath(zInputMainKey);
             if (!pathToButtonNames.TryGetValue(keyPath, out HashSet<string> buttonNames))
                 continue;
 

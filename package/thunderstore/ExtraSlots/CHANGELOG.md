@@ -1,3 +1,6 @@
+# 1.2.13
+* fixed Mouse3 and Mouse4 in keyboard shortcut combinations
+
 # 1.2.12
 * fixed backup recovery being blocked when one item prefab is unavailable
 * unavailable backup items are preserved for later recovery without restoring already recovered items again

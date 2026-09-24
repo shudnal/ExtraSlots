@@ -94,18 +94,7 @@ namespace ExtraSlots
             return handle;
         }
 
-        internal static bool CanDrag(bool alwaysDraggable, KeyboardShortcut dragKey) => alwaysDraggable || IsShortcutHeld(dragKey);
-
-        private static bool IsShortcutHeld(KeyboardShortcut shortcut)
-        {
-            if (shortcut.MainKey == KeyCode.None || !ZInput.GetKey(shortcut.MainKey))
-                return false;
-
-            foreach (KeyCode modifier in shortcut.Modifiers)
-                if (!ZInput.GetKey(modifier))
-                    return false;
-
-            return true;
-        }
+        internal static bool CanDrag(bool alwaysDraggable, KeyboardShortcut dragKey) =>
+            alwaysDraggable || HotBars.PreventSimilarHotkeys.IsShortcutPressed(dragKey);
     }
 }
