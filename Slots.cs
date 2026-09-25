@@ -129,7 +129,12 @@ namespace ExtraSlots
                     if (PlayerInventory == null || _gridPos == emptyPosition)
                         return null;
 
-                    if (cachedItems.TryGetValue(_gridPos, out ItemDrop.ItemData item))
+                    // CanAddItem temporarily removes slot residents from the live list. Their
+                    // reserved cells stay occupied even with a cold or previously empty cache.
+                    if (InventoryInteraction.TryGetCapacityQueryItem(PlayerInventory, _gridPos, out ItemDrop.ItemData item))
+                        return item;
+
+                    if (cachedItems.TryGetValue(_gridPos, out item))
                         return item;
 
                     return CacheItem();
@@ -141,8 +146,13 @@ namespace ExtraSlots
                 if (PlayerInventory == null)
                     return null;
 
+                // Direct cache refreshes must also respect a capacity query's hidden residents.
+                // Leave the existing cache untouched until the outer query restores its items.
+                if (InventoryInteraction.TryGetCapacityQueryItem(PlayerInventory, _gridPos, out ItemDrop.ItemData item))
+                    return item;
+
                 // Cache will be clear on inventory change
-                ItemDrop.ItemData item = PlayerInventory.GetItemAt(_gridPos.x, _gridPos.y);
+                item = PlayerInventory.GetItemAt(_gridPos.x, _gridPos.y);
                 cachedItems[_gridPos] = item;
                 return item;
             }

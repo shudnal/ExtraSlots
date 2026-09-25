@@ -200,6 +200,11 @@ namespace ExtraSlots
             }
         }
 
+        // Slot occupancy remains visible while CanAddItem hides slot residents from the
+        // native regular-inventory calculation. This lookup never reads or changes the cache.
+        internal static bool TryGetCapacityQueryItem(Inventory inventory, Vector2i position, out ItemDrop.ItemData item) =>
+            Inventory_CanAddItem_ItemData_TryFindAppropriateExtraSlot.TryGetReservedItem(inventory, position, out item);
+
         private static int GetPlayerEmptySlots(Inventory inventory)
         {
             if (inventory == null || inventory.m_temoraryInventory || inventory != PlayerInventory)
@@ -213,8 +218,9 @@ namespace ExtraSlots
             int emptySlots = InventoryHeightPlayer * inventory.m_width - regularItems;
             if (!Player_AutoPickup_PreventAutoPickupInExtraSlots.preventAddItem)
             {
+                // IsFree includes residents reserved by an active capacity query.
                 foreach (Slot slot in slots)
-                    if (slot.IsQuickSlot && slot.IsActive && slot.Item == null)
+                    if (slot.IsFreeQuickSlot())
                         emptySlots++;
             }
 
@@ -240,21 +246,25 @@ namespace ExtraSlots
         private static class Inventory_FindEmptySlot_FindAppropriateSlot
         {
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory __instance)
+            private static void Prefix(Inventory __instance, out int? __state)
             {
+                __state = null;
                 if (__instance.m_temoraryInventory || __instance != PlayerInventory)
                     return;
 
+                __state = __instance.m_height;
                 __instance.m_height = InventoryHeightPlayer;
             }
 
             [HarmonyPriority(Priority.First)]
-            private static void Postfix(Inventory __instance, ref Vector2i __result)
+            private static void Postfix(Inventory __instance, ref int? __state, ref Vector2i __result)
             {
-                if (__instance.m_temoraryInventory || __instance != PlayerInventory)
+                if (!__state.HasValue)
                     return;
 
-                __instance.m_height = InventoryHeightFull;
+                // A nested FindEmptySlot must not expand its caller's restricted capacity view.
+                __instance.m_height = __state.Value;
+                __state = null;
 
                 bool upgradePrecheckBypass = Inventory_AddItem_ByName_FindAppropriateSlot.ConsumeUpgradePrecheckBypass();
 
@@ -308,10 +318,11 @@ namespace ExtraSlots
 
             [HarmonyFinalizer]
             [HarmonyPriority(Priority.First)]
-            private static void Finalizer(Inventory __instance)
+            private static void Finalizer(Inventory __instance, ref int? __state)
             {
-                if (__instance == PlayerInventory)
-                    __instance.m_height = InventoryHeightFull;
+                if (__state.HasValue)
+                    __instance.m_height = __state.Value;
+                __state = null;
             }
         }
 
@@ -783,21 +794,70 @@ namespace ExtraSlots
             // Capacity checks can be nested by other patches. Pool per-call snapshots instead of
             // sharing one scratch list, and always restore the exact inventory in the finalizer.
             private static readonly Stack<CapacityQueryState> statePool = new Stack<CapacityQueryState>();
+            private static CapacityQueryState current;
+
+            internal static bool TryGetReservedItem(Inventory inventory, Vector2i position, out ItemDrop.ItemData item)
+            {
+                for (CapacityQueryState state = current; state != null; state = state.Previous)
+                    if (ReferenceEquals(state.Inventory, inventory) && state.ReservedItems.TryGetValue(position, out item))
+                        return true;
+
+                item = null;
+                return false;
+            }
+
+            private static bool IsActive(Inventory inventory)
+            {
+                for (CapacityQueryState state = current; state != null; state = state.Previous)
+                    if (ReferenceEquals(state.Inventory, inventory))
+                        return true;
+
+                return false;
+            }
+
+            private static long GetReservedStackSpace(Inventory inventory, ItemDrop.ItemData incoming)
+            {
+                // After an inner query restores its own items, outer queries can still be hiding
+                // stacks. Include those only in the ExtraSlots fallback, never in the native body.
+                long space = 0;
+                HashSet<ItemDrop.ItemData> counted = null;
+                for (CapacityQueryState state = current; state != null; state = state.Previous)
+                {
+                    if (!ReferenceEquals(state.Inventory, inventory))
+                        continue;
+
+                    foreach (ItemDrop.ItemData item in state.ReservedItems.Values)
+                    {
+                        if (item?.m_shared == null || item.m_shared.m_name != incoming.m_shared.m_name
+                            || item.m_worldLevel != incoming.m_worldLevel || inventory.m_inventory.Contains(item))
+                            continue;
+
+                        counted ??= new HashSet<ItemDrop.ItemData>();
+                        if (counted.Add(item))
+                            space += Math.Max(0, item.m_shared.m_maxStackSize - item.m_stack);
+                    }
+                }
+                return space;
+            }
 
             private sealed class CapacityQueryState
             {
                 private readonly List<(int Index, ItemDrop.ItemData Item)> removedItems = new List<(int, ItemDrop.ItemData)>(40);
-                private Inventory inventory;
+                internal readonly Dictionary<Vector2i, ItemDrop.ItemData> ReservedItems = new Dictionary<Vector2i, ItemDrop.ItemData>(40);
+                internal CapacityQueryState Previous;
+                internal Inventory Inventory;
                 private int originalHeight;
                 private bool restored;
                 private bool released;
 
                 internal void Begin(Inventory target)
                 {
-                    inventory = target;
+                    Inventory = target;
                     originalHeight = target.m_height;
                     restored = false;
                     released = false;
+                    Previous = current;
+                    current = this;
                     target.m_height = InventoryHeightPlayer;
 
                     for (int i = target.m_inventory.Count - 1; i >= 0; i--)
@@ -806,27 +866,35 @@ namespace ExtraSlots
                         if (item == null || !API.IsItemInSlot(item))
                             continue;
 
+                        // Capture the cell before removal, without clearing or depending on the
+                        // slot cache. A nested query must retain the outer query's reservations.
                         removedItems.Add((i, item));
+                        ReservedItems[item.m_gridPos] = item;
                         target.m_inventory.RemoveAt(i);
                     }
                 }
 
                 internal void Restore()
                 {
-                    if (restored || inventory == null)
+                    if (restored || Inventory == null)
                         return;
 
-                    inventory.m_height = originalHeight;
+                    Inventory.m_height = originalHeight;
                     // Entries were removed in descending index order. Restore ascending order so
                     // querying capacity cannot reorder resource consumption or identical stacks.
                     for (int i = removedItems.Count - 1; i >= 0; i--)
                     {
                         (int index, ItemDrop.ItemData item) = removedItems[i];
-                        if (!inventory.m_inventory.Contains(item))
-                            inventory.m_inventory.Insert(Math.Min(index, inventory.m_inventory.Count), item);
+                        if (!Inventory.m_inventory.Contains(item))
+                            Inventory.m_inventory.Insert(Math.Min(index, Inventory.m_inventory.Count), item);
                     }
 
                     restored = true;
+                    current = Previous;
+                    // Do not discard a cache while an outer query still owns hidden residents.
+                    // No Changed notification is needed: this was a read-only capacity check.
+                    if (!IsActive(Inventory))
+                        ClearCachedItems();
                 }
 
                 internal void Release()
@@ -836,7 +904,9 @@ namespace ExtraSlots
 
                     released = true;
                     removedItems.Clear();
-                    inventory = null;
+                    ReservedItems.Clear();
+                    Previous = null;
+                    Inventory = null;
                     if (statePool.Count < 8)
                         statePool.Push(this);
                 }
@@ -861,7 +931,8 @@ namespace ExtraSlots
                     return;
 
                 int requestedStack = stack > 0 ? stack : item.m_stack;
-                int freeStackSpace = __instance.FindFreeStackSpace(item.m_shared.m_name, item.m_worldLevel);
+                long freeStackSpace = Math.Max(0, __instance.FindFreeStackSpace(item.m_shared.m_name, item.m_worldLevel))
+                    + GetReservedStackSpace(__instance, item);
                 long freeQuickSlotStackSpace = (long)Math.Max(0, __instance.GetEmptySlots()) * item.m_shared.m_maxStackSize;
                 long sizeCombined = Math.Max(0, freeStackSpace) + freeQuickSlotStackSpace;
 
@@ -877,10 +948,14 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(CapacityQueryState __state, Exception __exception)
+            private static Exception Finalizer(ref CapacityQueryState __state, Exception __exception)
             {
                 __state?.Restore();
-                __state?.Release();
+                CapacityQueryState state = __state;
+                // Finalizers may be retried after another finalizer throws. Drop this call's
+                // handle before pooling so a retry cannot restore a reused nested-call state.
+                __state = null;
+                state?.Release();
                 return __exception;
             }
         }

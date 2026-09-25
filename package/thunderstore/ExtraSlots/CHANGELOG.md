@@ -1,3 +1,7 @@
+# 1.2.14
+* fixed quick-slot hotbars disappearing during auto pickup with AdventureBackpacks and other inventory capacity checks
+* fixed occupied extra slots being reported as free during nested inventory capacity checks
+
 # 1.2.13
 * fixed Mouse3 and Mouse4 in keyboard shortcut combinations
 
