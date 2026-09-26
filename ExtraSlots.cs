@@ -311,6 +311,8 @@ namespace ExtraSlots
 
         private void Awake()
         {
+            LocalizationManager.Localizer.Initialize();
+
             instance = this;
 
             ConfigInit();
@@ -332,8 +334,6 @@ namespace ExtraSlots
             Compatibility.CompatibilityHelper.CheckForCompatibility();
 
             harmony.PatchAll();
-
-            StartCoroutine(Localizer.Load());
         }
 
         private void LateUpdate()
