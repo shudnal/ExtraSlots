@@ -317,6 +317,7 @@ namespace ExtraSlots
 
             ConfigInit();
             _ = configSync.AddLockingConfigEntry(configLocked);
+            LocalizationManager.Localizer.ApplyCurrentLocalization();
 
             configDirectory = Path.Combine(Paths.ConfigPath, pluginID);
 
