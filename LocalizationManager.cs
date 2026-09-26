@@ -4,6 +4,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
 using JetBrains.Annotations;
+using Splatform;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -103,17 +104,16 @@ public class Localizer
     }
 
     private static bool initialized;
+    private static bool localizationEnabled;
 
     public static void Initialize()
     {
         if (initialized)
             return;
 
+        initialized = true;
         if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
-        {
-            initialized = true;
             return;
-        }
 
         EnsureYamlDotNetAvailable();
 
@@ -121,10 +121,25 @@ public class Localizer
         harmony.Patch(
             AccessTools.DeclaredMethod(typeof(Localization), nameof(Localization.SetupLanguage)),
             postfix: new HarmonyMethod(AccessTools.DeclaredMethod(typeof(Localizer), nameof(LoadLocalization))));
-        initialized = true;
+        localizationEnabled = true;
+    }
 
-        if (Localization.m_instance != null)
-            LoadLocalization(Localization.m_instance, Localization.m_instance.GetSelectedLanguage());
+    public static void ApplyCurrentLocalization()
+    {
+        if (!localizationEnabled || Localization.m_instance == null)
+            return;
+
+        string language = defaultLanguage;
+        if (PlatformManager.DistributionPlatform != null && PlatformInitializer.PreferencesInitialized)
+        {
+            string selectedLanguage = Localization.m_instance.GetSelectedLanguage();
+            if (string.IsNullOrEmpty(selectedLanguage))
+                PlatformPrefs.SetString("language", defaultLanguage);
+            else
+                language = selectedLanguage;
+        }
+
+        LoadLocalization(Localization.m_instance, language);
     }
 
     private static void EnsureYamlDotNetAvailable()
