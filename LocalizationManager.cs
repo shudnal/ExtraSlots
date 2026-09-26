@@ -6,6 +6,7 @@ using HarmonyLib;
 using JetBrains.Annotations;
 using Splatform;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -105,6 +106,7 @@ public class Localizer
 
     private static bool initialized;
     private static bool localizationEnabled;
+    private static bool deferredCurrentLocalizationScheduled;
 
     public static void Initialize()
     {
@@ -129,14 +131,36 @@ public class Localizer
         if (!localizationEnabled || Localization.m_instance == null)
             return;
 
-        string language = defaultLanguage;
         if (PlatformManager.DistributionPlatform != null && PlatformInitializer.PreferencesInitialized)
         {
-            string selectedLanguage = Localization.m_instance.GetSelectedLanguage();
-            if (string.IsNullOrEmpty(selectedLanguage))
-                PlatformPrefs.SetString("language", defaultLanguage);
-            else
-                language = selectedLanguage;
+            ApplyReadyCurrentLocalization();
+            return;
+        }
+
+        if (!deferredCurrentLocalizationScheduled)
+        {
+            deferredCurrentLocalizationScheduled = true;
+            Plugin.StartCoroutine(ApplyCurrentLocalizationWhenPreferencesReady());
+        }
+    }
+
+    private static IEnumerator ApplyCurrentLocalizationWhenPreferencesReady()
+    {
+        yield return new WaitUntil(() =>
+            PlatformManager.DistributionPlatform != null && PlatformInitializer.PreferencesInitialized);
+
+        deferredCurrentLocalizationScheduled = false;
+        if (localizationEnabled && Localization.m_instance != null)
+            ApplyReadyCurrentLocalization();
+    }
+
+    private static void ApplyReadyCurrentLocalization()
+    {
+        string language = Localization.m_instance.GetSelectedLanguage();
+        if (string.IsNullOrEmpty(language))
+        {
+            language = defaultLanguage;
+            PlatformPrefs.SetString("language", language);
         }
 
         LoadLocalization(Localization.m_instance, language);
