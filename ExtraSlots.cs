@@ -311,10 +311,13 @@ namespace ExtraSlots
 
         private void Awake()
         {
+            LocalizationManager.Localizer.Initialize();
+
             instance = this;
 
             ConfigInit();
             _ = configSync.AddLockingConfigEntry(configLocked);
+            LocalizationManager.Localizer.ApplyCurrentLocalization();
 
             configDirectory = Path.Combine(Paths.ConfigPath, pluginID);
 
@@ -332,8 +335,6 @@ namespace ExtraSlots
             Compatibility.CompatibilityHelper.CheckForCompatibility();
 
             harmony.PatchAll();
-
-            StartCoroutine(Localizer.Load());
         }
 
         private void LateUpdate()

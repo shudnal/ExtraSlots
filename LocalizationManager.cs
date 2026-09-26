@@ -104,16 +104,84 @@ public class Localizer
             localizationObjects.Remove(reference);
     }
 
-    public static IEnumerator Load()
+    private static bool initialized;
+    private static bool localizationEnabled;
+    private static bool deferredCurrentLocalizationScheduled;
+
+    public static void Initialize()
     {
-        yield return new WaitUntil(() => PlatformManager.DistributionPlatform != null && PlatformInitializer.PreferencesInitialized);
+        if (initialized)
+            return;
 
-        // Prevent NRE if language has not been set explicitly yet
-        // It will fall into English anyway
-        if (string.IsNullOrEmpty(PlatformPrefs.GetString("language", "")))
-            PlatformPrefs.SetString("language", defaultLanguage);
+        initialized = true;
+        if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            return;
 
-        LoadLocalization(Localization.instance, Localization.instance.GetSelectedLanguage());
+        EnsureYamlDotNetAvailable();
+
+        Harmony harmony = new("org.bepinex.helpers.LocalizationManager");
+        harmony.Patch(
+            AccessTools.DeclaredMethod(typeof(Localization), nameof(Localization.SetupLanguage)),
+            postfix: new HarmonyMethod(AccessTools.DeclaredMethod(typeof(Localizer), nameof(LoadLocalization))));
+        localizationEnabled = true;
+    }
+
+    public static void ApplyCurrentLocalization()
+    {
+        if (!localizationEnabled || Localization.m_instance == null)
+            return;
+
+        if (PlatformManager.DistributionPlatform != null && PlatformInitializer.PreferencesInitialized)
+        {
+            ApplyReadyCurrentLocalization();
+            return;
+        }
+
+        if (!deferredCurrentLocalizationScheduled)
+        {
+            deferredCurrentLocalizationScheduled = true;
+            Plugin.StartCoroutine(ApplyCurrentLocalizationWhenPreferencesReady());
+        }
+    }
+
+    private static IEnumerator ApplyCurrentLocalizationWhenPreferencesReady()
+    {
+        yield return new WaitUntil(() =>
+            PlatformManager.DistributionPlatform != null && PlatformInitializer.PreferencesInitialized);
+
+        deferredCurrentLocalizationScheduled = false;
+        if (localizationEnabled && Localization.m_instance != null)
+            ApplyReadyCurrentLocalization();
+    }
+
+    private static void ApplyReadyCurrentLocalization()
+    {
+        string language = Localization.m_instance.GetSelectedLanguage();
+        if (string.IsNullOrEmpty(language))
+        {
+            language = defaultLanguage;
+            PlatformPrefs.SetString("language", language);
+        }
+
+        LoadLocalization(Localization.m_instance, language);
+    }
+
+    private static void EnsureYamlDotNetAvailable()
+    {
+        try
+        {
+            if (Type.GetType("YamlDotNet.Serialization.DeserializerBuilder, YamlDotNet", throwOnError: false) != null)
+                return;
+        }
+        catch (Exception exception)
+        {
+            throw new FileNotFoundException(
+                "YamlDotNet is required for localization but could not be loaded. Install ValheimModding-YamlDotNet.",
+                exception);
+        }
+
+        throw new FileNotFoundException(
+            "YamlDotNet is required for localization but could not be loaded. Install ValheimModding-YamlDotNet.");
     }
 
     private static void LoadLocalization(Localization __instance, string language)
@@ -211,11 +279,6 @@ public class Localizer
             UpdatePlaceholderText(__instance, s.Key);
     }
 
-    static Localizer()
-    {
-        Harmony harmony = new("org.bepinex.helpers.LocalizationManager");
-        harmony.Patch(AccessTools.DeclaredMethod(typeof(Localization), nameof(Localization.LoadCSV)), postfix: new HarmonyMethod(AccessTools.DeclaredMethod(typeof(Localizer), nameof(LoadLocalization))));
-    }
 
     private static byte[]? LoadTranslationFromAssembly(string language)
     {
