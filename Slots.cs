@@ -114,14 +114,10 @@ namespace ExtraSlots
 
             // Read the key before inventory, progression and UI checks. Idle frames must not
             // resolve every slot or repeatedly traverse Player.TakeInput's patched UI checks.
-            public bool IsShortcutDown() => _getShortcut != null && IsShortcutDown(_getShortcut()) && IsActive && CanTakeShortcutInput();
+            public bool IsShortcutDown() => _getShortcut != null && IsShortcutDown(_getShortcut()) && IsActive && Player.m_localPlayer?.TakeInput() == true;
             public bool IsShortcutDownWithItem() => IsShortcutDown() && Item != null;
-            public bool IsShortcutPressed() => _getShortcut != null && IsShortcutPressed(_getShortcut()) && IsActive && CanTakeShortcutInput();
+            public bool IsShortcutPressed() => _getShortcut != null && IsShortcutPressed(_getShortcut()) && IsActive && Player.m_localPlayer?.TakeInput() == true;
             public bool IsShortcutPressedWithItem() => IsShortcutPressed() && Item != null;
-
-            // Typing in the build search must not use slot items or suppress matching keys.
-            private static bool CanTakeShortcutInput() => Player.m_localPlayer?.TakeInput() == true
-                && (!Hud.instance || !Hud.instance.m_buildUi || !Hud.instance.m_buildUi.SearchFieldFocused);
 
             public KeyboardShortcut GetShortcut() => _getShortcut == null ? KeyboardShortcut.Empty : _getShortcut();
             public string GetShortcutText() => _getShortcutText == null ? Name : Localization.instance.Localize(_getShortcutText());

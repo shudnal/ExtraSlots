@@ -419,13 +419,16 @@ public static class QuickBars
 
     private static bool UpdateCurrentHotkeyBar(bool joyHotbarLeft, bool joyHotbarRight, bool joyHotbarUse)
     {
+        // Block the caller's initial-bar fallback as well as actions on an existing bar.
+        if (!IsHotkeyBarsActive())
+            return true;
+
         if (_currentBarIndex < 0 || _currentBarIndex > bars.Count - 1)
             return false;
 
         HotkeyBar hotkeyBar = bars[_currentBarIndex];
-        bool isHotkeyBarsActive = IsHotkeyBarsActive();
-        if (hotkeyBar.m_selected < 0 || hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1 || !isHotkeyBarsActive)
-            return !isHotkeyBarsActive;
+        if (hotkeyBar.m_selected < 0 || hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1)
+            return false;
 
         if (joyHotbarLeft && --hotkeyBar.m_selected < 0)
             ChangeActiveHotkeyBar(next: false);
