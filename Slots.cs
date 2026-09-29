@@ -174,7 +174,7 @@ namespace ExtraSlots
                 cachedItems.Remove(_gridPos);
             }
 
-            public Slot(string slotID, int slotIndex, Func<string> getName = null, Func<ItemDrop.ItemData, bool> itemIsValid = null, Func<bool> isActive = null)
+            public Slot(string slotID, int slotIndex, Func<string> getName, Func<ItemDrop.ItemData, bool> itemIsValid, Func<bool> isActive)
             {
                 _id = slotID;
                 _index = slotIndex;
