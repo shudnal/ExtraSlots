@@ -227,6 +227,32 @@ public static class QuickBars
         return Array.Empty<Slot>();
     }
 
+    [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.ToggleBindingHint))]
+    private static class HotkeyBar_ToggleBindingHint_ExtraSlotLabels
+    {
+        private static void Postfix(HotkeyBar __instance, bool bShouldEnable)
+        {
+            if (!__instance || __instance.m_elements == null)
+                return;
+
+            // Only our three panels have a registered layout; leave all other bars unchanged.
+            Slot[] barSlots = GetSlotsForBar(__instance.name);
+            int elementCount = Math.Min(__instance.m_elements.Count, barSlots.Length);
+            for (int index = 0; index < elementCount; index++)
+            {
+                HotkeyBar.ElementData element = __instance.m_elements[index];
+                Slot slot = barSlots[index];
+                if (element == null || !element.m_go || slot == null)
+                    continue;
+
+                // Restore custom labels in this call, without waiting for the next icon refresh.
+                TMP_Text bindingText = GetElementExtraData(element).BindingText;
+                if (bindingText)
+                    bindingText.text = bShouldEnable ? slot.GetShortcutText() : string.Empty;
+            }
+        }
+    }
+
     private static int GetSlotOffset(string name)
     {
         if (name == AmmoSlotsHotBar.barName)
@@ -419,13 +445,16 @@ public static class QuickBars
 
     private static bool UpdateCurrentHotkeyBar(bool joyHotbarLeft, bool joyHotbarRight, bool joyHotbarUse)
     {
+        // Block the caller's initial-bar fallback as well as actions on an existing bar.
+        if (!IsHotkeyBarsActive())
+            return true;
+
         if (_currentBarIndex < 0 || _currentBarIndex > bars.Count - 1)
             return false;
 
         HotkeyBar hotkeyBar = bars[_currentBarIndex];
-        bool isHotkeyBarsActive = IsHotkeyBarsActive();
-        if (hotkeyBar.m_selected < 0 || hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1 || !isHotkeyBarsActive)
-            return !isHotkeyBarsActive;
+        if (hotkeyBar.m_selected < 0 || hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1)
+            return false;
 
         if (joyHotbarLeft && --hotkeyBar.m_selected < 0)
             ChangeActiveHotkeyBar(next: false);
