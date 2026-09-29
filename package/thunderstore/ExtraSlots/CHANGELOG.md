@@ -1,7 +1,8 @@
-# Unreleased
+# 1.2.15
 * fixed custom-slot auto-equip items preventing automatic tombstone recovery even when the contents fit
 * tombstone weight checks now omit uncertain equipment bonuses instead of rejecting all recovery, while accounting for possible loss of current equipment bonuses
 * mutually exclusive utility items no longer block automatic tombstone recovery when their uncertain bonuses are not needed
+* fixed initial hotbar selection bypassing UI input blocking
 
 # 1.2.14
 * fixed quick-slot hotbars disappearing during auto pickup with AdventureBackpacks and other inventory capacity checks
