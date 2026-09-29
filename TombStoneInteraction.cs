@@ -109,32 +109,111 @@ namespace ExtraSlots
                 && existing.m_shared.m_itemType == item.m_shared.m_itemType);
         }
 
-        private static bool CanAccountForAutoEquipCarryEffect(Player player, ItemDrop.ItemData item, Slot destinationSlot, out float carryDelta)
+        private static bool HasIncomingEquipConflict(PlayerInventoryOperations.SimulatedEquipmentPlacement placement,
+            List<PlayerInventoryOperations.SimulatedEquipmentPlacement> autoEquipPlacements)
         {
-            carryDelta = 0f;
-            if (player == null || item == null || destinationSlot == null || !IsItemToEquip(item))
-                return true;
-
-            StatusEffect incomingEffect = item.m_shared?.m_equipStatusEffect;
-            float incomingDelta = GetCarryWeightChange(incomingEffect);
-            if (CanGuaranteeAdditionalEquipEffect(player, item, destinationSlot))
+            foreach (PlayerInventoryOperations.SimulatedEquipmentPlacement other in autoEquipPlacements)
             {
-                carryDelta = incomingDelta;
-                return true;
+                if (ReferenceEquals(placement.Item, other.Item))
+                    continue;
+
+                if (placement.Slot == other.Slot)
+                    return true;
+
+                ItemDrop.ItemData.ItemType itemType = placement.Item.m_shared.m_itemType;
+                if (other.Item.m_shared.m_itemType == itemType
+                    && (itemType != ItemDrop.ItemData.ItemType.Utility
+                        || TombstoneUtilityConflictGuard.ShareConfiguredUniqueGroup(placement.Item, other.Item)))
+                    return true;
             }
 
-            // If auto-equip may replace an already equipped item, the exact post-equip carry limit
-            // depends on provider/vanilla replacement semantics. Never let EasyFit rely on a carry
-            // delta we cannot prove. Zero-delta replacements are safe only when the displaced
-            // same-type equipment also has no carry effect.
-            if (Mathf.Abs(incomingDelta) > 0.0001f || IsCustomSlotItem(item))
-                return false;
+            return false;
+        }
 
-            return !player.GetInventory().m_inventory.Any(existing => existing != null
-                && !ReferenceEquals(existing, item)
-                && player.IsItemEquiped(existing)
-                && existing.m_shared.m_itemType == item.m_shared.m_itemType
-                && Mathf.Abs(GetItemCarryWeightChange(existing)) > 0.0001f);
+        private static float GetRecoveryMaxCarryWeight(Player player, StatusEffect lootEffect,
+            List<PlayerInventoryOperations.SimulatedEquipmentPlacement> equipmentPlacements)
+        {
+            float maxCarryWeight = player.GetMaxCarryWeight();
+            List<PlayerInventoryOperations.SimulatedEquipmentPlacement> autoEquipPlacements = equipmentPlacements
+                .Where(placement => placement.Item?.m_shared != null && placement.Slot != null && IsItemToEquip(placement.Item))
+                .ToList();
+            List<ItemDrop.ItemData> equippedItems = player.GetInventory().m_inventory
+                .Where(item => item?.m_shared != null && player.IsItemEquiped(item))
+                .ToList();
+            HashSet<int> accountedEffects = new HashSet<int>();
+            Dictionary<int, StatusEffect> activeEffects = new Dictionary<int, StatusEffect>();
+            foreach (StatusEffect effect in player.GetSEMan().GetStatusEffects())
+            {
+                if (effect == null)
+                    continue;
+
+                int hash = effect.NameHash();
+                accountedEffects.Add(hash);
+                activeEffects[hash] = effect;
+            }
+
+            bool[] canAddEffect = new bool[autoEquipPlacements.Count];
+            HashSet<int> effectsAtRisk = new HashSet<int>();
+            for (int i = 0; i < autoEquipPlacements.Count; i++)
+            {
+                PlayerInventoryOperations.SimulatedEquipmentPlacement placement = autoEquipPlacements[i];
+                canAddEffect[i] = CanGuaranteeAdditionalEquipEffect(player, placement.Item, placement.Slot)
+                    && !HasIncomingEquipConflict(placement, autoEquipPlacements);
+                if (canAddEffect[i])
+                    continue;
+
+                // An uncertain replacement is not a reason to reject the whole grave. Instead,
+                // stop relying on positive effects of equipment it may displace. With custom
+                // providers, matching item types or the destination cell are conservative candidates.
+                foreach (ItemDrop.ItemData equipped in equippedItems)
+                {
+                    if (ReferenceEquals(equipped, placement.Item)
+                        || equipped.m_shared.m_itemType != placement.Item.m_shared.m_itemType
+                            && GetItemSlot(equipped) != placement.Slot)
+                        continue;
+
+                    if (equipped.m_shared.m_equipStatusEffect != null)
+                        effectsAtRisk.Add(equipped.m_shared.m_equipStatusEffect.NameHash());
+                    if (equipped.m_shared.m_setStatusEffect != null)
+                        effectsAtRisk.Add(equipped.m_shared.m_setStatusEffect.NameHash());
+                }
+            }
+
+            foreach (int hash in effectsAtRisk)
+            {
+                if (!activeEffects.TryGetValue(hash, out StatusEffect effect))
+                    continue;
+
+                float delta = GetCarryWeightChange(effect);
+                if (delta > 0f)
+                {
+                    maxCarryWeight -= delta;
+                    accountedEffects.Remove(hash);
+                }
+            }
+
+            // Current effects are already included in GetMaxCarryWeight. Refreshing Corpse Run
+            // or wearing multiple items with the same effect must not add its bonus again.
+            if (lootEffect != null && accountedEffects.Add(lootEffect.NameHash()))
+                maxCarryWeight += GetCarryWeightChange(lootEffect);
+
+            for (int i = 0; i < autoEquipPlacements.Count; i++)
+            {
+                StatusEffect effect = autoEquipPlacements[i].Item.m_shared.m_equipStatusEffect;
+                if (effect == null)
+                    continue;
+
+                float delta = GetCarryWeightChange(effect);
+                // Unknown/custom or mutually exclusive equipment contributes no speculative
+                // positive capacity. Keep possible penalties; neither case vetoes item recovery.
+                if (delta > 0f && !canAddEffect[i])
+                    continue;
+
+                if (accountedEffects.Add(effect.NameHash()))
+                    maxCarryWeight += delta;
+            }
+
+            return maxCarryWeight;
         }
 
         public static IEnumerator EquipItemsInSlots()
@@ -542,46 +621,7 @@ namespace ExtraSlots
                     return;
                 }
 
-                float effectiveMaxCarryWeight = player.GetMaxCarryWeight();
-                HashSet<int> accountedEffects = new HashSet<int>();
-
-                // GetMaxCarryWeight already includes every active status effect, not just equipment.
-                // A second grave refreshes an active Corpse Run; it does not grant another copy.
-                foreach (StatusEffect activeEffect in player.GetSEMan().GetStatusEffects())
-                    if (activeEffect != null)
-                        accountedEffects.Add(activeEffect.NameHash());
-
-                foreach (ItemDrop.ItemData equipped in playerInventory.m_inventory)
-                {
-                    if (equipped == null || !player.IsItemEquiped(equipped) || equipped.m_shared.m_equipStatusEffect == null)
-                        continue;
-
-                    accountedEffects.Add(equipped.m_shared.m_equipStatusEffect.NameHash());
-                }
-
-                if (__instance.m_lootStatusEffect != null)
-                {
-                    int effectHash = __instance.m_lootStatusEffect.NameHash();
-                    if (accountedEffects.Add(effectHash))
-                        effectiveMaxCarryWeight += GetCarryWeightChange(__instance.m_lootStatusEffect);
-                }
-
-                foreach (PlayerInventoryOperations.SimulatedEquipmentPlacement placement in equipmentPlacements)
-                {
-                    ItemDrop.ItemData item = placement.Item;
-                    if (item == null || !IsItemToEquip(item))
-                        continue;
-
-                    if (!CanAccountForAutoEquipCarryEffect(player, item, placement.Slot, out float carryDelta))
-                    {
-                        __result = false;
-                        return;
-                    }
-
-                    StatusEffect effect = item.m_shared?.m_equipStatusEffect;
-                    if (effect != null && accountedEffects.Add(effect.NameHash()))
-                        effectiveMaxCarryWeight += carryDelta;
-                }
+                float effectiveMaxCarryWeight = GetRecoveryMaxCarryWeight(player, __instance.m_lootStatusEffect, equipmentPlacements);
 
                 __result = playerInventory.GetTotalWeight() + tombstoneInventory.GetTotalWeight() <= effectiveMaxCarryWeight;
             }
