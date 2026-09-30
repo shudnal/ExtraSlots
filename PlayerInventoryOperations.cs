@@ -31,7 +31,7 @@ namespace ExtraSlots
             InvalidForSlot
         }
 
-        private sealed class ItemReferenceComparer : IEqualityComparer<ItemDrop.ItemData>
+        internal sealed class ItemReferenceComparer : IEqualityComparer<ItemDrop.ItemData>
         {
             internal static readonly ItemReferenceComparer Instance = new ItemReferenceComparer();
 

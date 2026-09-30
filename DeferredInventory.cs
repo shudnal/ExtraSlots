@@ -390,47 +390,6 @@ namespace ExtraSlots
             return true;
         }
 
-        internal static bool FinalizeDetachedReplacement(Player player, DeferredEntry handle, ItemDrop.ItemData item)
-        {
-            if (handle != null)
-            {
-                handle.PendingFinalization = false;
-                InvalidateRestorationOpportunity();
-            }
-            if (handle == null || item == null || !EnsureLoaded(player))
-                return false;
-
-            int index = entries.IndexOf(handle);
-            if (index < 0)
-                return false;
-
-            bool nowResident = player.GetInventory().ContainsItem(item);
-            DeferredEntry updated = null;
-            if (!nowResident)
-            {
-                ItemDrop.ItemData stored = item.Clone();
-                stored.m_equipped = false;
-                ApplyPreferredSlotMetadata(player, stored, handle.PreferredSlotId);
-                if (!TryCreateEntry(stored, handle.PreferredSlotId, handle.RestoreEquipped, out updated))
-                    return false;
-            }
-
-            if (nowResident)
-                entries.RemoveAt(index);
-            else
-                entries[index] = updated;
-            revision++;
-            if (Flush(player))
-                return true;
-
-            if (nowResident)
-                entries.Insert(index, handle);
-            else
-                entries[index] = handle;
-            revision++;
-            return false;
-        }
-
         internal static string GetMigrationKey(ItemDrop.ItemData item)
         {
             if (item == null)

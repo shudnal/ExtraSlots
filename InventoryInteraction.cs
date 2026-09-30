@@ -266,21 +266,6 @@ namespace ExtraSlots
                 __instance.m_height = __state.Value;
                 __state = null;
 
-                bool upgradePrecheckBypass = Inventory_AddItem_ByName_FindAppropriateSlot.ConsumeUpgradePrecheckBypass();
-
-                if (__result == emptyPosition
-                    && Inventory_AddItem_ByName_FindAppropriateSlot.IsReplacementCall
-                    && InventoryGui_DoCrafting_UpgradeInSlot.UpgradeSourceSlot is Slot sourceSlot
-                    && Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot is ItemDrop.ItemData upgradeItem)
-                {
-                    sourceSlot.ClearItemCache();
-                    if (sourceSlot.IsFree && sourceSlot.ItemFits(upgradeItem))
-                    {
-                        __result = sourceSlot.GridPosition;
-                        LogDebug($"Inventory.FindEmptySlot for upgraded item {upgradeItem.m_shared.m_name} {__result}");
-                    }
-                }
-
                 if (__result == emptyPosition && TryFindFreeEquipmentSlotForItem(Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot, out Slot slot1))
                 {
                     __result = slot1.GridPosition;
@@ -304,16 +289,6 @@ namespace ExtraSlots
                     __result = gridPos;
                     LogDebug($"Inventory.FindEmptySlot made free space for AddItem_ByName item {Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot.m_shared.m_name} {__result}");
                 }
-
-                // Inventory.AddItem(name, ...) performs an early FindEmptySlot precheck before it
-                // creates the upgraded ItemData. Let that one precheck pass so the actual replacement
-                // reaches the scoped AddItem recovery below, where it can be deferred losslessly.
-                if (__result == emptyPosition && upgradePrecheckBypass
-                    && InventoryGui_DoCrafting_UpgradeInSlot.IsExpectedReplacementPrefab(Inventory_AddItem_ByName_FindAppropriateSlot.itemToFindSlot))
-                {
-                    __result = new Vector2i(0, 0);
-                    LogDebug("Inventory.FindEmptySlot allowed the upgrade replacement creation to continue to deferred recovery.");
-                }
             }
 
             [HarmonyFinalizer]
@@ -329,258 +304,113 @@ namespace ExtraSlots
         [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.DoCrafting))]
         internal static class InventoryGui_DoCrafting_UpgradeInSlot
         {
-            internal enum UpgradeOutcome { Regular, Pending, Success, Downgraded, Destroyed }
-
             internal sealed class UpgradeState
             {
                 internal UpgradeState Previous;
-                internal Player Player;
                 internal Inventory Inventory;
-                internal Slot SourceSlot;
                 internal ItemDrop.ItemData Source;
-                internal ItemDrop.ItemData Snapshot;
-                internal ItemDrop.ItemData Replacement;
-                internal ItemDrop.ItemData DetachedReplacement;
-                internal DeferredInventory.DeferredEntry DeferredHandle;
-                internal IDisposable Mutation;
+                internal Vector2i SourcePosition;
                 internal string PrefabName;
-                internal bool WasEquipped;
-                internal bool OriginalStarted;
-                internal bool Accepted;
-                internal UpgradeOutcome Outcome;
-                internal int Quality => Outcome == UpgradeOutcome.Downgraded ? Snapshot.m_quality - 1 : Snapshot.m_quality + 1;
+                internal HashSet<ItemDrop.ItemData> ItemsBefore;
             }
 
-            internal static UpgradeState Current;
-            internal static Slot UpgradeSourceSlot => IsActive ? Current.SourceSlot : null;
-            internal static ItemDrop.ItemData UpgradeSourceItem => IsActive ? Current.Source : null;
-            internal static bool IsActive => Current?.SourceSlot != null && Current.OriginalStarted;
+            private static UpgradeState current;
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(InventoryGui __instance, Player player, out UpgradeState __state)
+            private static void Prefix(out UpgradeState __state)
             {
-                __state = new UpgradeState { Previous = Current };
-                Current = __state;
-                if (player == null || player.GetInventory() != PlayerInventory
-                    || __instance.m_craftUpgradeItem is not ItemDrop.ItemData item
-                    || !PlayerInventory.ContainsItem(item)
-                    || GetSlotInGrid(item.m_gridPos) is not Slot sourceSlot)
-                    return;
-
-                __state.Player = player;
-                __state.Inventory = player.GetInventory();
-                __state.SourceSlot = sourceSlot;
-                __state.Source = item;
-                __state.Snapshot = item.Clone();
-                __state.PrefabName = __instance.m_craftRecipe?.m_item?.gameObject?.name ?? item.m_dropPrefab?.name;
-                __state.WasEquipped = item.m_equipped || player.IsItemEquiped(item);
-                __state.Outcome = player.GetCurrentCraftingStation()?.m_upgrader == true
-                    ? UpgradeOutcome.Pending : UpgradeOutcome.Regular;
+                // A skipped or nested call needs its own frame, but no inventory snapshot yet.
+                __state = new UpgradeState { Previous = current };
+                current = __state;
             }
 
-            private static void MarkOriginalStarted()
+            private static void CaptureUpgrade(InventoryGui gui, Player player)
             {
-                if (Current?.SourceSlot == null || Current.OriginalStarted)
+                UpgradeState state = current;
+                Inventory inventory = player?.GetInventory();
+                if (state == null || state.ItemsBefore != null || inventory == null || inventory != PlayerInventory
+                    || gui.m_craftUpgradeItem is not ItemDrop.ItemData source || !source.m_dropPrefab
+                    || !inventory.ContainsItem(source)
+                    || GetSlotInGrid(source.m_gridPos) is not Slot sourceSlot || sourceSlot.IsEmptySlot)
                     return;
 
-                Current.OriginalStarted = true;
-                // Keep observers from restoring/consuming the escrow entry before every crafting
-                // postfix has finished enriching the replacement's custom item data. Do not open
-                // this transaction for foreign prefixes that replace DoCrafting completely.
-                Current.Mutation = PlayerInventoryOperations.Batch(Current.Inventory);
-            }
-
-            private static void MarkOutcome(UpgradeOutcome outcome)
-            {
-                if (IsActive)
-                    Current.Outcome = outcome;
+                // Runs only when the method body starts, after other prefixes. Keep identities,
+                // not item copies: the game owns every upgrade outcome and all item data.
+                state.Inventory = inventory;
+                state.Source = source;
+                state.SourcePosition = source.m_gridPos;
+                state.PrefabName = source.m_dropPrefab.name;
+                state.ItemsBefore = new HashSet<ItemDrop.ItemData>(inventory.m_inventory,
+                    PlayerInventoryOperations.ItemReferenceComparer.Instance);
             }
 
             private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                List<CodeInstruction> code = instructions.ToList();
-                Dictionary<string, UpgradeOutcome> outcomes = new Dictionary<string, UpgradeOutcome>
-                {
-                    { "$msg_upgrader_success", UpgradeOutcome.Success },
-                    { "$msg_upgrader_failed", UpgradeOutcome.Downgraded },
-                    { "$msg_upgrader_broke", UpgradeOutcome.Destroyed }
-                };
-                // Observe the actual branch before refunds or callbacks. A missing replacement alone
-                // cannot distinguish intentional destruction from an aborted/failed insertion.
-                foreach (string token in outcomes.Keys)
-                    if (code.Count(instruction => instruction.opcode == OpCodes.Ldstr && Equals(instruction.operand, token)) != 1)
-                        throw new InvalidOperationException($"Unsupported DoCrafting upgrader outcome marker: {token}.");
+                yield return new CodeInstruction(OpCodes.Ldarg_0);
+                yield return new CodeInstruction(OpCodes.Ldarg_1);
+                yield return new CodeInstruction(OpCodes.Call,
+                    AccessTools.Method(typeof(InventoryGui_DoCrafting_UpgradeInSlot), nameof(CaptureUpgrade)));
 
-                // Prefixes from other mods may fully replace DoCrafting and deliberately remove an
-                // ExtraSlots item themselves. Recovery is valid only after the vanilla body actually
-                // starts; otherwise their intentional removal must remain authoritative.
-                yield return new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(InventoryGui_DoCrafting_UpgradeInSlot), nameof(MarkOriginalStarted)));
-
-                MethodInfo mark = AccessTools.Method(typeof(InventoryGui_DoCrafting_UpgradeInSlot), nameof(MarkOutcome));
-                foreach (CodeInstruction instruction in code)
-                {
-                    if (instruction.opcode == OpCodes.Ldstr && instruction.operand is string token
-                        && outcomes.TryGetValue(token, out UpgradeOutcome outcome))
-                    {
-                        CodeInstruction marker = new CodeInstruction(OpCodes.Ldc_I4, (int)outcome);
-                        marker.labels.AddRange(instruction.labels);
-                        marker.blocks.AddRange(instruction.blocks);
-                        instruction.labels.Clear();
-                        instruction.blocks.Clear();
-                        yield return marker;
-                        yield return new CodeInstruction(OpCodes.Call, mark);
-                    }
+                // No outcome markers, branch matching, or changes to the crafting body.
+                foreach (CodeInstruction instruction in instructions)
                     yield return instruction;
-                }
             }
 
-            internal static bool IsReplacementRequest(string name, int quality, int variant, Vector2i position) =>
-                IsActive && Current.Outcome != UpgradeOutcome.Pending && Current.Outcome != UpgradeOutcome.Destroyed
-                && !Current.Inventory.ContainsItem(Current.Source)
-                && string.Equals(name, Current.PrefabName, StringComparison.Ordinal)
-                && quality == Current.Quality && variant == Current.Snapshot.m_variant
-                && position == Current.Snapshot.m_gridPos;
-
-            internal static bool IsExpectedReplacementPrefab(ItemDrop.ItemData item) =>
-                IsActive && Inventory_AddItem_ByName_FindAppropriateSlot.IsReplacementCall
-                && item != null && string.Equals(item.m_dropPrefab?.name, Current.PrefabName, StringComparison.Ordinal);
-
-            internal static void ObserveReplacementCreation(ItemDrop.ItemData result)
+            private static void ReturnReplacementToSourcePosition(UpgradeState state)
             {
-                if (!IsActive || !Inventory_AddItem_ByName_FindAppropriateSlot.IsReplacementCall || result == null)
+                if (state.ItemsBefore == null || state.Inventory != PlayerInventory
+                    || state.Inventory.m_inventory.Any(item => ReferenceEquals(item, state.Source)))
                     return;
 
-                // dropIfFullInv can return detached ItemData even after spawning a default prefab.
-                // Only resident output or a successful, explicit escrow adoption is authoritative.
-                if (Current.Inventory.ContainsItem(result))
+                ItemDrop.ItemData replacement = null;
+                foreach (ItemDrop.ItemData item in state.Inventory.m_inventory)
                 {
-                    Current.Accepted = true;
-                    Current.Replacement = result;
-                }
-            }
+                    if (item == null || state.ItemsBefore.Contains(item) || !item.m_dropPrefab
+                        || !string.Equals(item.m_dropPrefab.name, state.PrefabName, StringComparison.Ordinal))
+                        continue;
 
-            internal static void HandleReplacementAddResult(ItemDrop.ItemData item, bool originalRan, ref bool result)
-            {
-                if (!IsExpectedReplacementPrefab(item) || Current.Accepted
-                    || item.m_variant != Current.Snapshot.m_variant || item.m_quality != Current.Quality)
-                    return;
-
-                if (result)
-                {
-                    Current.Accepted = true;
-                    Current.Replacement = Current.Inventory.ContainsItem(item) ? item : null;
-                    return;
-                }
-
-                // Preserve an intentional foreign-prefix rejection. Roll back the original instead.
-                if (!originalRan)
-                    return;
-
-                if (DeferredInventory.EnqueueDetached(Current.Player, item, out DeferredInventory.DeferredEntry handle,
-                    Current.SourceSlot.ID, Current.WasEquipped, "upgrade replacement could not be inserted after topology changed", pendingFinalization: true))
-                {
-                    Current.Accepted = true;
-                    Current.Replacement = null;
-                    Current.DetachedReplacement = item;
-                    Current.DeferredHandle = handle;
-                    result = true;
-                }
-            }
-
-            private static void Complete(UpgradeState state)
-            {
-                if (state?.SourceSlot == null || !state.OriginalStarted || state.Outcome == UpgradeOutcome.Destroyed)
-                    return;
-
-                Player player = state.Player;
-                Inventory inventory = state.Inventory;
-                if (!player || inventory == null)
-                    return;
-
-                if (state.DeferredHandle != null)
-                {
-                    // Crafting postfixes can enrich custom data after the first durable adoption.
-                    // Refresh that exact entry, or relinquish it if a provider made the output resident.
-                    if (!DeferredInventory.FinalizeDetachedReplacement(player, state.DeferredHandle, state.DetachedReplacement))
-                        LogWarning("Unable to refresh the deferred upgrade output after crafting postfixes; its previously saved representation was retained.");
-                    if (inventory.ContainsItem(state.DetachedReplacement))
-                        state.Replacement = state.DetachedReplacement;
-                }
-
-                if (!state.Accepted && !inventory.ContainsItem(state.Source))
-                {
-                    ItemDrop.ItemData original = state.Snapshot.Clone();
-                    original.m_equipped = false;
-                    original.m_customData[customKeyPlayerID] = player.GetPlayerID().ToString();
-                    original.m_customData[customKeySlotID] = state.SourceSlot.ID;
-
-                    // Preserve ownership before invoking slot validators or equipment providers.
-                    if (!DeferredInventory.EnqueueDetached(player, original, state.SourceSlot.ID, state.WasEquipped, "upgrade rollback"))
+                    // One upgrade has one output. Do not guess if another mod violates that contract.
+                    if (replacement != null && !ReferenceEquals(replacement, item))
                     {
-                        using (PlayerInventoryOperations.Batch(inventory))
-                        {
-                            bool restored = false;
-                            ItemDrop.ItemData placed = null;
-                            try
-                            {
-                                PlayerInventoryOperations.TryInsertDetachedToBestAvailable(original, state.SourceSlot.ID,
-                                    state.WasEquipped, out placed, out restored, out _);
-                            }
-                            catch (Exception ex)
-                            {
-                                restored = inventory.ContainsItem(original);
-                                LogWarning($"Failed to place an upgrade rollback item normally:\n{ex}");
-                            }
-
-                            if (!restored)
-                            {
-                                PlayerInventoryOperations.InsertForReconciliation(original,
-                                    new Vector2i(InventoryWidth - 1, InventoryHeightFull - 1));
-                                LogWarning($"Upgrade rollback for {original.m_shared.m_name} used emergency reconciliation staging because deferred persistence was unavailable.");
-                            }
-                            else if (state.WasEquipped && placed != null && placed.IsEquipable() && !player.IsItemEquiped(placed))
-                                player.EquipItem(placed, triggerEquipEffects: false);
-                        }
+                        LogWarning($"Multiple new items match upgraded prefab {state.PrefabName}; their positions were left unchanged.");
+                        return;
                     }
+                    replacement = item;
                 }
-                else if (state.Accepted && state.WasEquipped && state.Replacement != null
-                    && inventory.ContainsItem(state.Replacement) && !player.IsItemEquiped(state.Replacement))
-                    player.EquipItem(state.Replacement, triggerEquipEffects: false);
 
-                ItemsSlotsValidation.ValidateItems();
-                ItemsSlotsValidation.ValidateSlots();
+                if (replacement == null || replacement.m_gridPos == state.SourcePosition)
+                    return;
+
+                // Move only this resident item. The common helper checks the destination, leaves
+                // any occupant alone, and updates caches/notifications only after a successful move.
+                if (PlayerInventoryOperations.Move(replacement, state.SourcePosition))
+                    LogDebug($"Returned upgraded item {state.PrefabName} to {state.SourcePosition}");
+                else
+                    LogDebug($"Left upgraded item {state.PrefabName} at {replacement.m_gridPos}: original position {state.SourcePosition} is unavailable.");
             }
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(UpgradeState __state, Exception __exception)
+            private static Exception Finalizer(ref UpgradeState __state, Exception __exception)
             {
-                if (__state == null)
+                UpgradeState state = __state;
+                if (state == null)
                     return __exception;
 
-                // Detach before calling providers, but do not expose an outer craft to these callbacks.
-                Current = null;
+                // A finalizer can be retried. Detach this frame before inventory callbacks so
+                // neither this operation nor an outer craft is active during the final move.
+                __state = null;
+                current = null;
                 try
                 {
-                    Complete(__state);
+                    ReturnReplacementToSourcePosition(state);
                 }
                 catch (Exception ex)
                 {
-                    LogWarning($"Failed to finalize ExtraSlots upgrade recovery:\n{ex}");
+                    LogWarning($"Failed to return an upgraded item to its original position:\n{ex}");
                 }
                 finally
                 {
-                    try
-                    {
-                        __state?.Mutation?.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        LogWarning($"Failed to notify upgrade inventory changes:\n{ex}");
-                    }
-                    finally
-                    {
-                        Current = __state?.Previous;
-                    }
+                    current = state.Previous;
                 }
                 return __exception;
             }
@@ -977,8 +807,6 @@ namespace ExtraSlots
                     if (PlayerInventoryOperations.InsertExisting(item, slot.GridPosition))
                         __result = true;
                 }
-
-                InventoryGui_DoCrafting_UpgradeInSlot.HandleReplacementAddResult(item, __runOriginal, ref __result);
             }
         }
 
@@ -1035,13 +863,6 @@ namespace ExtraSlots
                 __result = __instance.AddItem(item);
                 return false;
             }
-
-            [HarmonyPriority(Priority.Last)]
-            private static void Postfix(Inventory __instance, ItemDrop.ItemData item, bool __runOriginal, ref bool __result)
-            {
-                if (!__instance.m_temoraryInventory && item?.m_shared != null && __instance == PlayerInventory)
-                    InventoryGui_DoCrafting_UpgradeInSlot.HandleReplacementAddResult(item, __runOriginal, ref __result);
-            }
         }
 
         [HarmonyPatch(typeof(Inventory), nameof(Inventory.AddItem), typeof(string), typeof(int), typeof(int), typeof(int), typeof(long), typeof(string), typeof(Vector2i), typeof(bool), typeof(bool), typeof(bool))]
@@ -1053,41 +874,19 @@ namespace ExtraSlots
                 internal Inventory Inventory;
                 internal ItemDrop.ItemData Candidate;
                 internal ItemDrop.ItemData PendingDrop;
-                internal InventoryGui_DoCrafting_UpgradeInSlot.UpgradeState Upgrade;
-                internal bool PrecheckPending;
             }
 
             private static CallState current;
             public static ItemDrop.ItemData itemToFindSlot;
-            internal static bool IsReplacementCall => current?.Upgrade != null
-                && ReferenceEquals(current.Upgrade, InventoryGui_DoCrafting_UpgradeInSlot.Current);
-
-            internal static bool ConsumeUpgradePrecheckBypass()
-            {
-                bool pending = current?.PrecheckPending == true;
-                if (current != null)
-                    current.PrecheckPending = false;
-                return pending && IsReplacementCall;
-            }
 
             [HarmonyPriority(Priority.First)]
-            private static void Prefix(Inventory __instance, string name, int quality, int variant, Vector2i position,
-                ref bool dropIfFullInv, out CallState __state)
+            private static void Prefix(Inventory __instance, string name, int quality, int variant, out CallState __state)
             {
                 __state = new CallState { Previous = current, Inventory = __instance };
                 current = __state;
                 itemToFindSlot = null;
                 if (__instance.m_temoraryInventory || __instance != PlayerInventory)
                     return;
-
-                if (InventoryGui_DoCrafting_UpgradeInSlot.IsReplacementRequest(name, quality, variant, position))
-                {
-                    __state.Upgrade = InventoryGui_DoCrafting_UpgradeInSlot.Current;
-                    __state.PrecheckPending = true;
-                    // Ordinary crafting/refunds keep the caller's policy. Only a tracked replacement
-                    // uses lossless escrow or rollback instead of vanilla's detached default-prefab drop.
-                    dropIfFullInv = false;
-                }
 
                 ItemDrop component = ObjectDB.instance?.GetItemPrefab(name)?.GetComponent<ItemDrop>();
                 if (component?.m_itemData?.m_shared == null || component.m_itemData.m_shared.m_maxStackSize > 1)
@@ -1134,19 +933,11 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(ItemDrop.ItemData __result, CallState __state, Exception __exception)
+            private static Exception Finalizer(CallState __state, Exception __exception)
             {
-                if (__state == null)
-                    return __exception;
-
-                try
+                if (__state != null)
                 {
-                    if (IsReplacementCall)
-                        InventoryGui_DoCrafting_UpgradeInSlot.ObserveReplacementCreation(__result);
-                }
-                finally
-                {
-                    current = __state?.Previous;
+                    current = __state.Previous;
                     itemToFindSlot = current?.Candidate;
                 }
                 return __exception;

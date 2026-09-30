@@ -1,3 +1,8 @@
+# 1.2.16
+* simplified upgrade handling to return only an existing replacement item to its original extra slot
+* removed upgrade outcome marker checks that could interrupt mod initialization when another mod changes crafting
+* removed upgrade-specific rollback, deferred recovery, capacity bypasses and automatic re-equipping
+
 # 1.2.15
 * fixed custom-slot auto-equip items preventing automatic tombstone recovery even when the contents fit
 * tombstone weight checks now omit uncertain equipment bonuses instead of rejecting all recovery, while accounting for possible loss of current equipment bonuses
