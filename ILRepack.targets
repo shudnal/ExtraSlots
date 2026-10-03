@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <ModName>ExtraSlots</ModName>
-    <LanguageFileName>Extra Slots.English.json</LanguageFileName>
+    <LanguageFileName>Extra_Slots.English.json</LanguageFileName>
   </PropertyGroup>
 
   <Target Name="InitializeExtraSlotsPackageProperties">
