@@ -1,3 +1,8 @@
+# 1.2.17
+* fixed unsafe extra hotbar indexing by keeping display slot indices separate from inventory item positions
+* isolated nested hotbar updates and limited item-list replacement to the current hotbar call
+* isolated failing hotbar updates, with automatic retries and rate-limited diagnostic logging
+
 # 1.2.16
 * simplified upgrade handling to return only an existing replacement item to its original extra slot
 * removed upgrade outcome marker checks that could interrupt mod initialization when another mod changes crafting
