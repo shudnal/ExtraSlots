@@ -119,6 +119,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> equipmentSlotsPreventStackAll;
 
         public static ConfigEntry<bool> foodSlotsHotBarEnabled;
+        public static ConfigEntry<bool> foodSlotsHotBarHidden;
         public static ConfigEntry<Vector2> foodSlotsHotBarOffset;
         public static ConfigEntry<RectTransformExtensions.ElementAnchor> foodSlotsHotBarAnchor;
         public static ConfigEntry<float> foodSlotsHotBarScale;
@@ -152,6 +153,7 @@ namespace ExtraSlots
         public static ConfigEntry<string> miscSlotsItemBlackList;
 
         public static ConfigEntry<bool> ammoSlotsHotBarEnabled;
+        public static ConfigEntry<bool> ammoSlotsHotBarHidden;
         public static ConfigEntry<Vector2> ammoSlotsHotBarOffset;
         public static ConfigEntry<RectTransformExtensions.ElementAnchor> ammoSlotsHotBarAnchor;
         public static ConfigEntry<float> ammoSlotsHotBarScale;
@@ -178,6 +180,7 @@ namespace ExtraSlots
         public static ConfigEntry<string> ammoSlotHotKey3Text;
 
         public static ConfigEntry<bool> quickSlotsHotBarEnabled;
+        public static ConfigEntry<bool> quickSlotsHotBarHidden;
         public static ConfigEntry<Vector2> quickSlotsHotBarOffset;
         public static ConfigEntry<RectTransformExtensions.ElementAnchor> quickSlotsHotBarAnchor;
         public static ConfigEntry<float> quickSlotsHotBarScale;
@@ -555,6 +558,7 @@ namespace ExtraSlots
             };
 
             quickSlotsHotBarEnabled = serverConfig("Panels - Quick slots", "Enabled", defaultValue: true, "Enable hotbar with quick slots [Synced with Server]");
+            quickSlotsHotBarHidden = config("Panels - Quick slots", "Hide hotbar", defaultValue: false, "Hide the quick slots hotbar without disabling its hotkeys. Keep Enabled on to use hotkeys. Inventory slots remain visible; the hidden bar is excluded from gamepad hotbar navigation.");
             quickSlotsHotBarOffset = config("Panels - Quick slots", "Offset", defaultValue: new Vector2(230f, 156f), "On screen position of quick slots hotbar panel");
             quickSlotsHotBarAnchor = config("Panels - Quick slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for quick slots hotbar panel");
             quickSlotsHotBarScale = config("Panels - Quick slots", "Scale", defaultValue: 1f, "Relative size");
@@ -573,11 +577,13 @@ namespace ExtraSlots
             quickSlotsAlwaysShowEmpty.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             quickSlotsHideStackSize.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             quickSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
+            quickSlotsHotBarHidden.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
             quickSlotsHotBarScale.SettingChanged += (s, e) => HotBars.QuickSlotsHotBar.MarkDirty();
 
             ammoSlotsHotBarEnabled = serverConfig("Panels - Ammo slots", "Enabled", defaultValue: true, "Enable hotbar with Ammo slots [Synced with Server]");
+            ammoSlotsHotBarHidden = config("Panels - Ammo slots", "Hide hotbar", defaultValue: false, "Hide the ammo slots hotbar without disabling its hotkeys. Keep Enabled on to use hotkeys. Inventory slots remain visible; the hidden bar is excluded from gamepad hotbar navigation.");
             ammoSlotsHotBarOffset = config("Panels - Ammo slots", "Offset", defaultValue: new Vector2(230f, 228f), "On screen position of ammo slots hotbar panel");
             ammoSlotsHotBarAnchor = config("Panels - Ammo slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for ammo slots hotbar panel");
             ammoSlotsHotBarScale = config("Panels - Ammo slots", "Scale", defaultValue: 1f, "Relative size");
@@ -614,11 +620,13 @@ namespace ExtraSlots
             ammoSlotsAlwaysShowEmpty.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             ammoSlotsHideStackSize.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             ammoSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
+            ammoSlotsHotBarHidden.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
             ammoSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
             ammoSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
             ammoSlotsHotBarScale.SettingChanged += (s, e) => HotBars.AmmoSlotsHotBar.MarkDirty();
 
             foodSlotsHotBarEnabled = serverConfig("Panels - Food slots", "Enabled", defaultValue: true, "Enable hotbar with Food slots [Synced with Server]");
+            foodSlotsHotBarHidden = config("Panels - Food slots", "Hide hotbar", defaultValue: false, "Hide the food slots hotbar without disabling its hotkeys. Keep Enabled on to use hotkeys. Inventory slots remain visible; the hidden bar is excluded from gamepad hotbar navigation.");
             foodSlotsHotBarOffset = config("Panels - Food slots", "Offset", defaultValue: new Vector2(230f, 84f), "On screen position of Food slots hotbar panel");
             foodSlotsHotBarAnchor = config("Panels - Food slots", "Offset Anchor", defaultValue: RectTransformExtensions.ElementAnchor.BottomLeft, "Anchor point for Food slots hotbar panel");
             foodSlotsHotBarScale = config("Panels - Food slots", "Scale", defaultValue: 1f, "Relative size");
@@ -654,6 +662,7 @@ namespace ExtraSlots
             foodSlotsAlwaysShowEmpty.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             foodSlotsHideStackSize.SettingChanged += (s, e) => HotBars.QuickBars.InvalidateRendering();
             foodSlotsHotBarEnabled.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
+            foodSlotsHotBarHidden.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
             foodSlotsHotBarOffset.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
             foodSlotsHotBarAnchor.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();
             foodSlotsHotBarScale.SettingChanged += (s, e) => HotBars.FoodSlotsHotBar.MarkDirty();

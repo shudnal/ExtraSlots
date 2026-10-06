@@ -76,10 +76,14 @@ public static class AmmoSlotsHotBar
         if (!isDirty)
             return false;
 
-        if (IsEnabled() && hotBarRect == null)
+        bool showBar = IsEnabled() && !ammoSlotsHotBarHidden.Value;
+        if (showBar && hotBarRect == null)
             CreateBar();
-        else if (!IsEnabled() && hotBarRect != null)
+        else if (!showBar && hotBarRect != null)
+        {
+            hotBarRect.gameObject.SetActive(false);
             ClearBar();
+        }
 
         if (hotBarRect != null)
         {
