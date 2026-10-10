@@ -2,7 +2,6 @@
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using HarmonyLib;
-using LocalizationManager;
 using ConditionalConfigSync;
 using System.Collections.Generic;
 using System.IO;
@@ -39,7 +38,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.2.17";
+        public const string pluginVersion = "1.2.18";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -642,11 +641,11 @@ namespace ExtraSlots
             foodSlotsStackColor = config("Panels - Food slots", "Stack size color", defaultValue: Color.clear, "Color of stack size label.");
             foodSlotsPreventStackAll = config("Panels - Food slots", "Prevent Stack All", defaultValue: true, "Prevent items from food slots to be placed into container when Stack All feature is used.");
             foodSlotsItemList = serverConfig("Panels - Food slots", "Custom item list", defaultValue: "",
-                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as ammo items to fit in food slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"));
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should be treated as food items to fit in food slots" +
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."));
             foodSlotsItemBlackList = serverConfig("Panels - Food slots", "Custom item black list", defaultValue: "",
-                    GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as ammo items to fit in food slots" +
-                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength). [Synced with Server]"));
+                    GetDescriptionSeparatedStrings("Comma separated list of items that should NOT be treated as food items to fit in food slots" +
+                                            "\nWorks with prefab names (like BeltStrength) and item names (like $item_beltstrength)."));
 
             foodSlotsItemList.SettingChanged += (s, e) =>
             {

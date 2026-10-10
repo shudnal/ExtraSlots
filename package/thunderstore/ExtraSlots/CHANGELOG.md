@@ -1,3 +1,9 @@
+# 1.2.18
+* extra hotbars now keep vanilla-compatible element indices based on actual inventory columns, fixing overlays such as PortablePals without changing item coordinates or patching those mods
+* kept compact visual layouts and slot labels separate from collection indices; gamepad navigation and clicks skip hidden padding and use the correct slot
+* added API.TryGetHotbarElement for resolving the existing element of an inventory item
+* hotbar cleanup no longer returns an exception object, avoiding unnecessary loss of the original exception stack
+
 # 1.2.17
 * added separate Hide hotbar options for quick, ammo and food panels, keeping their hotkeys active while hiding the HUD bars
 * fixed unsafe extra hotbar indexing by keeping display slot indices separate from inventory item positions
