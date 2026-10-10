@@ -41,7 +41,8 @@ public static class QuickBars
     private static readonly Dictionary<GameObject, ElementExtraData> elementsExtraData = new Dictionary<GameObject, ElementExtraData>(32);
     private static readonly Dictionary<HotkeyBar, HotkeyBarRefreshGate> refreshGates = new Dictionary<HotkeyBar, HotkeyBarRefreshGate>();
     private static readonly Dictionary<HotkeyBar, HotkeyBarRenderContext> renderContexts = new Dictionary<HotkeyBar, HotkeyBarRenderContext>();
-    private static bool localSlotIndicesPatched;
+    private static readonly Dictionary<HotkeyBar, HotkeyBarLayout> renderedLayouts = new Dictionary<HotkeyBar, HotkeyBarLayout>();
+    private static bool hotbarLayoutPatched;
     private static readonly List<ItemDrop.ItemData> itemsToUse = new List<ItemDrop.ItemData>();
 
     private sealed class HotkeyBarRefreshGate
@@ -212,6 +213,7 @@ public static class QuickBars
     {
         elementsExtraData.Clear();
         refreshGates.Clear();
+        renderedLayouts.Clear();
         _currentBarIndex = -1;
         bars = null;
     }
@@ -271,77 +273,139 @@ public static class QuickBars
         return Array.Empty<Slot>();
     }
 
+    // Rendering, labels and input share one mapping. Collection indices are inventory
+    // columns; display indices are the positions within the configured Quick/Ammo/Food bar.
+    private sealed class HotkeyBarLayout
+    {
+        internal readonly Slot[] SlotsByColumn;
+        internal readonly ItemDrop.ItemData[] ItemsByColumn;
+        internal readonly int[] DisplayIndices;
+        internal readonly int[] VisibleColumns;
+        internal readonly int Width;
+        internal int VisibleCount { get; private set; }
+
+        internal HotkeyBarLayout(string barName, Inventory inventory)
+        {
+            Width = inventory.GetWidth();
+            if (Width <= 0)
+                throw new InvalidOperationException($"Invalid inventory width {Width} for hotbar '{barName}'.");
+
+            SlotsByColumn = new Slot[Width];
+            ItemsByColumn = new ItemDrop.ItemData[Width];
+            DisplayIndices = new int[Width];
+            for (int column = 0; column < Width; column++)
+                DisplayIndices[column] = -1;
+
+            Slot[] barSlots = GetSlotsForBar(barName);
+            VisibleColumns = new int[barSlots.Length];
+            int[] columnsByDisplayIndex = new int[barSlots.Length];
+            bool[] activeColumns = new bool[Width];
+            int lastOccupiedDisplayIndex = -1;
+            for (int displayIndex = 0; displayIndex < barSlots.Length; displayIndex++)
+            {
+                Slot slot = barSlots[displayIndex];
+                if (slot == null)
+                    continue;
+
+                int column = slot.GridPosition.x;
+                if (column < 0 || column >= Width || SlotsByColumn[column] != null)
+                    throw new InvalidOperationException($"Hotbar '{barName}' cannot map slot '{slot.ID}' " +
+                        $"at {slot.GridPosition} to a unique inventory column (width={Width}).");
+
+                SlotsByColumn[column] = slot;
+                DisplayIndices[column] = displayIndex;
+                columnsByDisplayIndex[displayIndex] = column;
+                if (!slot.IsActive)
+                    continue;
+
+                activeColumns[column] = true;
+                ItemDrop.ItemData item = slot.Item;
+                if (item == null)
+                    continue;
+
+                if (item.m_gridPos != slot.GridPosition)
+                    throw new InvalidOperationException($"Hotbar '{barName}' slot '{slot.ID}' at " +
+                        $"{slot.GridPosition} contains an item at {item.m_gridPos}.");
+
+                ItemsByColumn[column] = item;
+                lastOccupiedDisplayIndex = displayIndex;
+            }
+
+            bool showEmpty = ShouldShowEmptySlots(barName);
+            // Preserve empty gaps before the last occupied slot, but never expose padding
+            // or inactive slots to display or gamepad navigation.
+            for (int displayIndex = 0; displayIndex < barSlots.Length; displayIndex++)
+            {
+                Slot slot = barSlots[displayIndex];
+                if (slot == null)
+                    continue;
+                int column = columnsByDisplayIndex[displayIndex];
+                if (activeColumns[column] && (showEmpty || displayIndex <= lastOccupiedDisplayIndex))
+                    VisibleColumns[VisibleCount++] = column;
+            }
+        }
+
+        internal Slot GetSlot(int column) => column >= 0 && column < Width ? SlotsByColumn[column] : null;
+
+        internal int GetVisibleOrder(int column)
+        {
+            for (int i = 0; i < VisibleCount; i++)
+                if (VisibleColumns[i] == column)
+                    return i;
+            return -1;
+        }
+    }
+
+    private static bool ShouldShowEmptySlots(string name) => name == QuickSlotsHotBar.barName
+        ? ExtraSlots.quickSlotsAlwaysShowEmpty.Value
+        : name == AmmoSlotsHotBar.barName ? ExtraSlots.ammoSlotsAlwaysShowEmpty.Value
+        : name == FoodSlotsHotBar.barName && ExtraSlots.foodSlotsAlwaysShowEmpty.Value;
+
+    private static HotkeyBarLayout GetLayout(HotkeyBar bar)
+    {
+        if (!bar)
+            return null;
+        if (renderContexts.TryGetValue(bar, out HotkeyBarRenderContext context) && context.Layout != null)
+            return context.Layout;
+        return renderedLayouts.TryGetValue(bar, out HotkeyBarLayout layout) ? layout : null;
+    }
+
     [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.ToggleBindingHint))]
     private static class HotkeyBar_ToggleBindingHint_ExtraSlotLabels
     {
         private static void Postfix(HotkeyBar __instance, bool bShouldEnable)
         {
-            if (!__instance || __instance.m_elements == null)
+            if (!__instance || !IsExtraSlotsHotBar(__instance.name) || __instance.m_elements == null)
                 return;
 
-            // Only our three panels have a registered layout; leave all other bars unchanged.
-            Slot[] barSlots = GetSlotsForBar(__instance.name);
-            int elementCount = Math.Min(__instance.m_elements.Count, barSlots.Length);
-            for (int index = 0; index < elementCount; index++)
+            HotkeyBarLayout layout = GetLayout(__instance);
+            for (int column = 0; column < __instance.m_elements.Count; column++)
             {
-                HotkeyBar.ElementData element = __instance.m_elements[index];
-                Slot slot = barSlots[index];
-                if (element == null || !element.m_go || slot == null)
+                HotkeyBar.ElementData element = __instance.m_elements[column];
+                if (element == null || !element.m_go)
                     continue;
 
-                // Restore custom labels in this call, without waiting for the next icon refresh.
+                Slot slot = layout?.GetSlot(column);
                 TMP_Text bindingText = GetElementExtraData(element).BindingText;
                 if (bindingText)
-                    bindingText.text = bShouldEnable ? slot.GetShortcutText() : string.Empty;
+                    bindingText.text = bShouldEnable && slot != null ? slot.GetShortcutText() : string.Empty;
             }
         }
     }
 
-    private static int GetSlotOffset(string name)
-    {
-        if (name == AmmoSlotsHotBar.barName)
-            return AmmoSlotsHotBar.barSlotIndex;
-        if (name == FoodSlotsHotBar.barName)
-            return FoodSlotsHotBar.barSlotIndex;
-        return QuickSlotsHotBar.barSlotIndex;
-    }
-
-    private static int GetDesiredElementCount(string name, Slot[] barSlots)
-    {
-        bool showEmpty = name == QuickSlotsHotBar.barName ? ExtraSlots.quickSlotsAlwaysShowEmpty.Value
-            : name == AmmoSlotsHotBar.barName ? ExtraSlots.ammoSlotsAlwaysShowEmpty.Value
-            : name == FoodSlotsHotBar.barName && ExtraSlots.foodSlotsAlwaysShowEmpty.Value;
-        if (!showEmpty)
-            return 0;
-
-        for (int i = barSlots.Length - 1; i >= 0; i--)
-            if (barSlots[i]?.IsActive == true)
-                return i + 1;
-
-        return 0;
-    }
-
-    // Keep the allocation count and every element lookup on the same immutable slot snapshot.
+    // Keep a complete, stable table of vanilla elements, including inactive padding.
+    // Third-party postfixes can index it with the real item's inventory column.
     private static int ResolveElementCount(int occupiedCount, HotkeyBar bar) =>
-        bar && renderContexts.TryGetValue(bar, out HotkeyBarRenderContext context)
-            ? Math.Max(occupiedCount, context.EmptyElementCount) : occupiedCount;
+        bar && renderContexts.TryGetValue(bar, out HotkeyBarRenderContext context) && context.Layout != null
+            ? Math.Max(occupiedCount, context.Layout.Width) : occupiedCount;
 
     private sealed class HotkeyBarRenderContext
     {
         internal readonly HotkeyBar Bar;
-        internal readonly Slot[] BarSlots;
-        internal readonly ItemDrop.ItemData[] SlotItems;
-        internal readonly Dictionary<ItemDrop.ItemData, int> ElementIndices =
-            new Dictionary<ItemDrop.ItemData, int>(PlayerInventoryOperations.ItemReferenceComparer.Instance);
-        internal int EmptyElementCount;
+        internal HotkeyBarLayout Layout;
         internal bool ItemsCollected;
 
-        internal HotkeyBarRenderContext(HotkeyBar bar)
-        {
-            Bar = bar;
-            BarSlots = (Slot[])GetSlotsForBar(bar.name).Clone();
-            SlotItems = new ItemDrop.ItemData[BarSlots.Length];
-        }
+        internal HotkeyBarRenderContext(HotkeyBar bar) => Bar = bar;
 
         internal void CollectItems(Inventory inventory, List<ItemDrop.ItemData> items)
         {
@@ -349,23 +413,12 @@ public static class QuickBars
                 throw new InvalidOperationException($"Unexpected item collection for hotbar '{Bar.name}'.");
 
             items.Clear();
-            EmptyElementCount = GetDesiredElementCount(Bar.name, BarSlots);
             if (inventory != null && ReferenceEquals(inventory, PlayerInventory))
             {
-                for (int index = 0; index < BarSlots.Length; index++)
-                {
-                    Slot slot = BarSlots[index];
-                    ItemDrop.ItemData item = slot?.IsActive == true ? slot.Item : null;
-                    if (item == null)
-                        continue;
-
-                    if (ElementIndices.ContainsKey(item))
-                        throw new InvalidOperationException($"The same item occupies multiple slots in hotbar '{Bar.name}'.");
-
-                    ElementIndices.Add(item, index);
-                    SlotItems[index] = item;
-                    items.Add(item);
-                }
+                Layout = new HotkeyBarLayout(Bar.name, inventory);
+                for (int column = 0; column < Layout.Width; column++)
+                    if (Layout.ItemsByColumn[column] is ItemDrop.ItemData item)
+                        items.Add(item);
             }
             ItemsCollected = true;
         }
@@ -388,37 +441,20 @@ public static class QuickBars
         context.CollectItems(inventory, items);
     }
 
-    private static int GetHotbarItemIndex(ItemDrop.ItemData item, HotkeyBar bar)
-    {
-        if (!bar || !IsExtraSlotsHotBar(bar.name))
-            return item.m_gridPos.x;
-
-        if (item != null && renderContexts.TryGetValue(bar, out HotkeyBarRenderContext context)
-            && context.ElementIndices.TryGetValue(item, out int index))
-            return index;
-
-        // Never clamp an unknown item onto another slot or fall back to its inventory column.
-        throw new InvalidOperationException($"An item outside the slot snapshot reached hotbar '{bar.name}'.");
-    }
-
     [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.UpdateIcons))]
-    private static class HotkeyBar_UpdateIcons_LocalSlotIndices
+    private static class HotkeyBar_UpdateIcons_VanillaLayout
     {
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
             List<CodeInstruction> original = instructions.ToList();
             List<CodeInstruction> code = original.Select(instruction => new CodeInstruction(instruction)).ToList();
-            localSlotIndicesPatched = false;
+            hotbarLayoutPatched = false;
 
-            FieldInfo gridPosition = AccessTools.Field(typeof(ItemDrop.ItemData), nameof(ItemDrop.ItemData.m_gridPos));
-            FieldInfo column = AccessTools.Field(typeof(Vector2i), nameof(Vector2i.x));
             FieldInfo elements = AccessTools.Field(typeof(HotkeyBar), nameof(HotkeyBar.m_elements));
             MethodInfo getBoundItems = AccessTools.Method(typeof(Inventory), nameof(Inventory.GetBoundItems));
             MethodInfo countGetter = AccessTools.PropertyGetter(typeof(List<HotkeyBar.ElementData>), "Count");
             MethodInfo collectItems = AccessTools.Method(typeof(QuickBars), nameof(CollectHotbarItems));
-            MethodInfo getIndex = AccessTools.Method(typeof(QuickBars), nameof(GetHotbarItemIndex));
             MethodInfo resolveCount = AccessTools.Method(typeof(QuickBars), nameof(ResolveElementCount));
-            List<int> coordinateReads = new List<int>();
             int collectionCall = -1;
             int allocationCheck = -1;
             CodeInstruction storeCount = null;
@@ -430,16 +466,6 @@ public static class QuickBars
                     if (collectionCall >= 0 || code[i].blocks.Count != 0)
                         return Unsupported(original, "ambiguous item collection");
                     collectionCall = i;
-                }
-
-                if (Equals(code[i].operand, gridPosition))
-                {
-                    if ((code[i].opcode != OpCodes.Ldflda && code[i].opcode != OpCodes.Ldfld)
-                        || i + 1 >= code.Count || code[i + 1].opcode != OpCodes.Ldfld
-                        || !Equals(code[i + 1].operand, column)
-                        || code[i + 1].labels.Count != 0 || code[i + 1].blocks.Count != 0)
-                        return Unsupported(original, "unsupported inventory-coordinate access");
-                    coordinateReads.Add(i);
                 }
 
                 if (i + 3 >= code.Count || !code[i].LoadsField(elements) || !code[i + 1].Calls(countGetter))
@@ -456,19 +482,11 @@ public static class QuickBars
                 storeCount = store;
             }
 
-            if (collectionCall < 0 || coordinateReads.Count == 0 || allocationCheck < 0)
-                return Unsupported(original, $"collection={collectionCall}, coordinateReads={coordinateReads.Count}, allocation={allocationCheck}");
+            if (collectionCall < 0 || allocationCheck < 0)
+                return Unsupported(original, $"collection={collectionCall}, allocation={allocationCheck}");
 
-            // Replace only reads inside UpdateIcons. The real ItemData coordinates and the
-            // inventory's GetBoundItems method stay unchanged, including during nested callbacks.
-            foreach (int index in coordinateReads)
-            {
-                code[index].opcode = OpCodes.Ldarg_0;
-                code[index].operand = null;
-                code[index + 1].opcode = OpCodes.Call;
-                code[index + 1].operand = getIndex;
-            }
-
+            // Only substitute the item source and minimum table size. Leave all vanilla
+            // m_gridPos.x reads intact so the body and third-party patches agree on indices.
             CodeInstruction collection = code[collectionCall];
             collection.opcode = OpCodes.Call;
             collection.operand = collectItems;
@@ -494,13 +512,13 @@ public static class QuickBars
                 result.Add(instruction);
             }
 
-            localSlotIndicesPatched = true;
+            hotbarLayoutPatched = true;
             return result;
         }
 
         private static IEnumerable<CodeInstruction> Unsupported(List<CodeInstruction> original, string reason)
         {
-            ExtraSlots.LogWarning($"Hotbar slot-index patch could not be applied ({reason}). " +
+            ExtraSlots.LogWarning($"Hotbar layout patch could not be applied ({reason}). " +
                 "Extra hotbar icon updates are disabled; native and other mods' bars remain unchanged.");
             return original;
         }
@@ -519,23 +537,100 @@ public static class QuickBars
 
     private static ItemDrop.ItemData GetItemForElement(HotkeyBar bar, int index)
     {
-        if (bar.name == vanillaBarName)
+        if (IsExtraSlotsHotBar(bar.name))
         {
-            for (int i = 0; i < bar.m_items.Count; i++)
-            {
-                ItemDrop.ItemData item = bar.m_items[i];
-                if (item != null && item.m_gridPos.y == 0 && item.m_gridPos.x == index)
-                    return item;
-            }
-            return null;
+            Slot slot = GetLayout(bar)?.GetSlot(index);
+            ItemDrop.ItemData item = slot?.IsActive == true ? slot.Item : null;
+            return item != null && item.m_gridPos == slot.GridPosition && item.m_gridPos.x == index ? item : null;
         }
 
-        int slotIndex = index + GetSlotOffset(bar.name);
-        if (slotIndex < 0 || slotIndex >= slots.Length)
-            return null;
+        for (int i = 0; i < bar.m_items.Count; i++)
+        {
+            ItemDrop.ItemData item = bar.m_items[i];
+            if (item != null && item.m_gridPos.x == index && (bar.name != vanillaBarName || item.m_gridPos.y == 0))
+                return item;
+        }
+        return null;
+    }
 
-        Slot slot = slots[slotIndex];
-        return slot?.IsActive == true ? slot.Item : null;
+    /// <summary>
+    /// Resolves an existing rendered element for a real item on a vanilla or ExtraSlots bar.
+    /// Does not create elements, move items or treat display order as an inventory column.
+    /// </summary>
+    public static bool TryGetElementForItem(HotkeyBar bar, ItemDrop.ItemData item, out HotkeyBar.ElementData element)
+    {
+        element = null;
+        if (!bar || item == null || bar.m_elements == null || bar.m_items == null
+            || (bar.name != vanillaBarName && !IsExtraSlotsHotBar(bar.name)))
+            return false;
+
+        int column = item.m_gridPos.x;
+        if (column < 0 || column >= bar.m_elements.Count || !ReferenceEquals(GetItemForElement(bar, column), item))
+            return false;
+
+        bool listed = false;
+        for (int i = 0; i < bar.m_items.Count; i++)
+            if (ReferenceEquals(bar.m_items[i], item))
+            {
+                listed = true;
+                break;
+            }
+        if (!listed)
+            return false;
+
+        HotkeyBar.ElementData candidate = bar.m_elements[column];
+        if (candidate == null || !candidate.m_go)
+            return false;
+        element = candidate;
+        return true;
+    }
+
+    private static bool IsSelectableElement(HotkeyBar bar, int column)
+    {
+        if (!bar || column < 0 || column >= bar.m_elements.Count)
+            return false;
+        if (!IsExtraSlotsHotBar(bar.name))
+            return true;
+
+        HotkeyBarLayout layout = GetLayout(bar);
+        HotkeyBar.ElementData element = bar.m_elements[column];
+        return layout != null && layout.GetVisibleOrder(column) >= 0
+            && layout.GetSlot(column)?.IsActive == true
+            && element != null && element.m_go && element.m_go.activeSelf;
+    }
+
+    private static int GetBoundaryElement(HotkeyBar bar, bool first)
+    {
+        if (!bar || !bar.gameObject.activeInHierarchy || bar.m_elements == null || bar.m_elements.Count == 0)
+            return -1;
+        if (!IsExtraSlotsHotBar(bar.name))
+            return first ? 0 : bar.m_elements.Count - 1;
+
+        HotkeyBarLayout layout = GetLayout(bar);
+        if (layout == null)
+            return -1;
+        for (int i = first ? 0 : layout.VisibleCount - 1; i >= 0 && i < layout.VisibleCount; i += first ? 1 : -1)
+            if (IsSelectableElement(bar, layout.VisibleColumns[i]))
+                return layout.VisibleColumns[i];
+        return -1;
+    }
+
+    private static int GetAdjacentElement(HotkeyBar bar, int column, bool next)
+    {
+        if (!IsExtraSlotsHotBar(bar.name))
+        {
+            int target = column + (next ? 1 : -1);
+            return IsSelectableElement(bar, target) ? target : -1;
+        }
+
+        HotkeyBarLayout layout = GetLayout(bar);
+        int order = layout?.GetVisibleOrder(column) ?? -1;
+        if (order < 0)
+            return -1;
+        for (int i = order + (next ? 1 : -1); i >= 0 && i < layout.VisibleCount; i += next ? 1 : -1)
+            if (IsSelectableElement(bar, layout.VisibleColumns[i]))
+                return layout.VisibleColumns[i];
+        return -1;
     }
 
     [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.ElementClicked))]
@@ -547,7 +642,7 @@ public static class QuickBars
                 return true;
 
             if (player == CurrentPlayer && ZInput.IsTouchPressedDown() && ZInput.HasDoubleTapped()
-                && i >= 0 && i < __instance.m_elements.Count)
+                && IsSelectableElement(__instance, i))
             {
                 __instance.m_selected = i;
                 ItemDrop.ItemData item = GetItemForElement(__instance, i);
@@ -568,7 +663,7 @@ public static class QuickBars
         for (int i = 0; i < bar.m_elements.Count; i++)
         {
             HotkeyBar.ElementData element = bar.m_elements[i];
-            if (element?.m_go == null)
+            if (element?.m_go == null || updateEquippedState && !IsSelectableElement(bar, i))
                 continue;
 
             ElementExtraData extraData = GetElementExtraData(element);
@@ -590,42 +685,56 @@ public static class QuickBars
             return false;
 
         HotkeyBar hotkeyBar = bars[_currentBarIndex];
-        if (hotkeyBar.m_selected < 0 || hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1)
+        if (!IsSelectableElement(hotkeyBar, hotkeyBar.m_selected))
             return false;
 
-        if (joyHotbarLeft && --hotkeyBar.m_selected < 0)
-            ChangeActiveHotkeyBar(next: false);
-        else if (joyHotbarRight && ++hotkeyBar.m_selected > hotkeyBar.m_elements.Count - 1)
-            ChangeActiveHotkeyBar(next: true);
+        if (joyHotbarLeft || joyHotbarRight)
+        {
+            bool next = !joyHotbarLeft;
+            int target = GetAdjacentElement(hotkeyBar, hotkeyBar.m_selected, next);
+            if (target < 0)
+                ChangeActiveHotkeyBar(next);
+            else
+                hotkeyBar.m_selected = target;
+        }
         else if (joyHotbarUse)
-            if (hotkeyBar.name == QuickSlotsHotBar.barName)
-                Player.m_localPlayer.UseItem(Player.m_localPlayer.GetInventory(), QuickSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), fromInventoryGui: false);
-            else if (hotkeyBar.name == AmmoSlotsHotBar.barName)
-                Player.m_localPlayer.UseItem(Player.m_localPlayer.GetInventory(), AmmoSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), fromInventoryGui: false);
-            else if (hotkeyBar.name == FoodSlotsHotBar.barName)
-                Player.m_localPlayer.UseItem(Player.m_localPlayer.GetInventory(), FoodSlotsHotBar.GetItemInSlot(hotkeyBar.m_selected), fromInventoryGui: false);
+        {
+            if (IsExtraSlotsHotBar(hotkeyBar.name))
+            {
+                ItemDrop.ItemData item = GetItemForElement(hotkeyBar, hotkeyBar.m_selected);
+                if (item != null)
+                    Player.m_localPlayer.UseItem(PlayerInventory, item, fromInventoryGui: false);
+            }
             else if (hotkeyBar.name == vanillaBarName)
                 Player.m_localPlayer.UseHotbarItem(hotkeyBar.m_selected + 1);
             else
                 UseCustomBarItem(hotkeyBar);
+        }
 
         return true;
     }
 
     private static void ChangeActiveHotkeyBar(bool next = true)
     {
-        int[] activeBars = bars.Where(bar => bar.m_elements.Count > 0).Select(bar => bars.IndexOf(bar)).ToArray();
-        if (activeBars.Length == 0)
+        if (bars == null || bars.Count == 0)
         {
             _currentBarIndex = -1;
             return;
         }
 
-        int index = Array.IndexOf(activeBars, _currentBarIndex);
-        index = (index == -1) ? 0 : index + (next ? 1 : -1);
-
-        _currentBarIndex = activeBars[(index + activeBars.Length) % activeBars.Length];
-        bars[_currentBarIndex].m_selected = next ? 0 : bars[_currentBarIndex].m_elements.Count - 1;
+        int start = _currentBarIndex >= 0 && _currentBarIndex < bars.Count
+            ? _currentBarIndex : next ? -1 : 0;
+        for (int step = 1; step <= bars.Count; step++)
+        {
+            int index = (start + (next ? step : -step) + bars.Count) % bars.Count;
+            int selected = GetBoundaryElement(bars[index], first: next);
+            if (selected < 0)
+                continue;
+            _currentBarIndex = index;
+            bars[index].m_selected = selected;
+            return;
+        }
+        _currentBarIndex = -1;
     }
 
     private static bool IsHotkeyBarsActive() => !InventoryGui.IsVisible() && !Menu.IsVisible() && !GameCamera.InFreeFly()
@@ -813,9 +922,9 @@ public static class QuickBars
 
                 try
                 {
-                    bar.m_selected = _currentBarIndex == i
-                        ? Mathf.Clamp(bar.m_selected, -1, bar.m_elements.Count - 1)
-                        : -1;
+                    // A full-width table contains padding that must never become selected.
+                    if (_currentBarIndex != i || !IsSelectableElement(bar, bar.m_selected))
+                        bar.m_selected = -1;
 
                     if (refreshGate.ShouldRefresh(bar, player))
                     {
@@ -865,7 +974,9 @@ public static class QuickBars
         [HarmonyPriority(Priority.First)]
         public static bool Prefix(HotkeyBar __instance)
         {
-            return !IsBarToControl(__instance) || NoBarsToControl();
+            // Our bars always use this controller, including the frame before discovery.
+            // Vanilla Update would navigate padding and call vanilla hotbar actions.
+            return !IsExtraSlotsHotBar(__instance.name) && (!IsBarToControl(__instance) || NoBarsToControl());
         }
     }
     [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.UpdateIcons))]
@@ -880,7 +991,7 @@ public static class QuickBars
 
             // Different bars have independent snapshots. A recursive update of the very same
             // bar cannot safely clear/rebuild its live m_items and m_elements lists.
-            if (!localSlotIndicesPatched || renderContexts.ContainsKey(__instance))
+            if (!hotbarLayoutPatched || renderContexts.ContainsKey(__instance))
                 return false;
 
             __state = new HotkeyBarRenderContext(__instance);
@@ -925,15 +1036,33 @@ public static class QuickBars
 
             widthInElements = Mathf.Max(1, widthInElements);
 
-            for (int index = 0; index < __instance.m_elements.Count; index++)
+            HotkeyBarLayout layout = __state.Layout;
+            if (layout == null)
             {
-                HotkeyBar.ElementData elementData = __instance.m_elements[index];
+                renderedLayouts.Remove(__instance);
+                return;
+            }
+            renderedLayouts[__instance] = layout;
 
+            for (int column = 0; column < __instance.m_elements.Count; column++)
+            {
+                HotkeyBar.ElementData elementData = __instance.m_elements[column];
                 if (elementData == null || !elementData.m_go)
                     continue;
 
-                if (index >= __state.BarSlots.Length || __state.BarSlots[index] is not Slot slot)
+                Slot slot = layout.GetSlot(column);
+                bool visible = slot != null && layout.GetVisibleOrder(column) >= 0;
+                // Keep every ElementData and all vanilla children alive for third-party
+                // overlays. Hiding the root also hides any overlay children they add later.
+                elementData.m_go.SetActive(visible);
+                if (!visible)
+                {
+                    elementData.m_selection.SetActive(false);
+                    TMP_Text bindingText = GetElementExtraData(elementData).BindingText;
+                    if (bindingText)
+                        bindingText.text = string.Empty;
                     continue;
+                }
 
                 ElementExtraData extraData = GetElementExtraData(elementData);
                 EquipmentPanel.SetSlotLabel(extraData.BindingRect, extraData.BindingText, slot, hotbarElement: true);
@@ -946,31 +1075,37 @@ public static class QuickBars
                     elementData.m_queued.SetActive(false);
                     elementData.m_amount.gameObject.SetActive(false);
                 }
-                elementData.m_selection.SetActive(ZInput.IsGamepadActive() && index == __instance.m_selected);
+                elementData.m_selection.SetActive(ZInput.IsGamepadActive() && column == __instance.m_selected);
 
                 if (hideStackSize
                     && elementData.m_amount.gameObject.activeInHierarchy
-                    && __state.SlotItems[index] is ItemDrop.ItemData item
+                    && layout.ItemsByColumn[column] is ItemDrop.ItemData item
                     && (item.IsEquipable() || item.m_shared.m_itemType == ItemDrop.ItemData.ItemType.Consumable))
                 {
                     elementData.m_amount.SetText(elementData.m_stackText.ToFastString());
                 }
 
+                int displayIndex = layout.DisplayIndices[column];
                 elementData.m_go.transform.localPosition =
-                    new Vector3(index % widthInElements, (fillUp ? 1 : -1) * (index / widthInElements), 0f) * elementSpace;
+                    new Vector3(displayIndex % widthInElements, (fillUp ? 1 : -1) * (displayIndex / widthInElements), 0f) * elementSpace;
             }
+
+            if (!IsSelectableElement(__instance, __instance.m_selected))
+                __instance.m_selected = -1;
         }
 
         [HarmonyPriority(Priority.Last)]
-        private static Exception Finalizer(ref HotkeyBarRenderContext __state, Exception __exception)
+        private static void Finalizer(ref HotkeyBarRenderContext __state, Exception __exception)
         {
             HotkeyBarRenderContext context = __state;
             __state = null;
-            if (context != null && renderContexts.TryGetValue(context.Bar, out HotkeyBarRenderContext active)
-                && ReferenceEquals(active, context))
-                renderContexts.Remove(context.Bar);
+            if (context == null)
+                return;
 
-            return __exception;
+            if (renderContexts.TryGetValue(context.Bar, out HotkeyBarRenderContext active) && ReferenceEquals(active, context))
+                renderContexts.Remove(context.Bar);
+            if (__exception != null || !context.ItemsCollected)
+                renderedLayouts.Remove(context.Bar);
         }
     }
 

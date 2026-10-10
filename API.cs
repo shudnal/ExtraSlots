@@ -93,6 +93,14 @@ public static class API
     public static List<ItemDrop.ItemData> GetMiscSlotsItems() => GetMiscSlots().Select(slot => slot.Item).Where(item => item != null).ToList();
 
     /// <summary>
+    /// Tries to find the existing element displaying a real inventory item on a vanilla or ExtraSlots hotbar.
+    /// ExtraSlots element indices are inventory columns, not the panel's visual slot order.
+    /// Returns false for unsupported bars, missing elements or items not represented by the bar.
+    /// </summary>
+    public static bool TryGetHotbarElement(HotkeyBar bar, ItemDrop.ItemData item, out HotkeyBar.ElementData element) =>
+        HotBars.QuickBars.TryGetElementForItem(bar, item, out element);
+
+    /// <summary>
     /// Returns amount of extra rows added to player available inventory
     /// </summary>
     public static int GetExtraRows() => ExtraRowsPlayer;
