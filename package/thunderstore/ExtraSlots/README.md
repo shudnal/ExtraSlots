@@ -7,7 +7,7 @@ More inventory slots dedicated for equipment, food, ammo and misc items. Extra u
 
 Open the game's radial menu and select **Hotbar**. The **Quick bars** entry at the bottom opens your extra food, ammo and quick slots. The Back entry stays at the top.
 
-* With food and ammo slots active, food is on the left and ammo is on the right. Items from quick slots 1-5 are centered below them. Quick slot 6 is not shown in this layout.
+* With food and ammo slots active, food is on the left and ammo is on the right. Up to six quick-slot items are centered below them. The first occupied quick slot is on the left. The remaining items follow slot order counterclockwise across the bottom to the right.
 * With only food or only ammo active, that group is on the left. Up to six quick-slot items start on the right and continue clockwise. With only quick slots active, they use the same right-hand layout.
 * Empty food and ammo positions remain in their groups. Empty quick slots do not appear. Group gaps cannot select or use an adjacent item.
 

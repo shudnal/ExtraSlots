@@ -11,11 +11,11 @@ namespace ExtraSlots.Radial;
 internal sealed class QuickBarsRadialConfig : IRadialConfig
 {
     internal const string NameToken = "$exsl_radial_quick_bars";
-    internal const int ElementsPerLayer = 12;
+    internal const int ElementsPerLayer = 13;
 
-    // Twelve entries plus four quarter-cell group gaps fill one circle. The shader
+    // Thirteen entries plus four quarter-cell group gaps fill one circle. The shader
     // accepts a segment count independently of the radial's uniform input grid.
-    private const int ShapeSegments = 13;
+    private const int ShapeSegments = ElementsPerLayer + 1;
     private const float CellAngle = 360f / ShapeSegments;
     private const float GroupGap = CellAngle / 4f;
     private const float FirstRightAngle = CellAngle + GroupGap;
@@ -133,7 +133,7 @@ internal sealed class QuickBarsRadialConfig : IRadialConfig
                 AddSide(elements, food.AnyActive ? food : ammo, left: true);
             }
 
-            int limit = Math.Min(bothSides ? 5 : 6, quick.Slots.Length);
+            int limit = Math.Min(6, quick.Slots.Length);
             int occupied = 0;
             for (int i = 0; i < limit; i++)
                 if (quick.Active[i] && quick.Items[i] != null)
@@ -144,8 +144,10 @@ internal sealed class QuickBarsRadialConfig : IRadialConfig
             {
                 if (!quick.Active[i] || quick.Items[i] == null)
                     continue;
+                // Bottom slots start on the left and advance counterclockwise.
+                // A right-side quick group keeps its clockwise order.
                 float angle = bothSides
-                    ? 180f + (order - (occupied - 1) / 2f) * CellAngle
+                    ? 180f + ((occupied - 1) / 2f - order) * CellAngle
                     : FirstRightAngle + order * CellAngle;
                 AddSlot(elements, quick.Slots[i], quick.Items[i], angle);
                 order++;

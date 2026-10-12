@@ -9,9 +9,10 @@ namespace ExtraSlots.Radial;
 internal static class NativeRadialMenus
 {
     private const string EntryObjectName = "ExtraSlotsQuickBarsRadialEntry";
+    private const int HotbarElementsPerLayer = 12;
 
     private static bool IsExtendedHotbar(RadialBase radial) => radial.CurrentConfig is HotbarGroupConfig
-        && radial.m_elements != null && radial.m_elements.Count == 12
+        && radial.m_elements != null && radial.m_elements.Count == HotbarElementsPerLayer
         && radial.m_elements.GetElement(6) is GroupElement group && group.name == EntryObjectName;
 
     private sealed class ConstructionScope
@@ -47,7 +48,7 @@ internal static class NativeRadialMenus
             bool assigned = false;
             try
             {
-                List<RadialMenuElement> result = new List<RadialMenuElement>(new RadialMenuElement[12]);
+                List<RadialMenuElement> result = new List<RadialMenuElement>(new RadialMenuElement[HotbarElementsPerLayer]);
                 BackElement back = Object.Instantiate(RadialData.SO.BackElement);
                 owned.Add(back);
                 back.Init(__instance);
@@ -105,9 +106,13 @@ internal static class NativeRadialMenus
         {
             if (__instance.CurrentConfig is not QuickBarsRadialConfig && !constructionScopes.ContainsKey(__instance))
                 return true;
-            if (__instance.MaxElementsPerLayer != QuickBarsRadialConfig.ElementsPerLayer || __instance.m_segmentSize == 0f)
+            // The parent keeps its twelve-position grid and downward entry. Only
+            // the child needs room for Back, six side positions and six quick items.
+            int elementsPerLayer = __instance.CurrentConfig is QuickBarsRadialConfig
+                ? QuickBarsRadialConfig.ElementsPerLayer : HotbarElementsPerLayer;
+            if (__instance.MaxElementsPerLayer != elementsPerLayer || __instance.m_segmentSize == 0f)
             {
-                __instance.MaxElementsPerLayer = QuickBarsRadialConfig.ElementsPerLayer;
+                __instance.MaxElementsPerLayer = elementsPerLayer;
                 __instance.UpdateSegmentInfo();
             }
             return false;

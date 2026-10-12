@@ -1,7 +1,7 @@
 # 1.2.19
 * added Quick bars at the bottom of the game's Hotbar radial menu, with separate groups for food, ammo and quick-slot items
 * the new radial page keeps empty food and ammo positions, hides empty quick slots, and works when HUD hotbars are hidden
-* with both food and ammo groups active, the radial page uses quick slots 1-5; other layouts support all six quick slots
+* all radial layouts support six quick slots; the bottom group is centered and follows slot order counterclockwise from left to right
 * fixed PlantEasily's gamepad grid controls also using hotbar items when all extra HUD hotbars are hidden or disabled
 * removed support and settings for the old ValheimRadial mod
 
