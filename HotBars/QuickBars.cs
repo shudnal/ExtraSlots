@@ -976,9 +976,12 @@ public static class QuickBars
         {
             // Our bars always use this controller, including the frame before discovery.
             // Vanilla Update would navigate padding and call vanilla hotbar actions.
-            return !IsExtraSlotsHotBar(__instance.name) && (!IsBarToControl(__instance) || NoBarsToControl());
+            return !IsExtraSlotsHotBar(__instance.name)
+                && (!IsBarToControl(__instance) || NoBarsToControl())
+                && !Compatibility.PlantEasilyCompat.DisableGamepadInput;
         }
     }
+
     [HarmonyPatch(typeof(HotkeyBar), nameof(HotkeyBar.UpdateIcons))]
     public static class HotkeyBar_UpdateIcons_QuickBarsUpdate
     {
