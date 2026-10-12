@@ -20,5 +20,6 @@
     "exsl_slot_food_desc": "Jídlo určené ke spotřebě",
     "exsl_slot_equipment_trinket_label": "Ozdoba",
     "exsl_slot_lightened": "Odlehčený slot",
-    "exsl_slot_lightened_desc": "Hmotnost předměta snížena o $1"
+    "exsl_slot_lightened_desc": "Hmotnost předměta snížena o $1",
+    "exsl_radial_quick_bars": "Rychlé lišty"
 }
