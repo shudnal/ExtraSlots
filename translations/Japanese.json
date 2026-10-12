@@ -20,5 +20,6 @@
     "exsl_slot_food_desc": "摂取できる食料",
     "exsl_slot_equipment_trinket_label": "装身具",
     "exsl_slot_lightened": "軽量化スロット",
-    "exsl_slot_lightened_desc": "アイテム重量は $1 に軽減"
+    "exsl_slot_lightened_desc": "アイテム重量は $1 に軽減",
+    "exsl_radial_quick_bars": "クイックバー"
 }

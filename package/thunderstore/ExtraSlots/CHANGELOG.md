@@ -1,26 +1,28 @@
+# 1.2.19
+* Added **Quick bars** at the bottom of the game's **Hotbar** radial menu. It opens food, ammo and up to six quick slots.
+* The radial menu shows empty food and ammo slots but hides empty quick slots. The bottom quick-slot group is centered and ordered counterclockwise.
+* The **Quick bars** radial menu remains available when extra HUD hotbars are hidden or disabled.
+* Fixed unintended hotbar item use when resizing the PlantEasily grid with a gamepad. This affected players with all extra hotbars hidden or disabled.
+* Removed support and settings for the deprecated ValheimRadial mod.
+
 # 1.2.18
-* extra hotbars now keep vanilla-compatible element indices based on actual inventory columns, fixing overlays such as PortablePals without changing item coordinates or patching those mods
-* kept compact visual layouts and slot labels separate from collection indices; gamepad navigation and clicks skip hidden padding and use the correct slot
-* added API.TryGetHotbarElement for resolving the existing element of an inventory item
-* hotbar cleanup no longer returns an exception object, avoiding unnecessary loss of the original exception stack
+* Fixed extra hotbar errors with PortablePals item overlays. Improved compatibility with other mods that add overlays to item icons.
 
 # 1.2.17
-* added separate Hide hotbar options for quick, ammo and food panels, keeping their hotkeys active while hiding the HUD bars
-* fixed unsafe extra hotbar indexing by keeping display slot indices separate from inventory item positions
-* isolated nested hotbar updates and limited item-list replacement to the current hotbar call
-* isolated failing hotbar updates, with automatic retries and rate-limited diagnostic logging
+* Added separate **Hide hotbar** settings for quick, ammo and food hotbars. Hidden hotbars keep their hotkeys active.
+* Fixed some errors when updating extra hotbar icons.
+* Limited repeated hotbar error messages. A failed update no longer stops the other hotbars from updating.
 
 # 1.2.16
-* simplified upgrade handling to return only an existing replacement item to its original extra slot
-* removed upgrade outcome marker checks that could interrupt mod initialization when another mod changes crafting
-* removed upgrade-specific rollback, deferred recovery, capacity bypasses and automatic re-equipping
+* Upgraded items return to their original extra slots when those slots are free.
+* ExtraSlots no longer restores items destroyed during upgrades or equips upgraded items automatically.
+* Fixed a startup error with mods that change crafting.
 
 # 1.2.15
-* fixed custom-slot auto-equip items preventing automatic tombstone recovery even when the contents fit
-* tombstone weight checks now omit uncertain equipment bonuses instead of rejecting all recovery, while accounting for possible loss of current equipment bonuses
-* mutually exclusive utility items no longer block automatic tombstone recovery when their uncertain bonuses are not needed
-* fixed initial hotbar selection bypassing UI input blocking
-* fixed extra hotbar shortcut labels briefly changing to vanilla numbers when the input layout changes
+* Fixed automatic tombstone recovery being blocked by custom-slot items even when all contents could fit.
+* Improved carry-weight checks during tombstone recovery. Utility items that cannot be equipped together no longer block recovery when their carry-weight bonuses are not needed.
+* Fixed unintended hotbar selection while using menus with a gamepad.
+* Fixed extra hotbar shortcut labels briefly showing vanilla slot numbers after changing the input layout.
 
 # 1.2.14
 * fixed quick-slot hotbars disappearing during auto pickup with AdventureBackpacks and other inventory capacity checks

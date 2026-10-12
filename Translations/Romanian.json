@@ -20,5 +20,6 @@
     "exsl_slot_food_desc": "Mâncare consumabilă",
     "exsl_slot_equipment_trinket_label": "Amuletă",
     "exsl_slot_lightened": "Slot ușurat",
-    "exsl_slot_lightened_desc": "Greutatea obiectului redusă cu $1"
+    "exsl_slot_lightened_desc": "Greutatea obiectului redusă cu $1",
+    "exsl_radial_quick_bars": "Bare rapide"
 }

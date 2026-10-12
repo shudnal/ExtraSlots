@@ -20,5 +20,6 @@
     "exsl_slot_food_desc": "Съедобная пища и напитки",
     "exsl_slot_equipment_trinket_label": "Оберег",
     "exsl_slot_lightened": "Облегченный слот",
-    "exsl_slot_lightened_desc": "Вес предмета снижен на $1"
+    "exsl_slot_lightened_desc": "Вес предмета снижен на $1",
+    "exsl_radial_quick_bars": "Быстрые панели"
 }

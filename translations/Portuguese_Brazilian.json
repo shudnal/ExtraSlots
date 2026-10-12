@@ -20,5 +20,6 @@
     "exsl_slot_food_desc": "Slot rápido para comidas",
     "exsl_slot_equipment_trinket_label": "Amuleto",
     "exsl_slot_lightened": "Slot reduzido",
-    "exsl_slot_lightened_desc": "Peso do item reduzido em $1"
+    "exsl_slot_lightened_desc": "Peso do item reduzido em $1",
+    "exsl_radial_quick_bars": "Barras rápidas"
 }

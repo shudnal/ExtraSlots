@@ -38,7 +38,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.2.18";
+        public const string pluginVersion = "1.2.19";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -293,10 +293,6 @@ namespace ExtraSlots
         public static ConfigEntry<string> reducedInventoryPanelVisibility1;
         public static ConfigEntry<string> reducedInventoryPanelVisibility2;
         public static ConfigEntry<string> reducedInventoryPanelVisibility3;
-
-        public static ConfigEntry<bool> valheimRadialAddQuickSlots;
-        public static ConfigEntry<bool> valheimRadialAddFoodSlots;
-        public static ConfigEntry<bool> valheimRadialAddAmmoSlots;
 
         public static string configDirectory;
 
@@ -829,10 +825,6 @@ namespace ExtraSlots
             reducedInventoryPanelVisibility1.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
             reducedInventoryPanelVisibility2.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
             reducedInventoryPanelVisibility3.SettingChanged += (s, e) => EquipmentPanel.UpdateSidePanels();
-
-            valheimRadialAddQuickSlots = config("Mods compatibility - Valheim Radial", "Add items from quick slots", defaultValue: true, "Add items from slots to valheim radial panel");
-            valheimRadialAddFoodSlots = config("Mods compatibility - Valheim Radial", "Add items from food slots", defaultValue: true, "Add items from slots to valheim radial panel");
-            valheimRadialAddAmmoSlots = config("Mods compatibility - Valheim Radial", "Add items from ammo slots", defaultValue: true, "Add items from slots to valheim radial panel");
 
             // new default values were updated for new anchor point
             if (ammoSlotsHotBarOffset.Value == new Vector2(230f, 850f) && ammoSlotsHotBarAnchor.Value == RectTransformExtensions.ElementAnchor.BottomLeft)
