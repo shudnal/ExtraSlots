@@ -3,6 +3,16 @@
 
 More inventory slots dedicated for equipment, food, ammo and misc items. Extra utility slots. Quick slots. Custom slots API. Player inventory resize. Gamepad friendly. Slot obtaining progression.
 
+## Quick bars in the radial menu
+
+Open the game's radial menu and select **Hotbar**. The **Quick bars** entry at the bottom opens your extra food, ammo and quick slots. The Back entry stays at the top.
+
+* With food and ammo slots active, food is on the left and ammo is on the right. Items from quick slots 1-5 are centered below them. Quick slot 6 is not shown in this layout.
+* With only food or only ammo active, that group is on the left. Up to six quick-slot items start on the right and continue clockwise. With only quick slots active, they use the same right-hand layout.
+* Empty food and ammo positions remain in their groups. Empty quick slots do not appear. Group gaps cannot select or use an adjacent item.
+
+Slot availability and progression determine which groups appear. The entry is absent when none of these slots are active. Hiding or disabling a HUD hotbar does not disable this radial page or remove its inventory slots. Item use and closing follow the game's Hotbar radial behavior.
+
 ## Summary
 
 This mod expands the player's inventory, not by just adding more rows but by creating extra slots specifically designated for certain types of items.

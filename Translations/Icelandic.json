@@ -20,5 +20,6 @@
     "exsl_slot_food_desc": "Neytanleg matur",
     "exsl_slot_equipment_trinket_label": "Hnoss",
     "exsl_slot_lightened": "Létt slott",
-    "exsl_slot_lightened_desc": "Þyngd minnkuð um $1"
+    "exsl_slot_lightened_desc": "Þyngd minnkuð um $1",
+    "exsl_radial_quick_bars": "Hraðstikur"
 }

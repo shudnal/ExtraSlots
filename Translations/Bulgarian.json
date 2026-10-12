@@ -20,5 +20,6 @@
     "exsl_slot_food_desc": "Консумативна храна",
     "exsl_slot_equipment_trinket_label": "Амулет",
     "exsl_slot_lightened": "Олекотен слот",
-    "exsl_slot_lightened_desc": "Теглото намалено с $1"
+    "exsl_slot_lightened_desc": "Теглото намалено с $1",
+    "exsl_radial_quick_bars": "Бързи ленти"
 }
