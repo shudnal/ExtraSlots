@@ -98,18 +98,13 @@ You can set specific index for your slot.
 
 ## Slots backup
 
-Every time you save your character the backup of extra slots current state will be saved with it. You will not lose your extra items.
+When **Slots backup enabled** is on, each character save replaces the ExtraSlots backup with the current contents of your extra slots. Only the latest snapshot is kept. Older snapshots are not combined with it, even if the latest snapshot is empty or cannot be read.
 
-There is no items history, only last state on extra slots inventory. It will be overwritten on character save.
+When you load the character, ExtraSlots checks only that latest snapshot for missing items. Items already recovered from that snapshot are not restored again. An unavailable item does not stop other items from being recovered. Unresolved records remain in the same snapshot until the next successful backup save. That save replaces the whole snapshot, including unresolved records. This is not a backup history or permanent storage for items from removed mods.
 
-If you disable this mod and run the game without it you will lose any items that were in extra slots. But slots backup will be there until it is pruned deliberately.
+Starting with 1.2.21, older pending backup snapshots are ignored. The update does not remove items already restored to your inventory, chests or the ground. It also does not clear items already waiting for free inventory space, because that queue can contain legitimate items. Keep a separate copy of your character save before investigating duplicates or missing items.
 
-If you want your items back:
-* delete any incompatible mod that change inventory (don't forget to move items in regular inventory or chest)
-* run the game without this mods and without(!) ExtraSlots (you can run vanilla game if you're not sure)
-* login in any world with character you want to restore items
-* save this character
-* run the game with ExtraSlots installed and all items will be restored as it was on the moment you disabled the mod.
+If you load and save a character without ExtraSlots, the extra-slot items can be lost from the regular character inventory. The latest ExtraSlots snapshot remains in the character data and can restore missing items when the mod is installed again.
 
 ## Equipment Panel
 

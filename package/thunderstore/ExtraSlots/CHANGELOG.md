@@ -1,3 +1,6 @@
+# 1.2.21
+* Fixed old backup snapshots restoring duplicate items. Only the latest snapshot is used, and each new backup replaces the previous one.
+
 # 1.2.20
 * Fixed backup recovery being blocked after the Valheim 1.0.20 update.
 

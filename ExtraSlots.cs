@@ -38,7 +38,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.2.20";
+        public const string pluginVersion = "1.2.21";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -378,9 +378,9 @@ namespace ExtraSlots
                                                                          "\n1 slot comes with Food slots, 1 slot comes with Ammo slots." +
                                                                          "\nIf both Food and Ammo slots are disabled there will be no Misc slots." + 
                                                                          "\nIf there are no Quick slots there will be no Misc slots.");
-            backupEnabled = serverConfig("Extra slots", "Slots backup enabled", defaultValue: true, "Backup extra slots item on save. [Synced with Server]" +
-                                                                                        "\nIt could be restored in case of loading character without mod installed leading to extra slots item loss." +
-                                                                                        "\nWhen character is loaded with no extra slots items but has backup items the items from backup will be recover.");
+            backupEnabled = serverConfig("Extra slots", "Slots backup enabled", defaultValue: true, "Back up extra-slot items when the character is saved. [Synced with Server]" +
+                                                                                        "\nOnly the latest snapshot is kept. Each new backup replaces the previous snapshot and any unresolved records." +
+                                                                                        "\nMissing extra-slot items can be restored from that snapshot when the character is loaded with ExtraSlots installed.");
             slotsProgressionEnabled = serverConfig("Extra slots", "Slots progression enabled", defaultValue: true, "Enabled slot obtaining progression. If disabled - all enabled slots will be available from the start. [Synced with Server]");
             rowsProgressionEnabled = serverConfig("Extra slots", "Inventory rows progression enabled", defaultValue: false, "Enabled inventory rows obtaining progression. [Synced with Server]");
             preventUniqueUtilityItemsEquip = serverConfig("Extra slots", "Unique utility items", "BeltStrength:BeltYmir_TW:InfusedBeltStrength", 

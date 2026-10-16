@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 using static ExtraSlots.Slots;
@@ -21,20 +22,18 @@ namespace ExtraSlots
             public int extraRows;
             public string inventoryBase64;
 
-            // Version 0 is the original snapshot-only JSON. Pending inventories are opaque,
-            // independently retryable records; unreadable packages are retained whole.
+            // Version 2 keeps one immutable snapshot and tracks its consumed record indices.
+            // The version 1 pendingInventories field is deliberately not deserialized: it can
+            // mix several older snapshots, and cannot identify a single latest generation.
             public int recoveryVersion;
-            public string[] pendingInventories;
-
+            public int[] consumedRecordIndices;
         }
 
         public const string customKeyBackupID = "ExtraSlotsInventoryBackup";
 
-        private const int RecoveryVersion = 1;
+        private const int RecoveryVersion = 2;
 
-        // Only an unreadable outer envelope blocks replacement. A missing item is kept in
-        // pendingInventories while normal backups continue to cover the current equipment.
-        private static Player preserveRawBackupForPlayer;
+        // Recovery progress belongs only to the current snapshot. A new save replaces both.
         private static readonly HashSet<Player> recoveringPlayers = new HashSet<Player>();
 
         internal static bool IsRecovering(Player player) => player != null && recoveringPlayers.Contains(player);
@@ -69,7 +68,8 @@ namespace ExtraSlots
                 height = height,
                 extraRows = ExtraRowsPlayer,
                 inventoryBase64 = compressed.GetBase64(),
-                recoveryVersion = RecoveryVersion
+                recoveryVersion = RecoveryVersion,
+                consumedRecordIndices = Array.Empty<int>()
             };
 
             LogMessage($"Extra slots backup saved {extraSlotsBackup.date}, world {extraSlotsBackup.worldName}, items {extraSlotsBackup.nrOfItems}, size {(float)pkg.Size() / 1000:f1} kb, compressed {(float)compressed.Size() / 1000:f1} kb");
@@ -94,10 +94,17 @@ namespace ExtraSlots
                 return false;
             }
 
-            return extraSlotsBackup != null
-                && extraSlotsBackup.recoveryVersion >= 0 && extraSlotsBackup.recoveryVersion <= RecoveryVersion
-                && (!string.IsNullOrEmpty(extraSlotsBackup.inventoryBase64)
-                    || extraSlotsBackup.pendingInventories?.Length > 0);
+            if (extraSlotsBackup == null || extraSlotsBackup.recoveryVersion < 0
+                || extraSlotsBackup.recoveryVersion > RecoveryVersion
+                || string.IsNullOrEmpty(extraSlotsBackup.inventoryBase64))
+            {
+                LogWarning("ExtraSlots cannot read the latest backup snapshot or its recovery metadata. Older backup packages will not be loaded.");
+                return false;
+            }
+
+            if (extraSlotsBackup.recoveryVersion < RecoveryVersion)
+                extraSlotsBackup.consumedRecordIndices = Array.Empty<int>();
+            return true;
         }
 
         private static bool PlayerCanRestoreBackup(Player player, out ExtraSlotsBackup extraSlotsBackup)
@@ -111,13 +118,7 @@ namespace ExtraSlots
                 || player == null || !player.m_customData.ContainsKey(customKeyBackupID))
                 return false;
 
-            if (TryGetBackup(player, out extraSlotsBackup))
-                return true;
-
-            // Never overwrite a backup payload merely because this version cannot parse it.
-            if (!IsCharacterPreview())
-                preserveRawBackupForPlayer = player;
-            return false;
+            return TryGetBackup(player, out extraSlotsBackup);
         }
 
         private static bool IsCharacterPreview() => FejdStartup.instance != null && Player.m_localPlayer == null;
@@ -271,29 +272,26 @@ namespace ExtraSlots
 
         private static List<InventorySerialization.RecoveryRecord> ReadRecoveryRecords(ExtraSlotsBackup backup)
         {
-            List<InventorySerialization.RecoveryRecord> records = new List<InventorySerialization.RecoveryRecord>();
-            Append(backup.inventoryBase64);
-            if (backup.pendingInventories != null)
-                foreach (string payload in backup.pendingInventories)
-                    Append(payload);
-            return records;
-
-            void Append(string payload)
+            try
             {
-                if (string.IsNullOrEmpty(payload))
-                    return;
-                try
-                {
-                    records.AddRange(InventorySerialization.ReadRecoveryRecords(payload));
-                }
-                catch (Exception ex)
-                {
-                    // Do not consume a partly parsed, unframed stream. Other independent
-                    // packages remain usable, and the original bytes can be retried later.
-                    records.Add(new InventorySerialization.RecoveryRecord { Payload = payload });
-                    LogWarning($"ExtraSlots backup contains an unreadable inventory package. It is retained without blocking other records: {ex.Message}");
-                }
+                // Even an empty snapshot is authoritative. Never fall back to legacy pending
+                // packages, combine generations, or reinterpret older records as extra items.
+                return InventorySerialization.ReadRecoveryRecords(backup.inventoryBase64);
             }
+            catch (Exception ex)
+            {
+                LogWarning($"ExtraSlots could not read the latest backup snapshot. It is retained until the next successful backup save; older snapshots will not be loaded: {ex.Message}");
+                return null;
+            }
+        }
+
+        private static HashSet<int> ReadConsumedRecordIndices(ExtraSlotsBackup backup, int recordCount)
+        {
+            HashSet<int> consumed = new HashSet<int>();
+            foreach (int index in backup.consumedRecordIndices ?? Array.Empty<int>())
+                if (index < 0 || index >= recordCount || !consumed.Add(index))
+                    throw new InvalidDataException($"Invalid consumed backup record index {index} for {recordCount} records.");
+            return consumed;
         }
 
         private static ItemDrop.ItemData MaterializeBackupRecord(InventorySerialization.RecoveryRecord record)
@@ -305,11 +303,11 @@ namespace ExtraSlots
                 ItemDrop.ItemData item = record.Materialize(customKeyBackupID);
                 if (item != null)
                     return item;
-                LogWarning($"ExtraSlots backup record {record.Description} could not be materialized with its original stack. Only this record remains pending.");
+                LogWarning($"ExtraSlots backup record {record.Description} could not be materialized with its original stack. This record remains in the latest snapshot until the next successful backup save.");
             }
             catch (Exception ex)
             {
-                LogWarning($"ExtraSlots backup record {record.Description} failed to load. Only this record remains pending: {ex}");
+                LogWarning($"ExtraSlots backup record {record.Description} failed to load. Other records in this snapshot can still recover: {ex}");
             }
             return null;
         }
@@ -320,45 +318,43 @@ namespace ExtraSlots
             if (inventory == null || !recoveringPlayers.Add(player))
                 return;
 
-            bool normalized = false;
             try
             {
-                List<InventorySerialization.RecoveryRecord> records = ReadRecoveryRecords(backup);
-                if (IsCharacterPreview())
+                bool preview = IsCharacterPreview();
+                if (!preview)
                 {
-                    List<ItemDrop.ItemData> items = records.Select(MaterializeBackupRecord).Where(item => item != null).ToList();
+                    // Rewrite only the envelope, leaving the latest inventory bytes unchanged.
+                    // This removes legacy history even when the latest payload cannot be read.
+                    backup.recoveryVersion = RecoveryVersion;
+                    backup.consumedRecordIndices ??= Array.Empty<int>();
+                    player.m_customData[customKeyBackupID] = JsonUtility.ToJson(backup);
+                }
+
+                List<InventorySerialization.RecoveryRecord> records = ReadRecoveryRecords(backup);
+                if (records == null)
+                    return;
+                HashSet<int> consumed = ReadConsumedRecordIndices(backup, records.Count);
+                if (preview)
+                {
+                    List<ItemDrop.ItemData> items = records
+                        .Where((record, index) => !consumed.Contains(index))
+                        .Select(MaterializeBackupRecord).Where(item => item != null).ToList();
                     int projected = ProjectBackupToCharacterPreview(player, inventory, items);
                     LogMessage($"Extra slots backup preview checked. Backup date {backup.date}, world {backup.worldName}, projected {projected}");
                     return;
                 }
 
-                // Move the original snapshot into independent pending records before adoption.
-                // This transformation preserves every record, including unavailable prefabs.
-                // A later save can refresh its normal snapshot without losing these records.
-                ZPackage empty = new ZPackage();
-                new Inventory(customKeyBackupID, null, 1, 1).Save(empty);
-                ZPackage compressed = new ZPackage();
-                compressed.WriteCompressed(empty);
-                backup.inventoryBase64 = compressed.GetBase64();
-                backup.nrOfItems = 0;
-                backup.recoveryVersion = RecoveryVersion;
-                backup.pendingInventories = records.Select(record => record.Payload).ToArray();
-                player.m_customData[customKeyBackupID] = JsonUtility.ToJson(backup);
-                normalized = true;
-                if (ReferenceEquals(preserveRawBackupForPlayer, player))
-                    preserveRawBackupForPlayer = null;
-
                 var matcher = new Compatibility.InventoryMigration.RecoveryMatcher(player);
                 int imported = 0;
                 int alreadyPresent = 0;
-                for (int index = 0; index < records.Count;)
+                for (int index = 0; index < records.Count; index++)
                 {
+                    if (consumed.Contains(index))
+                        continue;
+
                     ItemDrop.ItemData item = MaterializeBackupRecord(records[index]);
                     if (item == null)
-                    {
-                        index++;
                         continue;
-                    }
 
                     int representedIndex;
                     try
@@ -367,17 +363,14 @@ namespace ExtraSlots
                     }
                     catch (Exception ex)
                     {
-                        LogWarning($"ExtraSlots backup record {records[index].Description} could not be matched and remains pending: {ex}");
-                        index++;
+                        LogWarning($"ExtraSlots backup record {records[index].Description} could not be matched and remains in the latest snapshot: {ex}");
                         continue;
                     }
 
                     if (!CommitRecoveredRecord(player, backup, index, item, representedIndex >= 0))
-                    {
-                        index++;
                         continue;
-                    }
 
+                    consumed.Add(index);
                     if (representedIndex >= 0)
                     {
                         matcher.Consume(representedIndex);
@@ -387,23 +380,20 @@ namespace ExtraSlots
                     {
                         imported++;
                     }
-                    records.RemoveAt(index);
                 }
 
-                // Never make restored items available before their source records are consumed.
-                // Missing prefabs or a failure of one record do not roll back earlier commits.
+                // Imported items remain unavailable until their source indices are consumed.
+                // A failed record never rolls back successful neighbors or creates a new snapshot.
                 if (imported > 0)
                 {
                     ItemsSlotsValidation.ValidateItems();
                     ItemsSlotsValidation.ValidateSlots();
                 }
-                LogMessage($"Extra slots backup recovery committed. Newly deferred {imported}, already present {alreadyPresent}, pending records/packages {records.Count}.");
+                LogMessage($"Extra slots latest backup recovery committed. Newly deferred {imported}, already present {alreadyPresent}, remaining records {records.Count - consumed.Count}.");
             }
             catch (Exception ex)
             {
-                if (!normalized && !IsCharacterPreview())
-                    preserveRawBackupForPlayer = player;
-                LogWarning($"ExtraSlots backup recovery was interrupted. Previously committed records remain recovered; remaining source data is retained: {ex}");
+                LogWarning($"ExtraSlots latest backup recovery was interrupted. Committed records remain consumed; unresolved data stays in this snapshot until the next successful backup save: {ex}");
             }
             finally
             {
@@ -415,14 +405,18 @@ namespace ExtraSlots
             ItemDrop.ItemData item, bool alreadyPresent)
         {
             string originalBackup = player.m_customData[customKeyBackupID];
-            string[] originalPending = backup.pendingInventories;
+            int[] originalConsumed = backup.consumedRecordIndices;
             bool hadDeferred = player.m_customData.TryGetValue(DeferredInventory.CustomDataKey, out string originalDeferred);
             DeferredInventory.DeferredEntry handle = null;
             try
             {
-                // Prepare the source update before touching deferred ownership. No gameplay
-                // callback is raised between adoption and consumption of this source record.
-                backup.pendingInventories = originalPending.Where((_, i) => i != index).ToArray();
+                // Keep the original package and its stable record indices. Mark this record
+                // before it becomes live, so a retry cannot restore it after it was moved or used.
+                int[] updatedConsumed = new int[(originalConsumed?.Length ?? 0) + 1];
+                if (originalConsumed != null)
+                    Array.Copy(originalConsumed, updatedConsumed, originalConsumed.Length);
+                updatedConsumed[updatedConsumed.Length - 1] = index;
+                backup.consumedRecordIndices = updatedConsumed;
                 string updatedBackup = JsonUtility.ToJson(backup);
                 if (!alreadyPresent && !DeferredInventory.EnqueueDetached(player, item, out handle,
                     GetSourceSlotId(item), item.m_equipped, "imported from ExtraSlots backup", pendingFinalization: true))
@@ -441,7 +435,7 @@ namespace ExtraSlots
             catch (Exception ex)
             {
                 // Atomicity is per record, not per backup. Do not undo successful neighbors.
-                backup.pendingInventories = originalPending;
+                backup.consumedRecordIndices = originalConsumed;
                 player.m_customData[customKeyBackupID] = originalBackup;
                 if (!alreadyPresent)
                 {
@@ -451,7 +445,7 @@ namespace ExtraSlots
                         player.m_customData.Remove(DeferredInventory.CustomDataKey);
                     DeferredInventory.EnsureLoaded(player);
                 }
-                LogWarning($"ExtraSlots backup record {item.m_dropPrefab?.name ?? "<unknown>"} could not be committed and remains pending: {ex}");
+                LogWarning($"ExtraSlots backup record {item.m_dropPrefab?.name ?? "<unknown>"} could not be committed and remains in the latest snapshot: {ex}");
                 return false;
             }
         }
@@ -462,26 +456,22 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.Last)]
             public static void Prefix(Player __instance)
             {
-                if (!backupEnabled.Value || __instance != CurrentPlayer || recoveringPlayers.Contains(__instance))
+                if (!backupEnabled.Value || __instance != CurrentPlayer || __instance.m_isLoading
+                    || recoveringPlayers.Contains(__instance))
                     return;
 
-                if (ReferenceEquals(preserveRawBackupForPlayer, __instance))
+                try
                 {
-                    LogDebug("Extra slots backup save skipped because the existing outer envelope could not be read safely.");
-                    return;
+                    // A successful save replaces the whole previous backup, including unreadable
+                    // records and recovery progress. Never inherit data from an older snapshot.
+                    ExtraSlotsBackup snapshot = GetExtraSlotsBackup(__instance.GetInventory());
+                    string json = JsonUtility.ToJson(snapshot);
+                    __instance.m_customData[customKeyBackupID] = json;
                 }
-
-                ExtraSlotsBackup previous = null;
-                if (__instance.m_customData.ContainsKey(customKeyBackupID) && !TryGetBackup(__instance, out previous))
+                catch (Exception ex)
                 {
-                    preserveRawBackupForPlayer = __instance;
-                    LogWarning("ExtraSlots cannot read the existing backup envelope; its original value will not be overwritten.");
-                    return;
+                    LogWarning($"ExtraSlots could not save a new backup snapshot. The previous snapshot is unchanged: {ex}");
                 }
-
-                ExtraSlotsBackup snapshot = GetExtraSlotsBackup(__instance.GetInventory());
-                snapshot.pendingInventories = previous?.pendingInventories;
-                __instance.m_customData[customKeyBackupID] = JsonUtility.ToJson(snapshot);
             }
         }
 
@@ -491,9 +481,6 @@ namespace ExtraSlots
             [HarmonyPriority(Priority.HigherThanNormal)]
             public static void Postfix(Player __instance)
             {
-                if (ReferenceEquals(preserveRawBackupForPlayer, __instance))
-                    preserveRawBackupForPlayer = null;
-
                 if (!backupEnabled.Value)
                     return;
 
