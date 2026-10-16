@@ -1,3 +1,4 @@
+using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,12 +7,25 @@ namespace ExtraSlots
 {
     internal static class InventorySerialization
     {
+        private static readonly Lazy<global::Version.Item> currentItemDataVersion =
+            new Lazy<global::Version.Item>(ReadCurrentItemDataVersion);
+
+        private static global::Version.Item ReadCurrentItemDataVersion()
+        {
+            // The current version is a const. Read the loaded game's field instead of
+            // embedding the reference assembly's value when ExtraSlots is compiled.
+            var field = AccessTools.Field(typeof(global::Version), nameof(global::Version.c_ItemDataVersion));
+            if (field == null)
+                throw new MissingFieldException(typeof(global::Version).FullName, nameof(global::Version.c_ItemDataVersion));
+
+            return (global::Version.Item)Convert.ToInt32(field.GetRawConstantValue());
+        }
+
         internal static int ReadItemCount(ZPackage header)
         {
             int version = header.ReadInt();
-            if (version < 100 || version > (int)global::Version.c_ItemDataVersion)
-                throw new InvalidDataException($"Unsupported inventory format {version}; the original payload must be retained.");
-
+            // Use the saved version to choose the layout, not to reject the package.
+            // Parsing and structural checks decide whether its contents can be read.
             int count = version >= (int)global::Version.Item.Smaller ? header.ReadUShort() : header.ReadInt();
             if (count < 0)
                 throw new InvalidDataException($"Invalid inventory item count {count}.");
@@ -171,7 +185,10 @@ namespace ExtraSlots
         {
             ZPackage package = new ZPackage();
             item.Save(package);
-            var (_, stored) = ItemDrop.ItemData.Load(new ZPackage(package.GetArray()), global::Version.c_ItemDataVersion);
+            ZPackage saved = new ZPackage(package.GetArray());
+            var (_, stored) = ItemDrop.ItemData.Load(saved, currentItemDataVersion.Value);
+            if (saved.GetPos() != saved.Size())
+                throw new InvalidDataException("Saved item payload has unrecognized trailing data.");
             stored.m_dropPrefab = item.m_dropPrefab;
             stored.m_shared = item.m_shared;
             return stored;
@@ -190,6 +207,8 @@ namespace ExtraSlots
             // Validate without advancing the package passed to the game's version-aware parser.
             ReadItemCount(new ZPackage(package.GetArray()));
             inventory.Load(package);
+            if (package.GetPos() != package.Size())
+                throw new InvalidDataException("Inventory payload has unrecognized trailing data. The original payload must be retained.");
 
             // Other load patches may return transport-only ItemData. Do not let recovery sources
             // be consumed, projected, classified, or equipped until every returned item is usable.

@@ -1,3 +1,6 @@
+# 1.2.20
+* Fixed backup recovery being blocked after the Valheim 1.0.20 update.
+
 # 1.2.19
 * Added **Quick bars** at the bottom of the game's **Hotbar** radial menu. It opens food, ammo and up to six quick slots.
 * The radial menu shows empty food and ammo slots but hides empty quick slots. The bottom quick-slot group is centered and ordered counterclockwise.
