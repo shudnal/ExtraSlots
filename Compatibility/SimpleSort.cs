@@ -109,10 +109,9 @@ namespace ExtraSlots.Compatibility
             private static void Postfix(SortState __state) => __state?.Restore();
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(SortState __state, Exception __exception)
+            private static void Finalizer(SortState __state)
             {
                 __state?.Dispose();
-                return __exception;
             }
         }
     }

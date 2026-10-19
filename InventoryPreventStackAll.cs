@@ -120,10 +120,9 @@ namespace ExtraSlots
             private static void Postfix(StackAllState __state) => __state?.Restore();
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(StackAllState __state, Exception __exception)
+            private static void Finalizer(StackAllState __state)
             {
                 __state?.Dispose();
-                return __exception;
             }
         }
 

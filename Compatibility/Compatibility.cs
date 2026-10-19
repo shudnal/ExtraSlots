@@ -167,12 +167,10 @@ namespace ExtraSlots.Compatibility
                     Rollback(__state);
             }
 
-            private static Exception Finalizer(Exception __exception, LegacyMigrationState __state)
+            private static void Finalizer(Exception __exception, LegacyMigrationState __state)
             {
                 if (__exception != null)
                     Rollback(__state);
-
-                return __exception;
             }
 
             private static void Rollback(LegacyMigrationState state)

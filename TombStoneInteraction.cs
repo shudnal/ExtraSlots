@@ -504,10 +504,10 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(Container __instance, LoadState __state, Exception __exception)
+            private static void Finalizer(Container __instance, LoadState __state, Exception __exception)
             {
                 if (__state == null)
-                    return __exception;
+                    return;
 
                 __instance.m_loading = __state.Loading;
                 if (__exception != null)
@@ -521,7 +521,6 @@ namespace ExtraSlots
                     __instance.m_lastRevision = __state.Revision;
                     __instance.m_inventory.UpdateTotalWeight();
                 }
-                return __exception;
             }
         }
 
@@ -642,12 +641,10 @@ namespace ExtraSlots
 
             [HarmonyFinalizer]
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(Character __instance, Exception __exception)
+            private static void Finalizer(Character __instance)
             {
                 if (IsValidPlayer(__instance))
                     OnDeathPostfix((Player)__instance, "Character.CheckDeath.Finalizer");
-
-                return __exception;
             }
         }
 
@@ -665,12 +662,10 @@ namespace ExtraSlots
 
             [HarmonyFinalizer]
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(Player __instance, Exception __exception)
+            private static void Finalizer(Player __instance)
             {
                 if (IsValidPlayer(__instance))
                     OnDeathPostfix(__instance, "Player.OnDeath.Finalizer");
-
-                return __exception;
             }
         }
     }

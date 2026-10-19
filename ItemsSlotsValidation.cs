@@ -377,10 +377,9 @@ namespace ExtraSlots
 
             [HarmonyFinalizer]
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(Exception __exception)
+            private static void Finalizer()
             {
                 playerLoadDepth = Math.Max(0, playerLoadDepth - 1);
-                return __exception;
             }
         }
 

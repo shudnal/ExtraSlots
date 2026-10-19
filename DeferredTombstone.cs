@@ -425,12 +425,10 @@ namespace ExtraSlots
             }
 
             [HarmonyFinalizer]
-            private static Exception Finalizer(TombStone __instance, bool __state, Exception __exception)
+            private static void Finalizer(TombStone __instance, bool __state)
             {
                 if (__state && __instance?.m_container != null)
                     __instance.m_container.m_inUse = false;
-
-                return __exception;
             }
         }
     }

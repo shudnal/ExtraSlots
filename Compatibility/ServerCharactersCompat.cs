@@ -79,10 +79,10 @@ namespace ExtraSlots.Compatibility
 
             [HarmonyFinalizer]
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(SaveState __state, Exception __exception)
+            private static void Finalizer(SaveState __state)
             {
                 if (__state == null)
-                    return __exception;
+                    return;
 
                 foreach (ItemSlotMetadata metadata in __state.Items)
                 {
@@ -99,8 +99,6 @@ namespace ExtraSlots.Compatibility
                     else
                         metadata.Item.m_customData.Remove(customKeySlotID);
                 }
-
-                return __exception;
             }
         }
     }

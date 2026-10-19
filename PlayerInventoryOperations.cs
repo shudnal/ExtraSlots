@@ -1482,10 +1482,9 @@ namespace ExtraSlots
 
             [HarmonyFinalizer]
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(IDisposable __state, Exception __exception)
+            private static void Finalizer(IDisposable __state)
             {
                 __state?.Dispose();
-                return __exception;
             }
         }
 
@@ -1503,10 +1502,9 @@ namespace ExtraSlots
 
             [HarmonyFinalizer]
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(IDisposable __state, Exception __exception)
+            private static void Finalizer(IDisposable __state)
             {
                 __state?.Dispose();
-                return __exception;
             }
         }
 
@@ -1524,10 +1522,9 @@ namespace ExtraSlots
 
             [HarmonyFinalizer]
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(IDisposable __state, Exception __exception)
+            private static void Finalizer(IDisposable __state)
             {
                 __state?.Dispose();
-                return __exception;
             }
         }
 

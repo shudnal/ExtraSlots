@@ -360,11 +360,10 @@ internal static class InventoryMigration
                 RollbackRecoverySource(__state, "ComfyQuickSlots snapshot");
         }
 
-        private static Exception Finalizer(Exception __exception, RecoverySourceState __state)
+        private static void Finalizer(Exception __exception, RecoverySourceState __state)
         {
             if (__exception != null)
                 RollbackRecoverySource(__state, "ComfyQuickSlots snapshot");
-            return __exception;
         }
     }
 
@@ -385,11 +384,10 @@ internal static class InventoryMigration
                 RollbackRecoverySource(__state, "InventorySlots backup");
         }
 
-        private static Exception Finalizer(Exception __exception, RecoverySourceState __state)
+        private static void Finalizer(Exception __exception, RecoverySourceState __state)
         {
             if (__exception != null)
                 RollbackRecoverySource(__state, "InventorySlots backup");
-            return __exception;
         }
     }
 
@@ -410,11 +408,10 @@ internal static class InventoryMigration
                 RollbackRecoverySource(__state, "EaQS 3.x backup");
         }
 
-        private static Exception Finalizer(Exception __exception, RecoverySourceState __state)
+        private static void Finalizer(Exception __exception, RecoverySourceState __state)
         {
             if (__exception != null)
                 RollbackRecoverySource(__state, "EaQS 3.x backup");
-            return __exception;
         }
     }
 }

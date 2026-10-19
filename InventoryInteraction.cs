@@ -179,11 +179,10 @@ namespace ExtraSlots
                     preventAddItem = __state.Value;
             }
 
-            private static Exception Finalizer(bool? __state, Exception __exception)
+            private static void Finalizer(bool? __state)
             {
                 if (__state.HasValue)
                     preventAddItem = __state.Value;
-                return __exception;
             }
         }
 
@@ -390,11 +389,11 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(ref UpgradeState __state, Exception __exception)
+            private static void Finalizer(ref UpgradeState __state)
             {
                 UpgradeState state = __state;
                 if (state == null)
-                    return __exception;
+                    return;
 
                 // A finalizer can be retried. Detach this frame before inventory callbacks so
                 // neither this operation nor an outer craft is active during the final move.
@@ -412,7 +411,6 @@ namespace ExtraSlots
                 {
                     current = state.Previous;
                 }
-                return __exception;
             }
         }
 
@@ -778,7 +776,7 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(ref CapacityQueryState __state, Exception __exception)
+            private static void Finalizer(ref CapacityQueryState __state)
             {
                 __state?.Restore();
                 CapacityQueryState state = __state;
@@ -786,7 +784,6 @@ namespace ExtraSlots
                 // handle before pooling so a retry cannot restore a reused nested-call state.
                 __state = null;
                 state?.Release();
-                return __exception;
             }
         }
 
@@ -933,14 +930,13 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(CallState __state, Exception __exception)
+            private static void Finalizer(CallState __state)
             {
                 if (__state != null)
                 {
                     current = __state.Previous;
                     itemToFindSlot = current?.Candidate;
                 }
-                return __exception;
             }
         }
 
@@ -954,10 +950,9 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(Inventory __instance, ItemDrop.ItemData item, bool __result, Exception __exception)
+            private static void Finalizer(Inventory __instance, ItemDrop.ItemData item, bool __result)
             {
                 Inventory_AddItem_ByName_FindAppropriateSlot.ObserveAddResult(__instance, item, __result);
-                return __exception;
             }
         }
 
@@ -994,14 +989,13 @@ namespace ExtraSlots
             }
 
             [HarmonyPriority(Priority.Last)]
-            private static Exception Finalizer(LoadState __state, Exception __exception)
+            private static void Finalizer(LoadState __state)
             {
                 if (!__state.Entered)
-                    return __exception;
+                    return;
 
                 inCall = __state.InCall;
                 loadingInventory = __state.Inventory;
-                return __exception;
             }
         }
 
@@ -1036,11 +1030,10 @@ namespace ExtraSlots
                     inCall = __state.Value;
             }
 
-            private static Exception Finalizer(bool? __state, Exception __exception)
+            private static void Finalizer(bool? __state)
             {
                 if (__state.HasValue)
                     inCall = __state.Value;
-                return __exception;
             }
         }
 

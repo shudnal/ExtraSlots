@@ -498,11 +498,10 @@ namespace ExtraSlots
                 }
 
                 [HarmonyPriority(Priority.Last)]
-                private static Exception Finalizer(EquipState __state, Exception __exception)
+                private static void Finalizer(EquipState __state)
                 {
                     if (__state != null)
                         current = __state.Previous;
-                    return __exception;
                 }
             }
 
