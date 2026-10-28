@@ -1,5 +1,6 @@
 ﻿using BepInEx.Configuration;
 using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -120,7 +121,8 @@ public static class PreventSimilarHotkeys
         if (__instance?.m_buttons == null)
             return;
 
-        Dictionary<string, HashSet<string>> pathToButtonNames = new Dictionary<string, HashSet<string>>();
+        // Unity control paths are case-insensitive, including paths recorded by rebinding.
+        Dictionary<string, HashSet<string>> pathToButtonNames = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (KeyValuePair<string, ZInput.ButtonDef> button in __instance.m_buttons)
         {
@@ -129,11 +131,10 @@ public static class PreventSimilarHotkeys
             if (button.Value?.ButtonAction == null)
                 continue;
 
+            // effectivePath already falls back to path when there is no override.
+            // Replaced or disabled bindings must not keep blocking their original keys.
             foreach (InputBinding binding in button.Value.ButtonAction.bindings)
-            {
                 AddButtonPath(binding.effectivePath, button.Key);
-                AddButtonPath(binding.path, button.Key);
-            }
         }
 
         foreach (Slot slot in slots)
@@ -224,6 +225,12 @@ public static class PreventSimilarHotkeys
                key == KeyCode.RightWindows;
     }
 
+    // Hidden bars keep their shortcuts; disabled bars do not use items.
+    private static bool IsSlotHotkeyEnabled(Slot slot) => slot.IsHotkeySlot
+        && (!slot.IsQuickSlot || QuickSlotsHotBar.IsEnabled())
+        && (!slot.IsAmmoSlot || AmmoSlotsHotBar.IsEnabled())
+        && (!slot.IsFoodSlot || FoodSlotsHotBar.IsEnabled());
+
     internal static bool IsAnyExtraSlotsHotkeyDown(bool checkForHeld = false)
     {
         int token = GetCacheToken();
@@ -238,7 +245,7 @@ public static class PreventSimilarHotkeys
 
             foreach (Slot slot in slots)
             {
-                if (!slot.IsHotkeySlot)
+                if (!IsSlotHotkeyEnabled(slot))
                     continue;
 
                 if (!slot.IsShortcutPressedWithItem())
@@ -259,7 +266,7 @@ public static class PreventSimilarHotkeys
 
         foreach (Slot slot in slots)
         {
-            if (!slot.IsHotkeySlot)
+            if (!IsSlotHotkeyEnabled(slot))
                 continue;
 
             if (!slot.IsShortcutDownWithItem())
