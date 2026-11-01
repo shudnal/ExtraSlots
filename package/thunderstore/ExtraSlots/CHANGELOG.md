@@ -1,3 +1,6 @@
+# 1.2.22
+* Added an option to hide the six regular equipment slots from the inventory panel without disabling equipped items.
+
 # 1.2.21
 * Fixed old backup snapshots restoring duplicate items. Only the latest snapshot is used, and each new backup replaces the previous one.
 

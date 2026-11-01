@@ -210,9 +210,17 @@ namespace ExtraSlots
 
         public static void UpdateSidePanels() => updateSidePanelsInFrames = 3;
 
+        private static bool IsSlotVisible(Slot slot) => slot.IsActive && (showRegularEquipmentSlots.Value || !slot.IsVanillaEquipment());
+
+        private static Slot[] GetVisibleEquipmentSlots() => showRegularEquipmentSlots.Value
+            ? GetEquipmentSlots()
+            : GetEquipmentSlots().Where(IsSlotVisible).ToArray();
+
+        private static bool HasVisibleSlots => equipmentSlotsCount > 0 || quickSlotsCount > 0 || IsFoodSlotAvailable() || IsAmmoSlotAvailable();
+
         internal static void UpdateSlotsCount()
         {
-            equipmentSlotsCount = GetEquipmentSlotsCount();
+            equipmentSlotsCount = GetVisibleEquipmentSlots().Length;
             quickSlotsCount = GetQuickSlotsCount();
         }
 
@@ -323,7 +331,9 @@ namespace ExtraSlots
             if (originalTooltipPosition == Vector2.zero)
                 originalTooltipPosition = InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition;
 
-            if (equipmentPanelTooltipOffset.Value == Vector2.zero)
+            if (!showRegularEquipmentSlots.Value && !HasVisibleSlots)
+                InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition = originalTooltipPosition;
+            else if (equipmentPanelTooltipOffset.Value == Vector2.zero)
                 InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition = originalTooltipPosition - new Vector2(0, PanelHeight + 3.5f * tileSpace);
             else
                 InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition = originalTooltipPosition + new Vector2(equipmentPanelTooltipOffset.Value.x, -equipmentPanelTooltipOffset.Value.y);
@@ -335,6 +345,11 @@ namespace ExtraSlots
         {
             if (!equipmentBackground)
                 return;
+
+            bool panelVisible = showRegularEquipmentSlots.Value || HasVisibleSlots;
+            equipmentBackground.gameObject.SetActive(panelVisible);
+            if (selectedFrame)
+                selectedFrame.gameObject.SetActive(panelVisible);
 
             equipmentBackground.sizeDelta = new Vector2(PanelWidth, PanelHeight);
             equipmentBackground.anchoredPosition = PanelPosition + new Vector2(PanelWidth / 2, -PanelHeight / 2);
@@ -352,7 +367,7 @@ namespace ExtraSlots
             if (!currentChild)
                 return;
 
-            currentChild.gameObject.SetActive(slot.IsActive);
+            currentChild.gameObject.SetActive(IsSlotVisible(slot));
             currentChild.GetComponent<RectTransform>().anchoredPosition = slot.Position;
             SetSlotLabel(currentChild.transform.Find("binding"), slot);
             SetSlotColor(currentChild.GetComponent<Button>(), InventoryGui.instance.m_dragItem != null && 
@@ -532,7 +547,7 @@ namespace ExtraSlots
 
         internal static void SetSlotsPositions()
         {
-            SetPosition(GetEquipmentSlots(), SlotPositions.GetEquipmentTileOffset);
+            SetPosition(GetVisibleEquipmentSlots(), SlotPositions.GetEquipmentTileOffset);
             SetPosition(GetQuickSlots(), SlotPositions.GetQuickSlotTileOffset);
             SetPosition(GetFoodSlots(), SlotPositions.GetFoodSlotTileOffset);
             SetPosition(GetAmmoSlots(), SlotPositions.GetAmmoSlotTileOffset);
@@ -566,7 +581,8 @@ namespace ExtraSlots
             private static int Column(int i) => i / 3;
             private static int Row(int i) => i % 3;
             private static int LastEquipmentRow() => Row(equipmentSlotsCount - 1);
-            internal static int LastEquipmentColumn() => Column(equipmentSlotsCount - 1);
+            internal static int LastEquipmentColumn() => equipmentSlotsCount == 0 && !showRegularEquipmentSlots.Value
+                ? -1 : Column(equipmentSlotsCount - 1);
 
             // Result in grid size of half tiles
             internal static Vector2 GetEquipmentTileOffset(int i)
@@ -1001,7 +1017,7 @@ namespace ExtraSlots
         {
             public static Vector2i FindEquipmentSlot(int row = -1, Slot slotRow = null, int col = -1, Slot slotCol = null, bool right = false, Slot before = null, Slot after = null)
             {
-                Slot[] equipmentSlots = GetEquipmentSlots();
+                Slot[] equipmentSlots = GetVisibleEquipmentSlots();
 
                 if (row == -1 && slotRow != null)
                     row = Array.IndexOf(equipmentSlots, slotRow) % 3;
@@ -1066,6 +1082,11 @@ namespace ExtraSlots
                 No food slots  == No misc slot under food slots */
 
                 Slot slot = GetSlotInGrid(__instance.m_selected);
+                if (!showRegularEquipmentSlots.Value && slot?.IsVanillaEquipment() == true)
+                {
+                    __instance.m_selected = new Vector2i(Mathf.Clamp(__instance.m_selected.x, 0, InventoryWidth - 1), InventoryHeightPlayer - 1);
+                    slot = null;
+                }
 
                 if (ZInput.GetButtonDown("JoyDPadLeft") || ZInput.GetButtonDown("JoyLStickLeft"))
                 {
@@ -1132,7 +1153,7 @@ namespace ExtraSlots
                         {
                             __instance.m_selected = FindEquipmentSlot(slotRow: slot, right: true, before: slot);
                             if (__instance.m_selected.x < 0)
-                                __instance.m_selected = new Vector2i(InventoryWidth - 1, Array.IndexOf(GetEquipmentSlots(), slot) % 3);
+                                __instance.m_selected = new Vector2i(InventoryWidth - 1, Array.IndexOf(GetVisibleEquipmentSlots(), slot) % 3);
                         }
                            
                         return false;
@@ -1164,13 +1185,21 @@ namespace ExtraSlots
                                         return false;
                                     }
                                 }
-                                __instance.m_selected = new Vector2i(0, InventoryHeightPlayer);
+                                if (showRegularEquipmentSlots.Value)
+                                    __instance.m_selected = new Vector2i(0, InventoryHeightPlayer);
                             }
                             else
                             {
                                 Vector2i newPos = FindEquipmentSlot(row: Math.Min(__instance.m_selected.y, equipmentSlotsCount - 1));
                                 if (newPos != emptyPosition)
                                     __instance.m_selected = newPos;
+                                else if (!showRegularEquipmentSlots.Value)
+                                {
+                                    if (IsFoodSlotAvailable())
+                                        __instance.m_selected = GetFoodSlots()[__instance.m_selected.y].GridPosition;
+                                    else if (IsAmmoSlotAvailable())
+                                        __instance.m_selected = GetAmmoSlots()[__instance.m_selected.y].GridPosition;
+                                }
                             }
                             return false;
                         }
@@ -1213,7 +1242,7 @@ namespace ExtraSlots
                                 Slot[] foodSlots = GetFoodSlots().Where(slot => slot.IsActive).ToArray();
                                 if (foodSlots.Length == 3)
                                 {
-                                    __instance.m_selected = foodSlots[Array.IndexOf(GetEquipmentSlots(), slot) % 3].GridPosition;
+                                    __instance.m_selected = foodSlots[Array.IndexOf(GetVisibleEquipmentSlots(), slot) % 3].GridPosition;
                                     return false;
                                 }
                                 else
@@ -1221,7 +1250,7 @@ namespace ExtraSlots
                                     Slot[] ammoSlots = GetAmmoSlots().Where(slot => slot.IsActive).ToArray();
                                     if (ammoSlots.Length == 3)
                                     {
-                                        __instance.m_selected = ammoSlots[Array.IndexOf(GetEquipmentSlots(), slot) % 3].GridPosition;
+                                        __instance.m_selected = ammoSlots[Array.IndexOf(GetVisibleEquipmentSlots(), slot) % 3].GridPosition;
                                         return false;
                                     }
                                 }
@@ -1274,7 +1303,7 @@ namespace ExtraSlots
                         }
                         else // Equipment slot
                         {
-                            __instance.m_selected = FindEquipmentSlot(col: Array.IndexOf(GetEquipmentSlots(), slot) / 3, right: true, before: slot);
+                            __instance.m_selected = FindEquipmentSlot(col: Array.IndexOf(GetVisibleEquipmentSlots(), slot) / 3, right: true, before: slot);
                             if (__instance.m_selected.x < 0)
                                 __instance.m_selected = slot.GridPosition;
                         }
@@ -1310,7 +1339,7 @@ namespace ExtraSlots
                         }
                         else if (slot.IsEquipmentSlot)
                         {
-                            int col = Array.IndexOf(GetEquipmentSlots(), slot) / 3;
+                            int col = Array.IndexOf(GetVisibleEquipmentSlots(), slot) / 3;
                             __instance.m_selected = FindEquipmentSlot(col: col, after: slot);
                             if (__instance.m_selected.x < 0)
                                 __instance.m_selected = GetQuickSlots()[col].GridPosition;
@@ -1354,7 +1383,7 @@ namespace ExtraSlots
                     return;
 
                 Slot slot = GetSlotInGrid(pos);
-                if (slot != null && !slot.IsEmptySlot && slot.IsActive)
+                if (slot != null && !slot.IsEmptySlot && IsSlotVisible(slot))
                     return;
 
                 pos.x = Mathf.Clamp(pos.x, 0, InventoryWidth - 1);

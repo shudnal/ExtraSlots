@@ -38,7 +38,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.2.21";
+        public const string pluginVersion = "1.2.22";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -101,6 +101,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> lightenedSlotsShowTooltip;
 
         public static ConfigEntry<string> vanillaSlotsOrder;
+        public static ConfigEntry<bool> showRegularEquipmentSlots;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
         public static ConfigEntry<Vector2> equipmentPanelOffset;
         public static ConfigEntry<bool> equipmentPanelSticky;
@@ -508,6 +509,9 @@ namespace ExtraSlots
             vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder,
                 new ConfigDescription("Comma separated list defining order of vanilla equipment slots", null, new CustomConfigs.ConfigurationManagerAttributes { CustomDrawer = CustomConfigs.DrawOrderedFixedStrings(",") }));
 
+            showRegularEquipmentSlots = config("Panels - Equipment slots", "Show regular equipment slots", defaultValue: true,
+                "Show the six vanilla armor, utility and trinket slots on the equipment panel. Hidden slots keep their items and equipment effects; turn this on to manage them.");
+
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalLeft, "Equipment slots alignment");
             equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
             equipmentPanelSticky = config("Panels - Equipment slots", "Sticky", defaultValue: true, "Snap the equipment panel to its default attachment or nearby inventory UI panels while dragging");
@@ -523,6 +527,7 @@ namespace ExtraSlots
             queuedEquipFade.SettingChanged += (s, e) => QueuedEquipIndicator.OnSettingChanged();
 
             vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
+            showRegularEquipmentSlots.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentPanelSticky.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();

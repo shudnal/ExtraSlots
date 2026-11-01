@@ -13,6 +13,10 @@ Open the game's radial menu and select **Hotbar**. The **Quick bars** entry at t
 
 Slot availability and progression determine which groups appear. The entry is absent when none of these slots are active. Hiding or disabling a HUD hotbar does not disable this radial page or remove its inventory slots. Item use and closing follow the game's Hotbar radial behavior.
 
+## Hiding regular equipment slots
+
+In **Panels - Equipment slots**, turn off **Show regular equipment slots** to hide the six vanilla equipment cells (helmet, chest, legs, cape, utility and trinket) in the ExtraSlots inventory panel. Equipped items, their effects and the reserved inventory cells remain unchanged. Turn this setting back on to access those slots. Extra utility and custom equipment slots remain visible when enabled. If all other inventory-panel slots are disabled, the ExtraSlots panel background is hidden too.
+
 ## Summary
 
 This mod expands the player's inventory, not by just adding more rows but by creating extra slots specifically designated for certain types of items.
