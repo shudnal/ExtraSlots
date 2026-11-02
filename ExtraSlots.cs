@@ -57,6 +57,7 @@ namespace ExtraSlots
         public static ConfigEntry<int> extraRows;
         public static ConfigEntry<int> quickSlotsAmount;
         public static ConfigEntry<int> extraUtilitySlotsAmount;
+        public static ConfigEntry<bool> showRegularEquipmentSlots;
         public static ConfigEntry<bool> foodSlotsEnabled;
         public static ConfigEntry<bool> miscSlotsEnabled;
         public static ConfigEntry<bool> ammoSlotsEnabled;
@@ -101,7 +102,6 @@ namespace ExtraSlots
         public static ConfigEntry<bool> lightenedSlotsShowTooltip;
 
         public static ConfigEntry<string> vanillaSlotsOrder;
-        public static ConfigEntry<bool> showRegularEquipmentSlots;
         public static ConfigEntry<SlotsAlignment> equipmentSlotsAlignment;
         public static ConfigEntry<Vector2> equipmentPanelOffset;
         public static ConfigEntry<bool> equipmentPanelSticky;
@@ -393,6 +393,9 @@ namespace ExtraSlots
             useSingleHotbarItem = config("Extra slots", "Use single hotbar item", defaultValue: true, "Enabled - only item from the first slot will be used with slots priority (Quick -> Ammo -> Food)\n" +
                                                                                                       "Disabled - all items with similar hotkey will be used at once. [Synced with Server]", synchronizedSetting: true);
             showExtraUtilityItems = config("Extra slots", "Show extra utility items", defaultValue: true, "Show extra utility items on player model. [Synced with Server]", synchronizedSetting: true);
+            showRegularEquipmentSlots = config("Extra slots", "Show regular equipment slots", defaultValue: true,
+                "Show the six vanilla armor, utility and trinket slots on the equipment panel. Hidden slots keep their items and equipment effects; turn this on to manage them.");
+            showRegularEquipmentSlots.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             customSlotItemsCanUseRegularEquipmentSlots = config("Extra slots", "Custom slot items can use regular equipment slots", defaultValue: false, "If enabled, items matching custom slots will try custom slots first and then fall back to regular compatible equipment slots. [Synced with Server]" +
                                                                                                                                     "\nIf disabled, such items will only be placed into custom slots, unless they have a valid saved previous slot.", synchronizedSetting: true);
 
@@ -509,9 +512,6 @@ namespace ExtraSlots
             vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder,
                 new ConfigDescription("Comma separated list defining order of vanilla equipment slots", null, new CustomConfigs.ConfigurationManagerAttributes { CustomDrawer = CustomConfigs.DrawOrderedFixedStrings(",") }));
 
-            showRegularEquipmentSlots = config("Panels - Equipment slots", "Show regular equipment slots", defaultValue: true,
-                "Show the six vanilla armor, utility and trinket slots on the equipment panel. Hidden slots keep their items and equipment effects; turn this on to manage them.");
-
             equipmentSlotsAlignment = config("Panels - Equipment slots", "Equipment slots alignment", SlotsAlignment.VerticalTopHorizontalLeft, "Equipment slots alignment");
             equipmentPanelOffset = config("Panels - Equipment slots", "Offset", Vector2.zero, "Offset relative to the upper right corner of the inventory (side elements included)");
             equipmentPanelSticky = config("Panels - Equipment slots", "Sticky", defaultValue: true, "Snap the equipment panel to its default attachment or nearby inventory UI panels while dragging");
@@ -527,7 +527,6 @@ namespace ExtraSlots
             queuedEquipFade.SettingChanged += (s, e) => QueuedEquipIndicator.OnSettingChanged();
 
             vanillaSlotsOrder.SettingChanged += (s, e) => EquipmentPanel.ReorderVanillaSlots();
-            showRegularEquipmentSlots.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentSlotsAlignment.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentPanelOffset.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
             equipmentPanelSticky.SettingChanged += (s, e) => EquipmentPanel.MarkDirty();
