@@ -1199,6 +1199,8 @@ namespace ExtraSlots
                                         __instance.m_selected = GetFoodSlots()[__instance.m_selected.y].GridPosition;
                                     else if (IsAmmoSlotAvailable())
                                         __instance.m_selected = GetAmmoSlots()[__instance.m_selected.y].GridPosition;
+                                    else if (GetQuickSlots().FirstOrDefault(slot => slot.IsActive) is Slot quickSlot)
+                                        __instance.m_selected = quickSlot.GridPosition;
                                 }
                             }
                             return false;

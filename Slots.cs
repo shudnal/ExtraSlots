@@ -199,6 +199,10 @@ namespace ExtraSlots
             public static bool IsShortcutPressed(KeyboardShortcut shortcut) => HotBars.PreventSimilarHotkeys.IsShortcutPressed(shortcut);
 
             public static bool IsVanillaSlotID(string id) => vanillaSlots.Contains(id);
+
+        // Keep existing residents valid, but do not automatically fill hidden native equipment cells.
+        internal static bool CanAutoPlaceInSlot(Slot slot) => slot != null
+            && (showRegularEquipmentSlots.Value || !slot.IsVanillaEquipment());
         }
 
         internal static class CustomSlot
@@ -396,15 +400,15 @@ namespace ExtraSlots
             if (item?.m_shared == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && CanAutoPlaceInSlot(prevSlot) && prevSlot.IsActive && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
             {
                 slot = prevSlot;
                 return true;
             }
 
-            int index = Array.FindIndex(slots, slot => slot.IsCustomSlot && slot.IsActive && slot.IsFree && slot.ItemFits(item));
+            int index = Array.FindIndex(slots, slot => slot.IsCustomSlot && CanAutoPlaceInSlot(slot) && slot.IsActive && slot.IsFree && slot.ItemFits(item));
             if (index == -1)
-                index = Array.FindIndex(slots, slot => slot.IsActive && slot.IsFree && slot.ItemFits(item));
+                index = Array.FindIndex(slots, slot => CanAutoPlaceInSlot(slot) && slot.IsActive && slot.IsFree && slot.ItemFits(item));
 
             if (index == -1)
                 return false;
@@ -417,14 +421,14 @@ namespace ExtraSlots
         {
             Slot[] equipmentSlots = GetEquipmentSlots();
 
-            Slot customSlot = equipmentSlots.FirstOrDefault(slot => slot.IsCustomSlot && predicate(slot));
+            Slot customSlot = equipmentSlots.FirstOrDefault(slot => slot.IsCustomSlot && CanAutoPlaceInSlot(slot) && predicate(slot));
             if (customSlot != null)
                 return customSlot;
 
             if (IsCustomSlotItem(item) && !customSlotItemsCanUseRegularEquipmentSlots.Value)
                 return null;
 
-            return equipmentSlots.FirstOrDefault(slot => !slot.IsCustomSlot && predicate(slot));
+            return equipmentSlots.FirstOrDefault(slot => !slot.IsCustomSlot && CanAutoPlaceInSlot(slot) && predicate(slot));
         }
 
         public static bool TryFindFreeEquipmentSlotForItem(ItemDrop.ItemData item, out Slot slot)
@@ -434,7 +438,7 @@ namespace ExtraSlots
             if (item?.m_shared == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && CanAutoPlaceInSlot(prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
             {
                 slot = prevSlot;
                 return true;
@@ -451,7 +455,7 @@ namespace ExtraSlots
             if (item?.m_shared == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.Item != null && !CurrentPlayer.IsItemEquiped(prevSlot.Item) || item == prevSlot.Item))
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && CanAutoPlaceInSlot(prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.Item != null && !CurrentPlayer.IsItemEquiped(prevSlot.Item) || item == prevSlot.Item))
             {
                 slot = prevSlot;
                 return true;

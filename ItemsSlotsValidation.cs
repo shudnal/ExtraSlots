@@ -109,6 +109,7 @@ namespace ExtraSlots
             ClearCachedItems();
 
             if (TryGetSavedPlayerSlot(item, out Slot savedSlot)
+                && CanAutoPlaceInSlot(savedSlot)
                 && savedSlot.IsActive
                 && savedSlot.ItemFits(item)
                 && (savedSlot.IsFree || ReferenceEquals(savedSlot.Item, item))
@@ -152,7 +153,7 @@ namespace ExtraSlots
                 return false;
 
             if (GetItemSlot(item) is not Slot currentSlot || !currentSlot.IsEquipmentSlot)
-                return true;
+                return slots.Any(slot => slot.IsEquipmentSlot && CanAutoPlaceInSlot(slot) && slot.ItemFits(item));
 
             return !customSlotItemsCanUseRegularEquipmentSlots.Value && !currentSlot.IsCustomSlot && IsCustomSlotItem(item);
         }
