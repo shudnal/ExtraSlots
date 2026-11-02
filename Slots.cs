@@ -378,10 +378,6 @@ namespace ExtraSlots
         public static Slot[] GetCustomSlots(bool onlyActive = true) => Array.FindAll(slots, slot => slot.IsCustomSlot && (!onlyActive || slot.IsActive));
         public static Slot[] GetInactiveSlots() => Array.FindAll(slots, slot => !slot.IsActive);
 
-        // Keep existing residents valid, but do not automatically fill hidden native equipment cells.
-        internal static bool CanAutoPlaceInSlot(Slot slot) => slot != null
-            && (showRegularEquipmentSlots.Value || !slot.IsVanillaEquipment());
-
         public static bool TryGetSavedPlayerSlot(ItemDrop.ItemData item, out Slot slot)
         {
             slot = null;
@@ -400,15 +396,15 @@ namespace ExtraSlots
             if (item?.m_shared == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && CanAutoPlaceInSlot(prevSlot) && prevSlot.IsActive && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
             {
                 slot = prevSlot;
                 return true;
             }
 
-            int index = Array.FindIndex(slots, slot => slot.IsCustomSlot && CanAutoPlaceInSlot(slot) && slot.IsActive && slot.IsFree && slot.ItemFits(item));
+            int index = Array.FindIndex(slots, slot => slot.IsCustomSlot && slot.IsActive && slot.IsFree && slot.ItemFits(item));
             if (index == -1)
-                index = Array.FindIndex(slots, slot => CanAutoPlaceInSlot(slot) && slot.IsActive && slot.IsFree && slot.ItemFits(item));
+                index = Array.FindIndex(slots, slot => slot.IsActive && slot.IsFree && slot.ItemFits(item));
 
             if (index == -1)
                 return false;
@@ -421,14 +417,14 @@ namespace ExtraSlots
         {
             Slot[] equipmentSlots = GetEquipmentSlots();
 
-            Slot customSlot = equipmentSlots.FirstOrDefault(slot => slot.IsCustomSlot && CanAutoPlaceInSlot(slot) && predicate(slot));
+            Slot customSlot = equipmentSlots.FirstOrDefault(slot => slot.IsCustomSlot && predicate(slot));
             if (customSlot != null)
                 return customSlot;
 
             if (IsCustomSlotItem(item) && !customSlotItemsCanUseRegularEquipmentSlots.Value)
                 return null;
 
-            return equipmentSlots.FirstOrDefault(slot => !slot.IsCustomSlot && CanAutoPlaceInSlot(slot) && predicate(slot));
+            return equipmentSlots.FirstOrDefault(slot => !slot.IsCustomSlot && predicate(slot));
         }
 
         public static bool TryFindFreeEquipmentSlotForItem(ItemDrop.ItemData item, out Slot slot)
@@ -438,7 +434,7 @@ namespace ExtraSlots
             if (item?.m_shared == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && CanAutoPlaceInSlot(prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.IsFree || item == prevSlot.Item))
             {
                 slot = prevSlot;
                 return true;
@@ -455,7 +451,7 @@ namespace ExtraSlots
             if (item?.m_shared == null)
                 return false;
 
-            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && CanAutoPlaceInSlot(prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.Item != null && !CurrentPlayer.IsItemEquiped(prevSlot.Item) || item == prevSlot.Item))
+            if (TryGetSavedPlayerSlot(item, out Slot prevSlot) && prevSlot.IsActive && prevSlot.IsEquipmentSlot && prevSlot.ItemFits(item) && (prevSlot.Item != null && !CurrentPlayer.IsItemEquiped(prevSlot.Item) || item == prevSlot.Item))
             {
                 slot = prevSlot;
                 return true;
@@ -628,16 +624,16 @@ namespace ExtraSlots
             AddSlot($"{extraUtilitySlotID}2", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, IsUtilitySlot2Available);
 
             // Third row
-            AddSlot(helmetSlotID,   () => "$exsl_slot_equipment_helmet_label",      IsHelmetSlotItem,       IsHelmetSlotKnown);
-            AddSlot(chestSlotID,    () => "$exsl_slot_equipment_chest_label",       IsChestSlotItem,        IsChestSlotKnown);
-            AddSlot(legsSlotID,     () => "$exsl_slot_equipment_legs_label",        IsLegsSlotItem,         IsLegsSlotKnown);
-            AddSlot(shoulderSlotID, () => "$exsl_slot_equipment_shoulders_label",   IsShoulderSlotItem,     IsShoulderSlotKnown);
-            AddSlot(utilitySlotID,  () => "$exsl_slot_equipment_utility_label",     IsUtilitySlotItem,      IsUtilitySlotKnown);
+            AddSlot(helmetSlotID,   () => "$exsl_slot_equipment_helmet_label",      IsHelmetSlotItem,       () => regularEquipmentSlotsEnabled.Value && IsHelmetSlotKnown());
+            AddSlot(chestSlotID,    () => "$exsl_slot_equipment_chest_label",       IsChestSlotItem,        () => regularEquipmentSlotsEnabled.Value && IsChestSlotKnown());
+            AddSlot(legsSlotID,     () => "$exsl_slot_equipment_legs_label",        IsLegsSlotItem,         () => regularEquipmentSlotsEnabled.Value && IsLegsSlotKnown());
+            AddSlot(shoulderSlotID, () => "$exsl_slot_equipment_shoulders_label",   IsShoulderSlotItem,     () => regularEquipmentSlotsEnabled.Value && IsShoulderSlotKnown());
+            AddSlot(utilitySlotID,  () => "$exsl_slot_equipment_utility_label",     IsUtilitySlotItem,      () => regularEquipmentSlotsEnabled.Value && IsUtilitySlotKnown());
 
             AddSlot($"{extraUtilitySlotID}3", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, IsUtilitySlot3Available);
             AddSlot($"{extraUtilitySlotID}4", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, IsUtilitySlot4Available);
 
-            AddSlot(trinketSlotID, () => "$exsl_slot_equipment_trinket_label", IsTrinketSlotItem, IsTrinketSlotKnown);
+            AddSlot(trinketSlotID, () => "$exsl_slot_equipment_trinket_label", IsTrinketSlotItem, () => regularEquipmentSlotsEnabled.Value && IsTrinketSlotKnown());
 
             CustomSlot.customSlotStartingIndex = index;
 

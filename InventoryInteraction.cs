@@ -505,12 +505,12 @@ namespace ExtraSlots
         private static class Inventory_AddItem_ItemData_amount_x_y_TargetPositionRerouting
         {
             [HarmonyPriority(Priority.Last)]
-            private static bool Prefix(Inventory __instance, ItemDrop.ItemData item, ref int x, ref int y, ref bool __result)
+            private static void Prefix(Inventory __instance, ItemDrop.ItemData item, ref int x, ref int y)
             {
                 // AddTempItem carries serialized fields only; it intentionally leaves m_shared null.
                 // Do not resize, classify, log, or reroute records used by world conversion.
                 if (__instance.m_temoraryInventory || item?.m_shared == null)
-                    return true;
+                    return;
 
                 if (__instance != PlayerInventory)
                 {
@@ -527,23 +527,23 @@ namespace ExtraSlots
                         __instance.m_height = Mathf.Max(__instance.m_height, y + 1);
                         LogDebug($"Inventory \"{__instance.m_name}\" loading: expanded {oldWidth}x{oldHeight} -> {__instance.m_width}x{__instance.m_height} for {item.m_shared.m_name} at {x},{y}");
                     }
-                    return true;
+                    return;
                 }
 
                 // Known materials and player keys are not yet loaded, custom components are not initialized, skip validation
                 if (Inventory_AddItem_OnLoad_FindAppropriateSlot.IsLoading(__instance) && CurrentPlayer.m_isLoading)
-                    return true;
+                    return;
 
                 // If another item is at grid - let stack logic go
                 if (__instance.GetItemAt(x, y) is ItemDrop.ItemData gridTakenItem)
                 {
                     LogDebug($"Inventory.AddItem X Y item {item.m_shared.m_name} adding at {x},{y} position is taken {gridTakenItem.m_shared?.m_name ?? gridTakenItem.m_dropPrefab?.name ?? "<unmaterialized item>"}");
-                    return true;
+                    return;
                 }
 
                 // If the dropped item fits for target slot
-                if (GetSlotInGrid(new Vector2i(x, y)) is not Slot slot || (CanAutoPlaceInSlot(slot) && slot.IsActive && !slot.IsEmptySlot && slot.ItemFits(item)))
-                    return true;
+                if (GetSlotInGrid(new Vector2i(x, y)) is not Slot slot || (slot.IsActive && !slot.IsEmptySlot && slot.ItemFits(item)))
+                    return;
 
                 LogDebug($"Inventory.AddItem X Y item {item.m_shared.m_name} adding at {x},{y} unfits slot {slot} {slot.GridPosition}");
 
@@ -552,7 +552,7 @@ namespace ExtraSlots
                     LogDebug($"Inventory.AddItem X Y Rerouted {item.m_shared.m_name} from {x},{y} to free slot {freeSlot} {freeSlot.GridPosition}");
                     x = freeSlot.GridPosition.x;
                     y = freeSlot.GridPosition.y;
-                    return true;
+                    return;
                 }
 
                 if (TryMakeFreeSpaceInPlayerInventory(tryFindRegularInventorySlot: true, out Vector2i gridPos))
@@ -560,17 +560,7 @@ namespace ExtraSlots
                     LogDebug($"Inventory.AddItem X Y Rerouted {item.m_shared.m_name} from {x},{y} to created free space {gridPos}");
                     x = gridPos.x;
                     y = gridPos.y;
-                    return true;
                 }
-
-                // An invisible native equipment cell must not accept a new item when no other destination exists.
-                if (!CanAutoPlaceInSlot(slot))
-                {
-                    __result = false;
-                    return false;
-                }
-
-                return true;
             }
 
             [HarmonyPriority(Priority.Last)]
@@ -832,7 +822,7 @@ namespace ExtraSlots
                 bool inBounds = pos.x >= 0 && pos.x < InventoryWidth && pos.y >= 0 && pos.y < InventoryHeightFull;
                 Slot slot = inBounds ? GetSlotInGrid(pos) : null;
                 bool validDestination = inBounds && (pos.y < InventoryHeightPlayer
-                    || (slot != null && CanAutoPlaceInSlot(slot) && slot.IsActive && !slot.IsEmptySlot && slot.ItemFits(item)));
+                    || (slot != null && slot.IsActive && !slot.IsEmptySlot && slot.ItemFits(item)));
                 // Keep native occupied-cell handling, but never admit an orphaned tail cell or
                 // negative position merely because it has no Slot descriptor.
                 if (inBounds && __instance.GetItemAt(pos.x, pos.y) != null || validDestination)

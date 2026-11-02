@@ -468,7 +468,6 @@ namespace ExtraSlots
             ClearCachedItems();
 
             if (TryGetSavedPlayerSlot(item, out Slot previousSlot)
-                && CanAutoPlaceInSlot(previousSlot)
                 && previousSlot.IsActive
                 && previousSlot.ItemFits(item)
                 && (previousSlot.IsFree || ReferenceEquals(previousSlot.Item, item))
@@ -530,7 +529,6 @@ namespace ExtraSlots
 
             if (!string.IsNullOrEmpty(preferredSlotId)
                 && API.FindSlot(preferredSlotId) is Slot preferredSlot
-                && CanAutoPlaceInSlot(preferredSlot)
                 && preferredSlot.IsActive
                 && preferredSlot.ItemFits(item)
                 && preferredSlot.IsFree
@@ -938,7 +936,7 @@ namespace ExtraSlots
                 // The real AddItem(x,y) patch only reroutes a hidden coordinate when it resolves
                 // to an actual ExtraSlots slot and that slot rejects the item. Orphaned tail cells
                 // are left to vanilla for the first pass and are repaired by the settlement pass.
-                if (requestedSlot == null || (CanAutoPlaceInSlot(requestedSlot) && requestedSlot.ItemFits(item)))
+                if (requestedSlot == null || requestedSlot.ItemFits(item))
                     return requested;
 
                 // Mirrors ExtraSlots' AddItem(item, amount, x, y) prefix: an invalid hidden target
@@ -953,8 +951,7 @@ namespace ExtraSlots
                 if (TryMakeFreeRegularPositionVirtual(out Vector2i regularTarget))
                     return regularTarget;
 
-                // The real AddItem(x,y) patch rejects a free but hidden native equipment cell.
-                return !CanAutoPlaceInSlot(requestedSlot) ? emptyPosition : requested;
+                return requested;
             }
 
             private bool TryMakeFreeRegularPositionVirtual(out Vector2i freedPosition)
@@ -1003,7 +1000,6 @@ namespace ExtraSlots
             {
                 if (TryGetSavedPlayerSlot(item, out Slot savedSlot)
                     && savedSlot.IsEquipmentSlot
-                    && CanAutoPlaceInSlot(savedSlot)
                     && IsUsableAndFree(savedSlot, item))
                 {
                     return savedSlot;
@@ -1021,7 +1017,7 @@ namespace ExtraSlots
 
             private Slot FindEmptyValidSlotVirtual(ItemDrop.ItemData item)
             {
-                if (TryGetSavedPlayerSlot(item, out Slot savedSlot) && CanAutoPlaceInSlot(savedSlot) && IsUsableAndFree(savedSlot, item))
+                if (TryGetSavedPlayerSlot(item, out Slot savedSlot) && IsUsableAndFree(savedSlot, item))
                     return savedSlot;
 
                 Slot custom = slots.FirstOrDefault(slot => slot != null && slot.IsCustomSlot && IsUsableAndFree(slot, item));
@@ -1112,7 +1108,6 @@ namespace ExtraSlots
 
             private bool IsUsableAndFree(Slot slot, ItemDrop.ItemData item) => slot != null
                 && !slot.IsEmptySlot
-                && CanAutoPlaceInSlot(slot)
                 && slot.IsActive
                 && slot.ItemFits(item)
                 && IsInsidePhysicalInventory(slot.GridPosition)
@@ -1212,7 +1207,6 @@ namespace ExtraSlots
             private bool TryRelocate(VirtualItem item)
             {
                 if (TryGetSavedPlayerSlot(item.Template, out Slot savedSlot)
-                    && CanAutoPlaceInSlot(savedSlot)
                     && IsUsableSlot(savedSlot, item.Template)
                     && IsFree(savedSlot.GridPosition))
                 {
@@ -1326,7 +1320,6 @@ namespace ExtraSlots
 
                 if (TryGetSavedPlayerSlot(item, out Slot savedSlot)
                     && savedSlot.IsEquipmentSlot
-                    && CanAutoPlaceInSlot(savedSlot)
                     && IsUsableSlot(savedSlot, item)
                     && IsFree(savedSlot.GridPosition))
                 {
@@ -1334,14 +1327,14 @@ namespace ExtraSlots
                     return true;
                 }
 
-                result = GetEquipmentSlots().FirstOrDefault(slot => slot.IsCustomSlot && CanAutoPlaceInSlot(slot) && IsUsableSlot(slot, item) && IsFree(slot.GridPosition));
+                result = GetEquipmentSlots().FirstOrDefault(slot => slot.IsCustomSlot && IsUsableSlot(slot, item) && IsFree(slot.GridPosition));
                 if (result != null)
                     return true;
 
                 if (IsCustomSlotItem(item) && !customSlotItemsCanUseRegularEquipmentSlots.Value)
                     return false;
 
-                result = GetEquipmentSlots().FirstOrDefault(slot => !slot.IsCustomSlot && CanAutoPlaceInSlot(slot) && IsUsableSlot(slot, item) && IsFree(slot.GridPosition));
+                result = GetEquipmentSlots().FirstOrDefault(slot => !slot.IsCustomSlot && IsUsableSlot(slot, item) && IsFree(slot.GridPosition));
                 return result != null;
             }
 
@@ -1359,7 +1352,6 @@ namespace ExtraSlots
                 result = null;
 
                 if (TryGetSavedPlayerSlot(item, out Slot savedSlot)
-                    && CanAutoPlaceInSlot(savedSlot)
                     && IsUsableSlot(savedSlot, item)
                     && IsFree(savedSlot.GridPosition))
                 {
@@ -1367,11 +1359,11 @@ namespace ExtraSlots
                     return true;
                 }
 
-                result = slots.FirstOrDefault(slot => slot.IsCustomSlot && CanAutoPlaceInSlot(slot) && IsUsableSlot(slot, item) && IsFree(slot.GridPosition));
+                result = slots.FirstOrDefault(slot => slot.IsCustomSlot && IsUsableSlot(slot, item) && IsFree(slot.GridPosition));
                 if (result != null)
                     return true;
 
-                result = slots.FirstOrDefault(slot => CanAutoPlaceInSlot(slot) && IsUsableSlot(slot, item) && IsFree(slot.GridPosition));
+                result = slots.FirstOrDefault(slot => IsUsableSlot(slot, item) && IsFree(slot.GridPosition));
                 return result != null;
             }
 

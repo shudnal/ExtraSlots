@@ -57,7 +57,7 @@ namespace ExtraSlots
         public static ConfigEntry<int> extraRows;
         public static ConfigEntry<int> quickSlotsAmount;
         public static ConfigEntry<int> extraUtilitySlotsAmount;
-        public static ConfigEntry<bool> showRegularEquipmentSlots;
+        public static ConfigEntry<bool> regularEquipmentSlotsEnabled;
         public static ConfigEntry<bool> foodSlotsEnabled;
         public static ConfigEntry<bool> miscSlotsEnabled;
         public static ConfigEntry<bool> ammoSlotsEnabled;
@@ -393,9 +393,9 @@ namespace ExtraSlots
             useSingleHotbarItem = config("Extra slots", "Use single hotbar item", defaultValue: true, "Enabled - only item from the first slot will be used with slots priority (Quick -> Ammo -> Food)\n" +
                                                                                                       "Disabled - all items with similar hotkey will be used at once. [Synced with Server]", synchronizedSetting: true);
             showExtraUtilityItems = config("Extra slots", "Show extra utility items", defaultValue: true, "Show extra utility items on player model. [Synced with Server]", synchronizedSetting: true);
-            showRegularEquipmentSlots = config("Extra slots", "Show regular equipment slots", defaultValue: true,
-                "Show the six vanilla armor, utility and trinket slots on the equipment panel. Hidden slots keep their items and equipment effects; turn this on to manage them.");
-            showRegularEquipmentSlots.SettingChanged += (s, e) => EquipmentPanel.UpdatePanel();
+            regularEquipmentSlotsEnabled = config("Extra slots", "Enable regular equipment slots", defaultValue: true,
+                "Enable the six regular armor, utility and trinket equipment slots. When disabled, items in these slots move to regular inventory if space is available. Custom equipment slots are unaffected.");
+            regularEquipmentSlotsEnabled.SettingChanged += (s, e) => API.UpdateSlotActivation();
             customSlotItemsCanUseRegularEquipmentSlots = config("Extra slots", "Custom slot items can use regular equipment slots", defaultValue: false, "If enabled, items matching custom slots will try custom slots first and then fall back to regular compatible equipment slots. [Synced with Server]" +
                                                                                                                                     "\nIf disabled, such items will only be placed into custom slots, unless they have a valid saved previous slot.", synchronizedSetting: true);
 
