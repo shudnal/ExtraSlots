@@ -199,10 +199,6 @@ namespace ExtraSlots
             public static bool IsShortcutPressed(KeyboardShortcut shortcut) => HotBars.PreventSimilarHotkeys.IsShortcutPressed(shortcut);
 
             public static bool IsVanillaSlotID(string id) => vanillaSlots.Contains(id);
-
-        // Keep existing residents valid, but do not automatically fill hidden native equipment cells.
-        internal static bool CanAutoPlaceInSlot(Slot slot) => slot != null
-            && (showRegularEquipmentSlots.Value || !slot.IsVanillaEquipment());
         }
 
         internal static class CustomSlot
@@ -381,6 +377,10 @@ namespace ExtraSlots
         public static Slot[] GetMiscSlots() => Array.FindAll(slots, slot => slot.IsMiscSlot);
         public static Slot[] GetCustomSlots(bool onlyActive = true) => Array.FindAll(slots, slot => slot.IsCustomSlot && (!onlyActive || slot.IsActive));
         public static Slot[] GetInactiveSlots() => Array.FindAll(slots, slot => !slot.IsActive);
+
+        // Keep existing residents valid, but do not automatically fill hidden native equipment cells.
+        internal static bool CanAutoPlaceInSlot(Slot slot) => slot != null
+            && (showRegularEquipmentSlots.Value || !slot.IsVanillaEquipment());
 
         public static bool TryGetSavedPlayerSlot(ItemDrop.ItemData item, out Slot slot)
         {
