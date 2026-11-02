@@ -325,7 +325,7 @@ namespace ExtraSlots
             if (originalTooltipPosition == Vector2.zero)
                 originalTooltipPosition = InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition;
 
-            if (!HasVisibleSlots)
+            if (!regularEquipmentSlotsEnabled.Value && !HasVisibleSlots)
                 InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition = originalTooltipPosition;
             else if (equipmentPanelTooltipOffset.Value == Vector2.zero)
                 InventoryGui.instance.m_playerGrid.m_tooltipAnchor.anchoredPosition = originalTooltipPosition - new Vector2(0, PanelHeight + 3.5f * tileSpace);
@@ -340,7 +340,7 @@ namespace ExtraSlots
             if (!equipmentBackground)
                 return;
 
-            bool panelVisible = HasVisibleSlots;
+            bool panelVisible = regularEquipmentSlotsEnabled.Value || HasVisibleSlots;
             equipmentBackground.gameObject.SetActive(panelVisible);
             if (selectedFrame)
                 selectedFrame.gameObject.SetActive(panelVisible);
@@ -575,7 +575,8 @@ namespace ExtraSlots
             private static int Column(int i) => i / 3;
             private static int Row(int i) => i % 3;
             private static int LastEquipmentRow() => Row(equipmentSlotsCount - 1);
-            internal static int LastEquipmentColumn() => equipmentSlotsCount == 0 ? -1 : Column(equipmentSlotsCount - 1);
+            internal static int LastEquipmentColumn() => equipmentSlotsCount == 0 && !regularEquipmentSlotsEnabled.Value
+                ? -1 : Column(equipmentSlotsCount - 1);
 
             // Result in grid size of half tiles
             internal static Vector2 GetEquipmentTileOffset(int i)
