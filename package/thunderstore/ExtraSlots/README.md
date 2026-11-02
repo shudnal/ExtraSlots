@@ -15,7 +15,7 @@ Slot availability and progression determine which groups appear. The entry is ab
 
 ## Hiding regular equipment slots
 
-In **Panels - Equipment slots**, turn off **Show regular equipment slots** to hide the six vanilla equipment cells (helmet, chest, legs, cape, utility and trinket) in the ExtraSlots inventory panel. Items already in those cells remain equipped and their effects stay active. New items are not automatically moved into hidden cells. Turn this setting back on to access items already stored there. Extra utility and custom equipment slots remain visible when enabled. If all other inventory-panel slots are disabled, the ExtraSlots panel background is hidden too.
+In **Extra slots**, turn off **Show regular equipment slots** to hide the six vanilla equipment cells (helmet, chest, legs, cape, utility and trinket) in the ExtraSlots inventory panel. Items already in those cells remain equipped and their effects stay active. New items are not automatically moved into hidden cells. Turn this setting back on to access items already stored there. Extra utility and custom equipment slots remain visible when enabled. If all other inventory-panel slots are disabled, the ExtraSlots panel background is hidden too.
 
 ## Summary
 
