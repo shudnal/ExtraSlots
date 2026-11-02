@@ -100,7 +100,7 @@ namespace ExtraSlots
             return true;
         }
 
-        private static bool TryRelocateInvalidSlotWithoutDisplacing(ItemDrop.ItemData item)
+        internal static bool TryRelocateInvalidSlotWithoutDisplacing(ItemDrop.ItemData item)
         {
             Inventory inventory = PlayerInventory;
             if (item == null || inventory == null || !inventory.ContainsItem(item))

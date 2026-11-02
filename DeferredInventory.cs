@@ -506,7 +506,9 @@ namespace ExtraSlots
             {
                 try
                 {
-                    for (int i = 0; i < entries.Count;)
+                    // Re-equipping can make a custom slot reject its restored item. Attempt each
+                    // original entry once, then record the final state before retrying deferred items.
+                    for (int i = 0, remaining = entries.Count; i < entries.Count && remaining > 0; remaining--)
                     {
                         DeferredEntry entry = entries[i];
                         if (entry.PendingFinalization || !TryMaterialize(entry, out ItemDrop.ItemData item))
@@ -546,7 +548,11 @@ namespace ExtraSlots
                                 }
                             }
 
-                            LogMessage($"Deferred item {entry.PrefabName} was restored to player inventory.");
+                            if (GetItemSlot(placedItem) is Slot restoredSlot && !restoredSlot.ItemFits(placedItem))
+                                ItemsSlotsValidation.TryRelocateInvalidSlotWithoutDisplacing(placedItem);
+
+                            if (placedItem != null && PlayerInventory.ContainsItem(placedItem))
+                                LogMessage($"Deferred item {entry.PrefabName} was restored to player inventory.");
                             continue;
                         }
 

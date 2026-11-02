@@ -624,16 +624,16 @@ namespace ExtraSlots
             AddSlot($"{extraUtilitySlotID}2", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, IsUtilitySlot2Available);
 
             // Third row
-            AddSlot(helmetSlotID,   () => "$exsl_slot_equipment_helmet_label",      IsHelmetSlotItem,       IsHelmetSlotKnown);
-            AddSlot(chestSlotID,    () => "$exsl_slot_equipment_chest_label",       IsChestSlotItem,        IsChestSlotKnown);
-            AddSlot(legsSlotID,     () => "$exsl_slot_equipment_legs_label",        IsLegsSlotItem,         IsLegsSlotKnown);
-            AddSlot(shoulderSlotID, () => "$exsl_slot_equipment_shoulders_label",   IsShoulderSlotItem,     IsShoulderSlotKnown);
-            AddSlot(utilitySlotID,  () => "$exsl_slot_equipment_utility_label",     IsUtilitySlotItem,      IsUtilitySlotKnown);
+            AddSlot(helmetSlotID,   () => "$exsl_slot_equipment_helmet_label",      IsHelmetSlotItem,       () => regularEquipmentSlotsEnabled.Value && IsHelmetSlotKnown());
+            AddSlot(chestSlotID,    () => "$exsl_slot_equipment_chest_label",       IsChestSlotItem,        () => regularEquipmentSlotsEnabled.Value && IsChestSlotKnown());
+            AddSlot(legsSlotID,     () => "$exsl_slot_equipment_legs_label",        IsLegsSlotItem,         () => regularEquipmentSlotsEnabled.Value && IsLegsSlotKnown());
+            AddSlot(shoulderSlotID, () => "$exsl_slot_equipment_shoulders_label",   IsShoulderSlotItem,     () => regularEquipmentSlotsEnabled.Value && IsShoulderSlotKnown());
+            AddSlot(utilitySlotID,  () => "$exsl_slot_equipment_utility_label",     IsUtilitySlotItem,      () => regularEquipmentSlotsEnabled.Value && IsUtilitySlotKnown());
 
             AddSlot($"{extraUtilitySlotID}3", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, IsUtilitySlot3Available);
             AddSlot($"{extraUtilitySlotID}4", () => "$exsl_slot_equipment_utility_label", IsUtilitySlotItem, IsUtilitySlot4Available);
 
-            AddSlot(trinketSlotID, () => "$exsl_slot_equipment_trinket_label", IsTrinketSlotItem, IsTrinketSlotKnown);
+            AddSlot(trinketSlotID, () => "$exsl_slot_equipment_trinket_label", IsTrinketSlotItem, () => regularEquipmentSlotsEnabled.Value && IsTrinketSlotKnown());
 
             CustomSlot.customSlotStartingIndex = index;
 
