@@ -62,6 +62,7 @@
     <Compile Include="EquipmentPanel.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="HotBars\FoodHotBar.cs" />
+    <Compile Include="HotBars\HotbarRows.cs" />
     <Compile Include="InventoryInteraction.cs" />
     <Compile Include="InventorySerialization.cs" />
     <Compile Include="PlayerInventoryOperations.cs" />
