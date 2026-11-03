@@ -73,6 +73,7 @@ public static class QuickBars
         private float nextRetryTime;
         private float nextErrorLogTime;
         private int suppressedErrors;
+        private readonly List<ItemDrop.ItemData> displayedItems = new List<ItemDrop.ItemData>(8);
 
         internal bool CanAttemptUpdate => !updateFailed || Time.unscaledTime >= nextRetryTime;
 
@@ -89,6 +90,7 @@ public static class QuickBars
                 || ZInput.IsGamepadActive() != gamepadActive
                 || player.GetActionQueueCount() != actionQueueCount
                 || !ReferenceEquals(player.m_actionQueue.Count > 0 ? player.m_actionQueue[0] : null, firstQueuedAction)
+                || (bar.name == vanillaBarName && HasDisplayedItemsChanged(player))
                 || Time.unscaledTime - lastRefreshTime > HeartbeatInterval)
                 return true;
 
@@ -107,6 +109,21 @@ public static class QuickBars
                 if (item.m_shared.m_useDurability && item.m_durability <= 0f)
                     return true;
             }
+
+            return false;
+        }
+
+        internal bool HasDisplayedItemsChanged(Player player)
+        {
+            displayedItems.Clear();
+            player.GetInventory().GetBoundItems(displayedItems);
+
+            if (displayedItems.Count != itemCount)
+                return true;
+
+            for (int i = 0; i < itemCount; i++)
+                if (!ReferenceEquals(displayedItems[i], items[i]))
+                    return true;
 
             return false;
         }
