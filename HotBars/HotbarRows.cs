@@ -47,22 +47,31 @@ public static class HotbarRows
         RowMode mode = ExtraSlots.vanillaHotbarRowMode.Value;
         if (lastMode != mode)
         {
-            selectedRow = 0;
+            if (!ExtraSlots.vanillaHotbarGamepadRowSwitching.Value)
+                selectedRow = 0;
             lastMode = mode;
         }
 
         int height = InventoryHeightPlayer;
+        selectedRow = Mathf.Clamp(selectedRow, 0, height - 1);
         bool allowInput = player.TakeInput() && !GameCamera.InFreeFly();
+
+        if (CanSwitchRowsWithGamepad(player))
+        {
+            bool previous = ZInput.GetButtonDown("JoyHotbarLeft");
+            bool next = ZInput.GetButtonDown("JoyHotbarRight");
+            if (previous != next)
+                selectedRow = (selectedRow + (previous ? height - 1 : 1)) % height;
+        }
 
         if (mode == RowMode.Hold)
         {
             currentRow = allowInput && PreventSimilarHotkeys.IsShortcutPressed(ExtraSlots.vanillaHotbarRowModifier.Value)
                 ? ResolveRow(ExtraSlots.vanillaHotbarHoldRow.Value, height)
-                : 0;
+                : ExtraSlots.vanillaHotbarGamepadRowSwitching.Value ? selectedRow : 0;
             return;
         }
 
-        selectedRow = Mathf.Clamp(selectedRow, 0, height - 1);
         if (allowInput)
         {
             bool previous = PreventSimilarHotkeys.IsShortcutDown(ExtraSlots.vanillaHotbarPreviousRow.Value);
@@ -93,6 +102,51 @@ public static class HotbarRows
         }
 
         currentRow = selectedRow;
+    }
+
+    // Gamepad row selection is persistent in both keyboard modes.
+    // The vanilla D-pad selection already ignores JoyAltKeys, so it stays unchanged.
+    private static bool CanSwitchRowsWithGamepad(Player player) =>
+        ExtraSlots.vanillaHotbarRowsEnabled.Value
+        && ExtraSlots.vanillaHotbarGamepadRowSwitching.Value
+        && ZInput.IsGamepadActive()
+        && player && player.TakeInput() && !player.InPlaceMode()
+        && !Hud.InRadial()
+        && !Compatibility.PlantEasilyCompat.DisableGamepadInput
+        && ZInput.GetButton("JoyAltKeys");
+
+    private static bool MinimapZoomButtonDown(string button) =>
+        !CanSwitchRowsWithGamepad(Player.m_localPlayer) && ZInput.GetButtonDown(button);
+
+    [HarmonyPatch(typeof(Minimap), nameof(Minimap.UpdateMap))]
+    private static class Minimap_UpdateMap_GamepadRowSwitching
+    {
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            List<CodeInstruction> original = instructions.ToList();
+            List<CodeInstruction> code = original.Select(instruction => new CodeInstruction(instruction)).ToList();
+            MethodInfo getButtonDown = AccessTools.Method(typeof(ZInput), nameof(ZInput.GetButtonDown));
+            MethodInfo zoomButtonDown = AccessTools.Method(typeof(HotbarRows), nameof(MinimapZoomButtonDown));
+            int replaced = 0;
+
+            for (int i = 0; i + 1 < code.Count; i++)
+            {
+                if (code[i].opcode != OpCodes.Ldstr || code[i].operand is not string name
+                    || (name != "JoyMiniMapZoomIn" && name != "JoyMiniMapZoomOut")
+                    || !code[i + 1].Calls(getButtonDown))
+                    continue;
+
+                code[i + 1].opcode = OpCodes.Call;
+                code[i + 1].operand = zoomButtonDown;
+                replaced++;
+            }
+
+            if (replaced == 2)
+                return code;
+
+            ExtraSlots.LogWarning($"Cannot patch minimap zoom for row switching: found {replaced} button checks.");
+            return original;
+        }
     }
 
     // Positive values use player-facing row numbers; negative values count from the end.

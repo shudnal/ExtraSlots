@@ -111,6 +111,7 @@ namespace ExtraSlots
         public static ConfigEntry<bool> panelsDraggable;
         public static ConfigEntry<KeyboardShortcut> panelsDragKey;
         public static ConfigEntry<bool> vanillaHotbarRowsEnabled;
+        public static ConfigEntry<bool> vanillaHotbarGamepadRowSwitching;
         public static ConfigEntry<HotBars.HotbarRows.RowMode> vanillaHotbarRowMode;
         public static ConfigEntry<KeyboardShortcut> vanillaHotbarRowModifier;
         public static ConfigEntry<int> vanillaHotbarHoldRow;
@@ -518,6 +519,8 @@ namespace ExtraSlots
 
             vanillaHotbarRowsEnabled = config("Panels - Vanilla hotbar", "Switch inventory rows", defaultValue: false,
                 "Enable using regular inventory rows as the vanilla hotbar. This is a client-side setting.");
+            vanillaHotbarGamepadRowSwitching = config("Panels - Vanilla hotbar", "Gamepad row switching", defaultValue: false,
+                "Hold the controller's Alt button and press D-pad Left/Right to cycle regular inventory rows. The selected row stays active in both switch modes. Requires Switch inventory rows to be enabled. This replaces the same shortcut used to zoom the minimap.");
             vanillaHotbarRowMode = config("Panels - Vanilla hotbar", "Switch mode", HotBars.HotbarRows.RowMode.Hold,
                 "Hold: show another row only while the modifier is held. Persistent: use the row selected by shortcuts or modifier + mouse wheel.");
             vanillaHotbarRowModifier = config("Panels - Vanilla hotbar", "Modifier shortcut", new KeyboardShortcut(KeyCode.LeftAlt),
