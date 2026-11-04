@@ -110,10 +110,10 @@ public static class HotbarRows
         ExtraSlots.vanillaHotbarRowsEnabled.Value
         && ExtraSlots.vanillaHotbarGamepadRowSwitching.Value
         && ZInput.IsGamepadActive()
+        && ZInput.GetButton("JoyAltKeys")
         && player && player.TakeInput() && !player.InPlaceMode()
         && !Hud.InRadial()
-        && !Compatibility.PlantEasilyCompat.DisableGamepadInput
-        && ZInput.GetButton("JoyAltKeys");
+        && !Compatibility.PlantEasilyCompat.DisableGamepadInput;
 
     private static bool MinimapZoomButtonDown(string button) =>
         !CanSwitchRowsWithGamepad(Player.m_localPlayer) && ZInput.GetButtonDown(button);

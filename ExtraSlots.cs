@@ -520,7 +520,7 @@ namespace ExtraSlots
             vanillaHotbarRowsEnabled = config("Panels - Vanilla hotbar", "Switch inventory rows", defaultValue: false,
                 "Enable using regular inventory rows as the vanilla hotbar. This is a client-side setting.");
             vanillaHotbarGamepadRowSwitching = config("Panels - Vanilla hotbar", "Gamepad row switching", defaultValue: false,
-                "Hold the controller's Alt button and press D-pad Left/Right to cycle regular inventory rows. The selected row stays active in both switch modes. Requires Switch inventory rows to be enabled. This replaces the same shortcut used to zoom the minimap.");
+                "Hold the controller's alternate-action button and press D-pad Left/Right to cycle regular inventory rows. The selected row stays active in both switch modes. Requires Switch inventory rows to be enabled. This replaces the same shortcut used to zoom the minimap.");
             vanillaHotbarRowMode = config("Panels - Vanilla hotbar", "Switch mode", HotBars.HotbarRows.RowMode.Hold,
                 "Hold: show another row only while the modifier is held. Persistent: use the row selected by shortcuts or modifier + mouse wheel.");
             vanillaHotbarRowModifier = config("Panels - Vanilla hotbar", "Modifier shortcut", new KeyboardShortcut(KeyCode.LeftAlt),
