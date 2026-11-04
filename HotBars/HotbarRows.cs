@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
+using Valheim.UI;
 using static ExtraSlots.Slots;
 
 namespace ExtraSlots.HotBars;
@@ -22,6 +23,7 @@ public static class HotbarRows
     private static int selectedRow;
     private static RowMode lastMode;
     private static bool readingScroll;
+    private static int renderedRadialRow = -1;
 
     internal static int CurrentRow => ExtraSlots.vanillaHotbarRowsEnabled.Value ? currentRow : 0;
 
@@ -122,6 +124,60 @@ public static class HotbarRows
         {
             if (__result != 0f && ConsumingMouseWheel())
                 __result = 0f;
+        }
+    }
+
+
+    // The game's Hotbar radial page uses GetHotbar(), which always reads row zero.
+    // Keep its eight original positions while taking items from the selected row.
+    private static List<ItemDrop.ItemData> GetRadialHotbarItems(Inventory inventory, bool includeEmpty)
+    {
+        int row = GetRowForInventory(inventory);
+        if (row == 0)
+            return inventory.GetHotbar(includeEmpty);
+
+        List<ItemDrop.ItemData> items = new List<ItemDrop.ItemData>(8);
+        for (int x = 0; x < 8; x++)
+        {
+            ItemDrop.ItemData item = inventory.GetItemAt(x, row);
+            if (item != null || includeEmpty)
+                items.Add(item);
+        }
+        return items;
+    }
+
+    [HarmonyPatch(typeof(HotbarGroupConfig), nameof(HotbarGroupConfig.InitRadialConfig))]
+    private static class HotbarGroupConfig_InitRadialConfig_SelectedRow
+    {
+        private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            List<CodeInstruction> code = instructions.Select(instruction => new CodeInstruction(instruction)).ToList();
+            MethodInfo vanillaGetHotbar = AccessTools.Method(typeof(Inventory), nameof(Inventory.GetHotbar), new[] { typeof(bool) });
+            MethodInfo getRadialItems = AccessTools.Method(typeof(HotbarRows), nameof(GetRadialHotbarItems));
+            int index = code.FindIndex(instruction => instruction.Calls(vanillaGetHotbar));
+            if (index < 0 || code.FindIndex(index + 1, instruction => instruction.Calls(vanillaGetHotbar)) >= 0)
+            {
+                ExtraSlots.LogWarning("Cannot patch radial hotbar: unexpected inventory lookup.");
+                return code;
+            }
+
+            code[index].opcode = OpCodes.Call;
+            code[index].operand = getRadialItems;
+            return code;
+        }
+
+        private static void Postfix() => renderedRadialRow = CurrentRow;
+    }
+
+    [HarmonyPatch(typeof(RadialBase), nameof(RadialBase.Update))]
+    private static class RadialBase_Update_SelectedHotbarRow
+    {
+        private static void Prefix(RadialBase __instance)
+        {
+            if (__instance.Active && !__instance.m_isClosing && !__instance.m_closeQueued
+                && __instance.m_queuedOpenConfigs.openConfig == null
+                && __instance.CurrentConfig is HotbarGroupConfig && renderedRadialRow != CurrentRow)
+                __instance.Refresh();
         }
     }
 
