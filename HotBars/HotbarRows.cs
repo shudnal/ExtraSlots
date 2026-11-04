@@ -115,8 +115,7 @@ public static class HotbarRows
         && !Hud.InRadial()
         && !Compatibility.PlantEasilyCompat.DisableGamepadInput;
 
-    private static bool MinimapZoomButtonDown(string button) =>
-        !CanSwitchRowsWithGamepad(Player.m_localPlayer) && ZInput.GetButtonDown(button);
+    private static bool AllowMinimapZoom() => !CanSwitchRowsWithGamepad(Player.m_localPlayer);
 
     [HarmonyPatch(typeof(Minimap), nameof(Minimap.UpdateMap))]
     private static class Minimap_UpdateMap_GamepadRowSwitching
@@ -126,25 +125,53 @@ public static class HotbarRows
             List<CodeInstruction> original = instructions.ToList();
             List<CodeInstruction> code = original.Select(instruction => new CodeInstruction(instruction)).ToList();
             MethodInfo getButtonDown = AccessTools.Method(typeof(ZInput), nameof(ZInput.GetButtonDown));
-            MethodInfo zoomButtonDown = AccessTools.Method(typeof(HotbarRows), nameof(MinimapZoomButtonDown));
-            int replaced = 0;
+            MethodInfo getActiveSelf = AccessTools.PropertyGetter(typeof(GameObject), nameof(GameObject.activeSelf));
+            MethodInfo allowZoom = AccessTools.Method(typeof(HotbarRows), nameof(AllowMinimapZoom));
+            List<(int index, object target)> conditions = new List<(int, object)>(2);
 
-            for (int i = 0; i + 1 < code.Count; i++)
+            for (int i = 0; i + 2 < code.Count; i++)
             {
                 if (code[i].opcode != OpCodes.Ldstr || code[i].operand is not string name
                     || (name != "JoyMiniMapZoomIn" && name != "JoyMiniMapZoomOut")
                     || !code[i + 1].Calls(getButtonDown))
                     continue;
 
-                code[i + 1].opcode = OpCodes.Call;
-                code[i + 1].operand = zoomButtonDown;
-                replaced++;
+                if (code[i + 2].opcode != OpCodes.Brfalse && code[i + 2].opcode != OpCodes.Brfalse_S)
+                    return Unsupported(original);
+
+                bool matched = false;
+                for (int j = i + 3; j + 1 < code.Count && j < i + 12; j++)
+                {
+                    if (!code[j].Calls(getActiveSelf)
+                        || (code[j + 1].opcode != OpCodes.Brtrue && code[j + 1].opcode != OpCodes.Brtrue_S))
+                        continue;
+
+                    // Append "&& AllowMinimapZoom()" after the original activeSelf test.
+                    conditions.Add((j + 2, code[j + 1].operand));
+                    matched = true;
+                    break;
+                }
+
+                if (!matched)
+                    return Unsupported(original);
             }
 
-            if (replaced == 2)
-                return code;
+            if (conditions.Count != 2 || conditions[0].index == conditions[1].index)
+                return Unsupported(original);
 
-            ExtraSlots.LogWarning($"Cannot patch minimap zoom for row switching: found {replaced} button checks.");
+            for (int i = conditions.Count - 1; i >= 0; i--)
+            {
+                (int index, object target) = conditions[i];
+                code.Insert(index, new CodeInstruction(OpCodes.Call, allowZoom));
+                code.Insert(index + 1, new CodeInstruction(OpCodes.Brfalse, target));
+            }
+
+            return code;
+        }
+
+        private static IEnumerable<CodeInstruction> Unsupported(List<CodeInstruction> original)
+        {
+            ExtraSlots.LogWarning("Cannot patch minimap zoom for hotbar row switching.");
             return original;
         }
     }
@@ -182,44 +209,59 @@ public static class HotbarRows
     }
 
 
-    // The game's Hotbar radial page uses GetHotbar(), which always reads row zero.
-    // Keep its eight original positions while taking items from the selected row.
-    private static List<ItemDrop.ItemData> GetRadialHotbarItems(Inventory inventory, bool includeEmpty)
-    {
-        int row = GetRowForInventory(inventory);
-        if (row == 0)
-            return inventory.GetHotbar(includeEmpty);
+    // Keep the native LINQ filtering and element layout. Select the player's current
+    // hotbar row in both GetHotbar paths (including empty positions).
+    private static readonly Func<ItemDrop.ItemData, bool> selectedHotbarRowFilter =
+        item => item.m_gridPos.y == CurrentRow;
 
-        List<ItemDrop.ItemData> items = new List<ItemDrop.ItemData>(8);
-        for (int x = 0; x < 8; x++)
-        {
-            ItemDrop.ItemData item = inventory.GetItemAt(x, row);
-            if (item != null || includeEmpty)
-                items.Add(item);
-        }
-        return items;
+    private static IEnumerable<ItemDrop.ItemData> FilterHotbarRow(
+        IEnumerable<ItemDrop.ItemData> items, Func<ItemDrop.ItemData, bool> originalFilter)
+    {
+        if (CurrentRow != 0 && ReferenceEquals(items, Player.m_localPlayer?.GetInventory()?.m_inventory))
+            return items.Where(selectedHotbarRowFilter);
+
+        return items.Where(originalFilter);
     }
 
-    [HarmonyPatch(typeof(HotbarGroupConfig), nameof(HotbarGroupConfig.InitRadialConfig))]
-    private static class HotbarGroupConfig_InitRadialConfig_SelectedRow
+    [HarmonyPatch(typeof(Inventory), nameof(Inventory.GetHotbar))]
+    private static class Inventory_GetHotbar_SelectedRow
     {
         private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {
-            List<CodeInstruction> code = instructions.Select(instruction => new CodeInstruction(instruction)).ToList();
-            MethodInfo vanillaGetHotbar = AccessTools.Method(typeof(Inventory), nameof(Inventory.GetHotbar), new[] { typeof(bool) });
-            MethodInfo getRadialItems = AccessTools.Method(typeof(HotbarRows), nameof(GetRadialHotbarItems));
-            int index = code.FindIndex(instruction => instruction.Calls(vanillaGetHotbar));
-            if (index < 0 || code.FindIndex(index + 1, instruction => instruction.Calls(vanillaGetHotbar)) >= 0)
+            List<CodeInstruction> original = instructions.ToList();
+            List<CodeInstruction> code = original.Select(instruction => new CodeInstruction(instruction)).ToList();
+            MethodInfo filterItems = AccessTools.Method(typeof(HotbarRows), nameof(FilterHotbarRow));
+            int replaced = 0;
+
+            for (int i = 0; i < code.Count; i++)
             {
-                ExtraSlots.LogWarning("Cannot patch radial hotbar: unexpected inventory lookup.");
-                return code;
+                if (code[i].operand is not MethodInfo method
+                    || method.DeclaringType != typeof(Enumerable)
+                    || method.Name != nameof(Enumerable.Where)
+                    || !method.IsGenericMethod || method.GetGenericArguments()[0] != typeof(ItemDrop.ItemData))
+                    continue;
+
+                ParameterInfo[] parameters = method.GetParameters();
+                if (parameters.Length != 2
+                    || parameters[1].ParameterType != typeof(Func<ItemDrop.ItemData, bool>))
+                    continue;
+
+                code[i].opcode = OpCodes.Call;
+                code[i].operand = filterItems;
+                replaced++;
             }
 
-            code[index].opcode = OpCodes.Call;
-            code[index].operand = getRadialItems;
-            return code;
-        }
+            if (replaced == 2)
+                return code;
 
+            ExtraSlots.LogWarning($"Cannot patch GetHotbar row filtering: found {replaced} predicates.");
+            return original;
+        }
+    }
+
+    [HarmonyPatch(typeof(HotbarGroupConfig), nameof(HotbarGroupConfig.InitRadialConfig))]
+    private static class HotbarGroupConfig_InitRadialConfig_TrackRow
+    {
         private static void Postfix() => renderedRadialRow = CurrentRow;
     }
 
