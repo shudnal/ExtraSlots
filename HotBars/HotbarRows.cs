@@ -26,7 +26,7 @@ public static class HotbarRows
     private static bool readingScroll;
     private static int renderedRadialRow = -1;
 
-    internal static int CurrentRow => ExtraSlots.vanillaHotbarRowsEnabled.Value ? currentRow : 0;
+    internal static int CurrentRow => ExtraSlots.vanillaHotbarRowsEnabled.Value || ExtraSlots.vanillaHotbarGamepadRowSwitching.Value ? currentRow : 0;
 
     internal static void UpdateInput(Player player)
     {
@@ -38,7 +38,9 @@ public static class HotbarRows
             holdWasActive = false;
         }
 
-        if (!ExtraSlots.vanillaHotbarRowsEnabled.Value)
+        bool keyboardRowSwitching = ExtraSlots.vanillaHotbarRowsEnabled.Value;
+        bool gamepadRowSwitching = ExtraSlots.vanillaHotbarGamepadRowSwitching.Value;
+        if (!keyboardRowSwitching && !gamepadRowSwitching)
         {
             currentRow = 0;
             selectedRow = 0;
@@ -50,7 +52,7 @@ public static class HotbarRows
         RowMode mode = ExtraSlots.vanillaHotbarRowMode.Value;
         if (lastMode != mode)
         {
-            if (!ExtraSlots.vanillaHotbarGamepadRowSwitching.Value)
+            if (!gamepadRowSwitching)
                 selectedRow = 0;
             lastMode = mode;
         }
@@ -68,12 +70,12 @@ public static class HotbarRows
                 selectedRow = (selectedRow + (previous ? height - 1 : 1)) % height;
         }
 
-        if (mode == RowMode.Hold)
+        if (mode == RowMode.Hold && keyboardRowSwitching)
         {
             bool holding = allowInput && PreventSimilarHotkeys.IsShortcutPressed(ExtraSlots.vanillaHotbarRowModifier.Value);
             currentRow = holding
                 ? ResolveRow(ExtraSlots.vanillaHotbarHoldRow.Value, height)
-                : ExtraSlots.vanillaHotbarGamepadRowSwitching.Value ? selectedRow : 0;
+                : gamepadRowSwitching ? selectedRow : 0;
 
             if (holding != holdWasActive)
             {
@@ -85,13 +87,13 @@ public static class HotbarRows
             }
             else if (!holding && selectedRow != previousSelectedRow)
             {
-                PlayOpenInventorySound(player);
+                PlayRowChangeSound(player);
             }
             return;
         }
 
         holdWasActive = false;
-        if (allowInput)
+        if (allowInput && keyboardRowSwitching)
         {
             bool previous = PreventSimilarHotkeys.IsShortcutDown(ExtraSlots.vanillaHotbarPreviousRow.Value);
             bool next = PreventSimilarHotkeys.IsShortcutDown(ExtraSlots.vanillaHotbarNextRow.Value);
@@ -122,7 +124,19 @@ public static class HotbarRows
 
         currentRow = selectedRow;
         if (selectedRow != previousSelectedRow)
-            PlayOpenInventorySound(player);
+            PlayRowChangeSound(player);
+    }
+
+    private static void PlayRowChangeSound(Player player)
+    {
+        InventoryGui inventoryGui = InventoryGui.instance;
+        if (inventoryGui)
+        {
+            Vector3 position = player.transform.position;
+            inventoryGui.m_openInventoryEffects.Create(position, Quaternion.identity);
+            if (selectedRow == 0)
+                inventoryGui.m_setActiveGroupEffects.Create(position, Quaternion.identity);
+        }
     }
 
     private static void PlayOpenInventorySound(Player player)
@@ -142,8 +156,7 @@ public static class HotbarRows
     // Gamepad row selection is persistent in both keyboard modes.
     // The vanilla D-pad selection already ignores JoyAltKeys, so it stays unchanged.
     private static bool CanSwitchRowsWithGamepad(Player player) =>
-        ExtraSlots.vanillaHotbarRowsEnabled.Value
-        && ExtraSlots.vanillaHotbarGamepadRowSwitching.Value
+        ExtraSlots.vanillaHotbarGamepadRowSwitching.Value
         && ZInput.IsGamepadActive()
         && ZInput.GetButton("JoyAltKeys")
         && player && player.TakeInput() && !player.InPlaceMode()
