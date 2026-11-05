@@ -79,7 +79,7 @@ public static class HotbarRows
             {
                 if (holding)
                     PlayOpenInventorySound(player);
-                else
+                else if (allowInput)
                     PlayCloseInventorySound(player);
                 holdWasActive = holding;
             }
