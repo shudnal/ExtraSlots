@@ -63,6 +63,7 @@ public static class QuickBars
         private int itemCount;
         private int elementCount = -1;
         private int selected;
+        private int hotbarRow;
         private int revision;
         private int actionQueueCount;
         private Player.MinorActionData firstQueuedAction;
@@ -86,6 +87,7 @@ public static class QuickBars
                 || bar.m_elements.Count != elementCount
                 || bar.m_selected != selected
                 || revision != inventoryRevision
+                || (bar.name == vanillaBarName && hotbarRow != HotbarRows.CurrentRow)
                 || ZInput.IsGamepadActive() != gamepadActive
                 || player.GetActionQueueCount() != actionQueueCount
                 || !ReferenceEquals(player.m_actionQueue.Count > 0 ? player.m_actionQueue[0] : null, firstQueuedAction)
@@ -139,6 +141,7 @@ public static class QuickBars
 
             elementCount = bar.m_elements.Count;
             selected = bar.m_selected;
+            hotbarRow = HotbarRows.CurrentRow;
             revision = inventoryRevision;
             actionQueueCount = player.GetActionQueueCount();
             firstQueuedAction = actionQueueCount > 0 ? player.m_actionQueue[0] : null;
@@ -547,7 +550,7 @@ public static class QuickBars
         for (int i = 0; i < bar.m_items.Count; i++)
         {
             ItemDrop.ItemData item = bar.m_items[i];
-            if (item != null && item.m_gridPos.x == index && (bar.name != vanillaBarName || item.m_gridPos.y == 0))
+            if (item != null && item.m_gridPos.x == index && (bar.name != vanillaBarName || item.m_gridPos.y == HotbarRows.CurrentRow))
                 return item;
         }
         return null;
@@ -1137,6 +1140,12 @@ public static class QuickBars
     [HarmonyPatch(typeof(Player), nameof(Player.Update))]
     private static class Player_Update_SlotsUse
     {
+        private static void Prefix(Player __instance)
+        {
+            if (IsValidPlayer(__instance))
+                HotbarRows.UpdateInput(__instance);
+        }
+
         private static void Postfix(Player __instance)
         {
             if (!IsValidPlayer(__instance))

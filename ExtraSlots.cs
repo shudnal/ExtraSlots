@@ -38,7 +38,7 @@ namespace ExtraSlots
     {
         public const string pluginID = "shudnal.ExtraSlots";
         public const string pluginName = "Extra Slots";
-        public const string pluginVersion = "1.2.23";
+        public const string pluginVersion = "1.2.24";
 
         internal readonly Harmony harmony = new Harmony(pluginID);
 
@@ -110,6 +110,14 @@ namespace ExtraSlots
 
         public static ConfigEntry<bool> panelsDraggable;
         public static ConfigEntry<KeyboardShortcut> panelsDragKey;
+        public static ConfigEntry<bool> vanillaHotbarRowsEnabled;
+        public static ConfigEntry<bool> vanillaHotbarGamepadRowSwitching;
+        public static ConfigEntry<HotBars.HotbarRows.RowMode> vanillaHotbarRowMode;
+        public static ConfigEntry<KeyboardShortcut> vanillaHotbarRowModifier;
+        public static ConfigEntry<int> vanillaHotbarHoldRow;
+        public static ConfigEntry<bool> vanillaHotbarScrollToSwitch;
+        public static ConfigEntry<KeyboardShortcut> vanillaHotbarPreviousRow;
+        public static ConfigEntry<KeyboardShortcut> vanillaHotbarNextRow;
         public static ConfigEntry<bool> queuedEquipFade;
         public static ConfigEntry<bool> quickSlotsAlwaysShowEmpty;
         public static ConfigEntry<bool> ammoSlotsAlwaysShowEmpty;
@@ -508,6 +516,23 @@ namespace ExtraSlots
             foodSlotHotKey1Text = config("Hotkeys", "Food 1 Text", "Alt + Q", "Hotkey 1 Display Text. Leave blank to use the hotkey itself.");
             foodSlotHotKey2Text = config("Hotkeys", "Food 2 Text", "Alt + E", "Hotkey 2 Display Text. Leave blank to use the hotkey itself.");
             foodSlotHotKey3Text = config("Hotkeys", "Food 3 Text", "Alt + R", "Hotkey 3 Display Text. Leave blank to use the hotkey itself.");
+
+            vanillaHotbarRowsEnabled = config("Panels - Vanilla hotbar", "Switch inventory rows", defaultValue: false,
+                "Enable keyboard and mouse switching between regular inventory rows. This is a client-side setting.");
+            vanillaHotbarGamepadRowSwitching = config("Panels - Vanilla hotbar", "Switch inventory rows with gamepad", defaultValue: false,
+                "Hold the controller's alternate-action button and press D-pad Left/Right to cycle regular inventory rows. The selected row remains active after release. This works independently of keyboard switching and replaces the same shortcut used to zoom the minimap.");
+            vanillaHotbarRowMode = config("Panels - Vanilla hotbar", "Switch mode", HotBars.HotbarRows.RowMode.Hold,
+                "Keyboard and mouse mode. Hold: show another row only while the modifier is held. Persistent: use the row selected by shortcuts or modifier + mouse wheel.");
+            vanillaHotbarRowModifier = config("Panels - Vanilla hotbar", "Modifier shortcut", new KeyboardShortcut(KeyCode.LeftAlt),
+                "Hold to show the alternate row in Hold mode, or hold while scrolling in Persistent mode.");
+            vanillaHotbarHoldRow = config("Panels - Vanilla hotbar", "Hold mode row", defaultValue: 2,
+                "Row shown while the modifier is held. 1 = first row, 2 = second row, -1 = last regular row, -2 = second from last. 0 uses the first row. Values are limited to regular inventory rows.");
+            vanillaHotbarScrollToSwitch = config("Panels - Vanilla hotbar", "Switch rows with mouse wheel", defaultValue: true,
+                "Persistent mode only. Hold the modifier and scroll to select a row. The mouse wheel does not zoom the camera during selection.");
+            vanillaHotbarPreviousRow = config("Panels - Vanilla hotbar", "Previous row shortcut", new KeyboardShortcut(KeyCode.PageUp),
+                "Persistent mode only. Show the previous regular inventory row; wraps from the first to the last.");
+            vanillaHotbarNextRow = config("Panels - Vanilla hotbar", "Next row shortcut", new KeyboardShortcut(KeyCode.PageDown),
+                "Persistent mode only. Show the next regular inventory row; wraps from the last to the first.");
 
             vanillaSlotsOrder = config("Panels - Equipment slots", "Regular equipment slots order", Slots.VanillaOrder,
                 new ConfigDescription("Comma separated list defining order of vanilla equipment slots", null, new CustomConfigs.ConfigurationManagerAttributes { CustomDrawer = CustomConfigs.DrawOrderedFixedStrings(",") }));
