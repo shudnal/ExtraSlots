@@ -21,6 +21,7 @@ public static class HotbarRows
     private static Player currentPlayer;
     private static int currentRow;
     private static int selectedRow;
+    private static bool holdWasActive;
     private static RowMode lastMode;
     private static bool readingScroll;
     private static int renderedRadialRow = -1;
@@ -34,12 +35,14 @@ public static class HotbarRows
             currentPlayer = player;
             currentRow = 0;
             selectedRow = 0;
+            holdWasActive = false;
         }
 
         if (!ExtraSlots.vanillaHotbarRowsEnabled.Value)
         {
             currentRow = 0;
             selectedRow = 0;
+            holdWasActive = false;
             lastMode = ExtraSlots.vanillaHotbarRowMode.Value;
             return;
         }
@@ -54,6 +57,7 @@ public static class HotbarRows
 
         int height = InventoryHeightPlayer;
         selectedRow = Mathf.Clamp(selectedRow, 0, height - 1);
+        int previousSelectedRow = selectedRow;
         bool allowInput = player.TakeInput() && !GameCamera.InFreeFly();
 
         if (CanSwitchRowsWithGamepad(player))
@@ -66,12 +70,27 @@ public static class HotbarRows
 
         if (mode == RowMode.Hold)
         {
-            currentRow = allowInput && PreventSimilarHotkeys.IsShortcutPressed(ExtraSlots.vanillaHotbarRowModifier.Value)
+            bool holding = allowInput && PreventSimilarHotkeys.IsShortcutPressed(ExtraSlots.vanillaHotbarRowModifier.Value);
+            currentRow = holding
                 ? ResolveRow(ExtraSlots.vanillaHotbarHoldRow.Value, height)
                 : ExtraSlots.vanillaHotbarGamepadRowSwitching.Value ? selectedRow : 0;
+
+            if (holding != holdWasActive)
+            {
+                if (holding)
+                    PlayOpenInventorySound(player);
+                else
+                    PlayCloseInventorySound(player);
+                holdWasActive = holding;
+            }
+            else if (!holding && selectedRow != previousSelectedRow)
+            {
+                PlayOpenInventorySound(player);
+            }
             return;
         }
 
+        holdWasActive = false;
         if (allowInput)
         {
             bool previous = PreventSimilarHotkeys.IsShortcutDown(ExtraSlots.vanillaHotbarPreviousRow.Value);
@@ -102,6 +121,22 @@ public static class HotbarRows
         }
 
         currentRow = selectedRow;
+        if (selectedRow != previousSelectedRow)
+            PlayOpenInventorySound(player);
+    }
+
+    private static void PlayOpenInventorySound(Player player)
+    {
+        InventoryGui inventoryGui = InventoryGui.instance;
+        if (inventoryGui)
+            inventoryGui.m_openInventoryEffects.Create(player.transform.position, Quaternion.identity);
+    }
+
+    private static void PlayCloseInventorySound(Player player)
+    {
+        InventoryGui inventoryGui = InventoryGui.instance;
+        if (inventoryGui)
+            inventoryGui.m_closeInventoryEffects.Create(player.transform.position, Quaternion.identity);
     }
 
     // Gamepad row selection is persistent in both keyboard modes.

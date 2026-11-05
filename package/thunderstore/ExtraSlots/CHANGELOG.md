@@ -1,5 +1,5 @@
 # 1.2.24
-* Added optional vanilla hotbar row switching. Hold a key to show another row, or select a persistent row with hotkeys, the mouse wheel, or the controller's alternate-action button and D-pad Left/Right. The Hotbar radial menu shows items from the selected row.
+* Added optional vanilla hotbar row switching. Hold a key to show another row, or select a persistent row with hotkeys, the mouse wheel, or the controller's alternate-action button and D-pad Left/Right. The Hotbar radial menu shows items from the selected row. Switching rows plays inventory sounds.
 
 # 1.2.23
 * Fixed the behavior of hidden regular equipment slots.
